@@ -70,7 +70,7 @@ CVP nodes in the face of failures.
 
 Example:
 
-    >>> from CvpRac.cvp_client import CvpClient
+    >>> from cvprac.cvp_client import CvpClient
     >>> clnt = CvpClient()
     >>> clnt.connect(['cvp1', 'cvp2', 'cvp3'], 'cvp_user', 'cvp_word')
     >>> result = clnt.get('/cvpInfo/getCvpInfo.do')
@@ -88,7 +88,7 @@ import requests
 from requests.exceptions import ConnectionError, HTTPError, Timeout, \
     TooManyRedirects
 
-from CvpRac.cvp_client_errors import CvpApiError, CvpLoginError, \
+from cvprac.cvp_client_errors import CvpApiError, CvpLoginError, \
     CvpRequestError, CvpSessionLogOutError
 
 class CvpClient(object):
@@ -99,7 +99,7 @@ class CvpClient(object):
     # CVP node.
     NUM_RETRY_REQUESTS = 3
 
-    def __init__(self, logger='CvpRac', syslog=False, filename=None):
+    def __init__(self, logger='cvprac', syslog=False, filename=None):
         ''' Initialize the client and configure logging.  Either syslog, file
             logging, both, or none can be enabled.  If neither syslog
             nor filename is specified then no logging will be performed.

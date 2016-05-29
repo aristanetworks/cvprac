@@ -37,8 +37,8 @@ import sys
 import unittest
 from requests.exceptions import Timeout
 
-from CvpRac.cvp_client import CvpClient
-from CvpRac.cvp_client_errors import CvpApiError, CvpLoginError, \
+from cvprac.cvp_client import CvpClient
+from cvprac.cvp_client_errors import CvpApiError, CvpLoginError, \
     CvpRequestError, CvpSessionLogOutError
 
 # pylint: disable=too-many-public-methods
@@ -101,7 +101,7 @@ class TestCvpClient(DutSystemTest):
         ''' Verify CvpClient init with syslog and filename argument
         '''
         logfile = '/tmp/foo'
-        clnt = CvpClient(syslog=True, logger='CvpRacTmp', filename=logfile)
+        clnt = CvpClient(syslog=True, logger='cvpracTmp', filename=logfile)
         self.assertIsNotNone(clnt)
         os.remove(logfile)
 
