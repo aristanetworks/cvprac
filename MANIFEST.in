@@ -1,0 +1,7 @@
+include README.md
+include Makefile
+include *.spec
+include *.txt
+include LICENSE
+recursive-include test *.py
+recursive-include test *.yaml
