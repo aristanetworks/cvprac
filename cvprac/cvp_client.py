@@ -258,7 +258,15 @@ class CvpClient(object):
             if 'errorMessage' in joutput:
                 err_msg = joutput['errorMessage']
             else:
-                err_msg = joutput['errorCode']
+                if 'errors' in joutput:
+                    error_list = joutput['errors']
+                else:
+                    error_list = [joutput['errorCode']]
+                # Build the error message from all the errors.
+                err_msg = error_list[0]
+                for idx in range(1, len(error_list)):
+                    err_msg = '%s\n%s' % (err_msg, error_list[idx])
+
             msg = ('%s: Request Error: %s' % (prefix, err_msg))
             self.log.error(msg)
             raise CvpApiError(msg)
