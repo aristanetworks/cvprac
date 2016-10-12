@@ -41,7 +41,6 @@ from cvprac.cvp_client import CvpClient
 from cvprac.cvp_client_errors import CvpApiError, CvpLoginError, \
     CvpRequestError, CvpSessionLogOutError
 
-# pylint: disable=too-many-public-methods
 sys.path.append(os.path.join(os.path.dirname(__file__), '../lib'))
 from systestlib import DutSystemTest
 
