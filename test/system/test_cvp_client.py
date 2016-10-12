@@ -262,7 +262,7 @@ class TestCvpClient(DutSystemTest):
             self.assertEqual('success', result['data'])
 
         except Exception as error:
-            # Should not have had an exception. Restore the CVP password
+            # Should not have had an exception.  Restore the CVP password
             # and re-raise the error.
             self._change_passwd(nodes, dut['username'], self.NEW_PASSWORD,
                                 dut['password'])
@@ -355,7 +355,7 @@ class TestCvpClient(DutSystemTest):
             self.assertEqual('success', result['data'])
 
         except Exception as error:
-            # Should not have had an exception. Restore the CVP password
+            # Should not have had an exception.  Restore the CVP password
             # and re-raise the error.
             self._change_passwd(nodes, dut['username'], self.NEW_PASSWORD,
                                 dut['password'])

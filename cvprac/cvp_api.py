@@ -99,18 +99,22 @@ class CvpApi(object):
             raise error
         return task
 
-    def get_tasks_by_status(self, status):
+    def get_tasks_by_status(self, status, start=0, end=0):
         ''' Returns a list of tasks with the given status.
 
             Args:
                 status (str): Task status
+                start (int): Start index for the pagination.  Default is 0.
+                end (int): End index for the pagination.  If end index is 0
+                    then all the records will be returned.  Default is 0.
 
             Returns:
                 tasks (list): The list of tasks
         '''
         self.log.debug('get_tasks_by_status: status: %s' % status)
         data = self.clnt.get(
-            '/task/getTasks.do?queryparam=%s&startIndex=0&endIndex=0' % status)
+            '/task/getTasks.do?queryparam=%s&startIndex=%d&endIndex=%d' %
+            (status, start, end))
         return data['data']
 
     def get_tasks(self, start=0, end=0):
@@ -120,6 +124,7 @@ class CvpApi(object):
                 start (int): Start index for the pagination.  Default is 0.
                 end (int): End index for the pagination.  If end index is 0
                     then all the records will be returned.  Default is 0.
+
             Returns:
                 tasks (dict): The 'total' key contains the number of tasks,
                     the 'data' key contains a list of the tasks.
@@ -134,7 +139,7 @@ class CvpApi(object):
 
             Args:
                 task_id (int): CVP task identifier
-                start (int): The first log entry to return.
+                start (int): The first log entry to return.  Default is 0.
                 end (int): The last log entry to return.  Default is 0 which
                     means to return all log entries.  Can be a large number to
                     indicate the last log entry.
@@ -161,8 +166,8 @@ class CvpApi(object):
         self.clnt.post('/task/addNoteToTask.do', data)
 
     def execute_task(self, task_id):
-        ''' Execute the task. Note that if the task has failed then inspect the
-            task logs to determine why the task failed. If you see:
+        ''' Execute the task.  Note that if the task has failed then inspect
+            the task logs to determine why the task failed.  If you see:
 
               Failure response received from the netElement: Unauthorized User
 
@@ -198,11 +203,15 @@ class CvpApi(object):
         self.log.debug('get_configlets_by_name: name: %s' % name)
         return self.clnt.get('/configlet/getConfigletByName.do?name=%s' % name)
 
-    def get_configlet_history(self, key):
+    def get_configlet_history(self, key, start=0, end=0):
         ''' Returns the configlet history.
 
             Args:
                 key (str): Key for the configlet.
+                start (int): The first configlet entry to return.  Default is 0
+                end (int): The last configlet entry to return.  Default is 0
+                    which means to return all configlet entries.  Can be a
+                    large number to indicate the last configlet entry.
 
             Returns:
                 history (dict): The configlet dict with the changes from
@@ -210,17 +219,22 @@ class CvpApi(object):
         '''
         self.log.debug('get_configlets_history: key: %s' % key)
         return self.clnt.get('/configlet/getConfigletHistory.do?configletId='
-                             '%s&queryparam=&startIndex=0&endIndex=0' % key)
+                             '%s&queryparam=&startIndex=%d&endIndex=%d' %
+                             (key, start, end))
 
-    def get_inventory(self):
+    def get_inventory(self, start=0, end=0):
         ''' Returns the a dict of the net elements known to CVP.
 
             Returns:
-                task (dict): The CVP task for the associated Id.
+                start (int): The first inventory entry to return.  Default is 0
+                end (int): The last inventory entry to return.  Default is 0
+                    which means to return all inventory entries.  Can be a
+                    large number to indicate the last inventory entry.
         '''
         self.log.debug('get_inventory: called')
         data = self.clnt.get('/inventory/getInventory.do?'
-                             'queryparam=&startIndex=0&endIndex=0')
+                             'queryparam=&startIndex=%d&endIndex=%d' %
+                             (start, end))
         return data['netElementList']
 
     def get_device_by_name(self, fqdn):
@@ -237,19 +251,23 @@ class CvpApi(object):
                              'queryparam=%s&startIndex=0&endIndex=0' % fqdn)
         return data['netElementList'][0]
 
-    def get_configlets_by_device_id(self, mac):
+    def get_configlets_by_device_id(self, mac, start=0, end=0):
         ''' Returns the list of configlets applied to a device.
 
             Args:
                 mac (str): Device mac address (i.e. device id)
+                start (int): The first configlet entry to return.  Default is 0
+                end (int): The last configlet entry to return.  Default is 0
+                    which means to return all configlet entries.  Can be a
+                    large number to indicate the last configlet entry.
 
             Returns:
                 configlets (list): The list of configlets applied to the device
         '''
         self.log.debug('get_configlets_by_device: mac: %s' % mac)
         data = self.clnt.get('/provisioning/getConfigletsByNetElementId.do?'
-                             'netElementId=%s&queryParam=&startIndex=0&'
-                             'endIndex=0' % mac)
+                             'netElementId=%s&queryParam=&startIndex=%d&'
+                             'endIndex=%d' % (mac, start, end))
         return data['configletList']
 
     def add_configlet(self, name, config):
@@ -457,6 +475,7 @@ class CvpApi(object):
 
             Args:
                 container_name (str): Container name
+                container_key (str): Container key
                 parent_name (str): Parent container name
                 parent_key (str): Parent container key
         '''

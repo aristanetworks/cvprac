@@ -37,7 +37,7 @@
     2) Contains at least one device in a container.
     3) Container or device has at least one configlet applied.
     4) Device has a user account and password that matches the CVP username
-       and password. If device does not have correct username and/or password
+       and password.  If device does not have correct username and/or password
        then the tests that execute tasks will fail with the following error:
 
          AssertionError: Execution for task id 220 failed
