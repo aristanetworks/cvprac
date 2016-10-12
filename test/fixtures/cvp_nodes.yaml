@@ -1,6 +1,6 @@
 - node: cvp
-  username: CvpRacTest
-  password: AristaInnovates
+  username: cvpadmin
+  password: cvp123
 - node: cvp2
   username: CvpRacTest
   password: AristaInnovates
