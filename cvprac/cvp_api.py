@@ -71,8 +71,7 @@ class CvpApi(object):
         self.log = clnt.log
 
     def get_cvp_info(self):
-        ''' Initialize the class variables.  This routine is called from the
-            web.RequestHandler initialize method defined in the API classes.
+        ''' Returns information about CVP.
 
             Returns:
                 cvp_info (dict): CVP Information
@@ -162,7 +161,13 @@ class CvpApi(object):
         self.clnt.post('/task/addNoteToTask.do', data)
 
     def execute_task(self, task_id):
-        ''' Execute the task
+        ''' Execute the task. Note that if the task has failed then inspect the
+            task logs to determine why the task failed. If you see:
+
+              Failure response received from the netElement: Unauthorized User
+
+            then it means that the netelement does not have the same user ID
+            and/or password as the CVP user executing the task.
 
             Args:
                 task_id (str): Task ID

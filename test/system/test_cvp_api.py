@@ -36,9 +36,15 @@
     1) Test has dedicated access to the CVP node.
     2) Contains at least one device in a container.
     3) Container or device has at least one configlet applied.
+    4) Device has a user account and password that matches the CVP username
+       and password. If device does not have correct username and/or password
+       then the tests that execute tasks will fail with the following error:
 
-    After running tests the device may show that it is out of compliance.
-    This is due to applying configlets and then canceling the tasks.
+         AssertionError: Execution for task id 220 failed
+
+       and in the test log is the error:
+
+         Failure response received from the netElement : ' Unauthorized User '
 '''
 import os
 import re
@@ -302,9 +308,11 @@ class TestCvpClient(DutSystemTest):
             time.sleep(1)
             result = self.api.get_task_by_id(task_id)
             status = result['workOrderUserDefinedStatus']
-            if status == 'Completed':
+            if status == 'Completed' or status == 'Failed':
                 break
             cnt -= 1
+        err_msg = 'Execution for task id %s failed' % task_id
+        self.assertNotEqual(status, 'Failed', msg=err_msg)
         err_msg = 'Timeout waiting for task id %s to execute' % task_id
         self.assertGreater(cnt, 0, msg=err_msg)
 
