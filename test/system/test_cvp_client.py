@@ -31,6 +31,13 @@
 #
 
 ''' System test for the CvpClient class
+
+    Requirements for CVP Node:
+    1) Just need one node for test with the following account:
+       username: CvpRacTest
+       password: AristaInnovates
+
+       Be sure to create the same account on the switch used for testing.
 '''
 import os
 import sys
