@@ -209,6 +209,9 @@ class TestCvpClient(DutSystemTest):
         result = self.api.get_logs_by_id(task_id)
         self.assertIsNotNone(result)
 
+        # Check compliance
+        self.test_api_check_compliance()
+
     def test_api_get_task_by_id_bad(self):
         ''' Verify get_task_by_id with bad task id
         '''
@@ -372,6 +375,9 @@ class TestCvpClient(DutSystemTest):
 
         # Delete the configlet
         self.api.delete_configlet(name, key)
+
+        # Check compliance
+        self.test_api_check_compliance()
 
     def test_api_check_compliance(self):
         ''' Verify check_compliance
