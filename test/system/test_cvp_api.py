@@ -315,6 +315,9 @@ class TestCvpClient(DutSystemTest):
         (task_id, _) = self._create_task()
         self._execute_task(task_id)
 
+        # Check compliance
+        self.test_api_check_compliance()
+
     def test_api_containers(self):
         ''' Verify add_container and delete_container
         '''
