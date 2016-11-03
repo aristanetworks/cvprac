@@ -179,8 +179,39 @@ The cvprac module provides system tests. To run the system tests, you will need
 to update the ``cvp_nodes.yaml`` file found in test/fixtures. At least one
 running CVP node needs to be specified.
 
-* To run the system tests, run ``make tests`` from the root of the cvprac
-  source folder.
+Requirements for running the system tests:
+
+* Need one CVP node for test with a test user account.  Create the same account
+on the switch used for testing. The user account information follows:
+
+```
+username: CvpRacTest
+password: AristaInnovates
+```
+
+If switch does not have correct username and/or password then the tests that
+execute tasks will fail with the following error:
+
+```
+AssertionError: Execution for task id 220 failed
+```
+
+and in the test log is the error:
+
+```
+Failure response received from the netElement : ' Unauthorized User '
+```
+
+* Test has dedicated access to the CVP node.
+
+* CVP node contains at least one device in a container.
+
+* Container or device has at least one configlet applied.
+
+
+To run the system testsr:
+
+* run ``make tests`` from the root of the cvprac source folder.
 
 # Contributing
 
