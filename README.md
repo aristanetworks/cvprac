@@ -22,11 +22,12 @@ specified then no logging will be performed.
 This class supports creating a connection to a CVP node and then issuing
 subsequent GET and POST requests to CVP.  A GET or POST request will be
 automatically retried on the same node if the request receives a
-requests.exceptions.Timeout error.  A GET or POST request will be automatically
-retried on the same node if the request receives a CvpSessionLogOutError.  For
-this case a login will be performed before the request is retried.  For either
-case, the maximum number of times a request will be retried on the same node
-is specified by the class attribute NUM_RETRY_REQUESTS.
+requests.exceptions.Timeout or ReadTimeout error.  A GET or POST request will
+be automatically retried on the same node if the request receives a
+CvpSessionLogOutError.  For this case a login will be performed before the
+request is retried.  For either case, the maximum number of times a request
+will be retried on the same node is specified by the class attribute
+NUM_RETRY_REQUESTS.
 
 If more than one CVP node is specified when creating a connection, and a GET
 or POST request that receives a requests.exceptions.ConnectionError,
@@ -40,14 +41,14 @@ If any of the errors persists across all nodes then the GET or POST request
 will fail and the last error that occurred will be raised.
 
 The class provides connect, get, and post methods that allow the user to make
-RESTful API calls to CVP.  The class does not provide any wrapper functions
-around the specific RESTful API operations (ex: /cvpInfo/getCvpInfo.do,
-/aaa/saveAAADetails.do, ...).  To do so would require creating methods that
-take the appropriate dictionary as method parameters for the operation or
-flatten out the dictionary and pass them as parameters to the operation method.
-Either approach adds no value.  The value provided by this class is in
-automatically handling the CVP session logout and retrying requests across all
-CVP nodes in the face of failures.
+RESTful API calls to CVP.  See the example below using the get method.
+
+The class provides a wrapper function around the CVP RESTful API operations.
+Each API method takes the RESTful API parameters as method parameters to the
+operation method.  The API class was added to the client class because the
+API functions are required when using the CVP RESTful API and placing them
+in this library avoids duplicating the calls in every application that uses
+this class.  See the examples below using the api methods.
 
 ## Requirements
 
@@ -131,7 +132,7 @@ Once the package has been installed you can run the following example to verify 
 
 ## Example
 
-Example:
+Example using get method:
 
 ```
 >>> from cvprac.cvp_client import CvpClient
@@ -141,6 +142,35 @@ Example:
 >>> print result
 {u'version': u'2016.1.0'}
 >>>
+```
+
+Same example as above using the api method:
+
+```
+>>> from cvprac.cvp_client import CvpClient
+>>> clnt = CvpClient()
+>>> clnt.connect(['cvp1', 'cvp2', 'cvp3'], 'cvp_user', 'cvp_word')
+>>> result = clnt.api.get_cvp_info()
+>>> print result
+{u'version': u'2016.1.0'}
+>>>
+```
+
+Example using the api method to create a container, wait 5 seconds, then
+delete the container.  Before running this example manually create a container
+named DC-1 on your CVP node.
+
+```
+>>> import time
+>>> from cvprac.cvp_client import CvpClient
+>>> clnt = CvpClient()
+>>> clnt.connect(['cvp1'], 'cvp_user', 'cvp_word')
+>>> parent = clnt.api.search_topology('DC-1')
+>>> clnt.api.add_container('TORs', 'DC-1', parent['containerList'][0]['key'])
+>>> child = clnt.api.search_topology('TORs')
+>>> time.sleep(5)
+>>> result = clnt.api.delete_container('TORs', child['containerList'][0]['key'], 'DC-1', parent['containerList'][0]['key'])
+>>> 
 ```
 
 # Testing
