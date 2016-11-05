@@ -48,7 +48,7 @@ Each API method takes the RESTful API parameters as method parameters to the
 operation method.  The API class was added to the client class because the
 API functions are required when using the CVP RESTful API and placing them
 in this library avoids duplicating the calls in every application that uses
-this class.  See the examples below using the api methods.
+this class.  See the examples below using the API methods.
 
 ## Requirements
 
@@ -144,7 +144,7 @@ Example using get method:
 >>>
 ```
 
-Same example as above using the api method:
+Same example as above using the API method:
 
 ```
 >>> from cvprac.cvp_client import CvpClient
@@ -156,7 +156,7 @@ Same example as above using the api method:
 >>>
 ```
 
-Example using the api method to create a container, wait 5 seconds, then
+Example using the API method to create a container, wait 5 seconds, then
 delete the container.  Before running this example manually create a container
 named DC-1 on your CVP node.
 
@@ -172,6 +172,16 @@ named DC-1 on your CVP node.
 >>> result = clnt.api.delete_container('TORs', child['containerList'][0]['key'], 'DC-1', parent['containerList'][0]['key'])
 >>> 
 ```
+
+# Notes for API Class Usage
+
+## Containers
+
+With the API the containers are added for all cases.  If you add the container
+to the original root container ‘Tenant’ then you have to do a refresh from the
+GUI to see the container after it is added or deleted.  If the root container
+has been renamed or the parent container is not the root container then an
+add or delete will update the GUI without requiring a manual refresh.
 
 # Testing
 
