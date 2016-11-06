@@ -31,6 +31,13 @@
 #
 
 ''' System test for the CvpClient class
+
+    Requirements for CVP Node:
+    1) Just need one node for test with the following account:
+       username: CvpRacTest
+       password: AristaInnovates
+
+       Be sure to create the same account on the switch used for testing.
 '''
 import os
 import sys
@@ -41,7 +48,6 @@ from cvprac.cvp_client import CvpClient
 from cvprac.cvp_client_errors import CvpApiError, CvpLoginError, \
     CvpRequestError, CvpSessionLogOutError
 
-# pylint: disable=too-many-public-methods
 sys.path.append(os.path.join(os.path.dirname(__file__), '../lib'))
 from systestlib import DutSystemTest
 
@@ -256,7 +262,7 @@ class TestCvpClient(DutSystemTest):
             self.assertEqual('success', result['data'])
 
         except Exception as error:
-            # Should not have had an exception. Restore the CVP password
+            # Should not have had an exception.  Restore the CVP password
             # and re-raise the error.
             self._change_passwd(nodes, dut['username'], self.NEW_PASSWORD,
                                 dut['password'])
@@ -349,7 +355,7 @@ class TestCvpClient(DutSystemTest):
             self.assertEqual('success', result['data'])
 
         except Exception as error:
-            # Should not have had an exception. Restore the CVP password
+            # Should not have had an exception.  Restore the CVP password
             # and re-raise the error.
             self._change_passwd(nodes, dut['username'], self.NEW_PASSWORD,
                                 dut['password'])

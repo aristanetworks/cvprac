@@ -41,11 +41,12 @@ specified then no logging will be performed.
 This class supports creating a connection to a CVP node and then issuing
 subsequent GET and POST requests to CVP.  A GET or POST request will be
 automatically retried on the same node if the request receives a
-requests.exceptions.Timeout error.  A GET or POST request will be automatically
-retried on the same node if the request receives a CvpSessionLogOutError.  For
-this case a login will be performed before the request is retried.  For either
-case, the maximum number of times a request will be retried on the same node
-is specified by the class attribute NUM_RETRY_REQUESTS.
+requests.exceptions.Timeout or ReadTimeout error.  A GET or POST request will
+be automatically retried on the same node if the request receives a
+CvpSessionLogOutError.  For this case a login will be performed before the
+request is retried.  For either case, the maximum number of times a request
+will be retried on the same node is specified by the class attribute
+NUM_RETRY_REQUESTS.
 
 If more than one CVP node is specified when creating a connection, and a GET
 or POST request that receives a requests.exceptions.ConnectionError,
@@ -59,14 +60,7 @@ If any of the errors persists across all nodes then the GET or POST request
 will fail and the last error that occurred will be raised.
 
 The class provides connect, get, and post methods that allow the user to make
-RESTful API calls to CVP.  The class does not provide any wrapper functions
-around the specific RESTful API operations (ex: /cvpInfo/getCvpInfo.do,
-/aaa/saveAAADetails.do, ...).  To do so would require creating methods that
-take the appropriate dictionary as method parameters for the operation or
-flatten out the dictionary and pass them as parameters to the operation method.
-Either approach adds no value.  The value provided by this class is in
-automatically handling the CVP session logout and retrying requests across all
-CVP nodes in the face of failures.
+direct RESTful API calls to CVP.
 
 Example:
 
@@ -74,6 +68,23 @@ Example:
     >>> clnt = CvpClient()
     >>> clnt.connect(['cvp1', 'cvp2', 'cvp3'], 'cvp_user', 'cvp_word')
     >>> result = clnt.get('/cvpInfo/getCvpInfo.do')
+    >>> print result
+    {u'version': u'2016.1.0'}
+    >>>
+
+The class provides a wrapper function around the CVP RESTful API operations.
+Each API method takes the RESTful API parameters as method parameters to the
+operation method.  The API class was added to the client class because the
+API functions are required when using the CVP RESTful API and placing them
+in this library avoids duplicating the calls in every application that uses
+this class.
+
+Example:
+
+    >>> from cvprac.cvp_client import CvpClient
+    >>> clnt = CvpClient()
+    >>> clnt.connect(['cvp1', 'cvp2', 'cvp3'], 'cvp_user', 'cvp_word')
+    >>> result = clnt.api.get_cvp_info()
     >>> print result
     {u'version': u'2016.1.0'}
     >>>
@@ -86,8 +97,9 @@ from itertools import cycle
 
 import requests
 from requests.exceptions import ConnectionError, HTTPError, Timeout, \
-    TooManyRedirects
+    ReadTimeout, TooManyRedirects
 
+from cvprac.cvp_api import CvpApi
 from cvprac.cvp_client_errors import CvpApiError, CvpLoginError, \
     CvpRequestError, CvpSessionLogOutError
 
@@ -138,6 +150,9 @@ class CvpClient(object):
         if syslog is False and filename is None:
             # Not logging so use the null handler
             self.log.addHandler(logging.NullHandler())
+
+        # Instantiate the CvpApi class
+        self.api = CvpApi(self)
 
     def connect(self, nodes, username, password, connect_timeout=10,
                 protocol='http', port=None):
@@ -223,7 +238,7 @@ class CvpClient(object):
         try:
             self._login()
         except (ConnectionError, CvpApiError, CvpRequestError,
-                CvpSessionLogOutError, HTTPError, Timeout,
+                CvpSessionLogOutError, HTTPError, ReadTimeout, Timeout,
                 TooManyRedirects) as error:
             self.log.error(error)
             # Any error that occurs during login is a good reason not to use
@@ -287,6 +302,8 @@ class CvpClient(object):
                     reponse from server indicates session was logged out.
                 HTTPError: A HTTPError is raised if there was an invalid HTTP
                     response.
+                ReadTimeout: A ReadTimeout is raised if there was a request
+                    timeout when reading from the connection.
                 Timeout: A Timeout is raised if there was a request timeout.
                 TooManyRedirects: A TooManyRedirects is raised if the request
                     exceeds the configured number of maximum redirections
@@ -335,6 +352,8 @@ class CvpClient(object):
                     reponse from server indicates session was logged out.
                 HTTPError: A HTTPError is raised if there was an invalid HTTP
                     response.
+                ReadTimeout: A ReadTimeout is raised if there was a request
+                    timeout when reading from the connection.
                 Timeout: A Timeout is raised if there was a request timeout.
                 TooManyRedirects: A TooManyRedirects is raised if the request
                     exceeds the configured number of maximum redirections
@@ -400,7 +419,7 @@ class CvpClient(object):
                 self.log.error(error)
                 continue
 
-            except Timeout as error:
+            except (ReadTimeout, Timeout) as error:
                 self.log.debug(error)
 
                 # Retry the request if there was a timeout. Decrement the
@@ -454,6 +473,8 @@ class CvpClient(object):
                     reponse from server indicates session was logged out.
                 HTTPError: A HTTPError is raised if there was an invalid HTTP
                     response.
+                ReadTimeout: A ReadTimeout is raised if there was a request
+                    timeout when reading from the connection.
                 Timeout: A Timeout is raised if there was a request timeout.
                 TooManyRedirects: A TooManyRedirects is raised if the request
                     exceeds the configured number of maximum redirections
@@ -489,6 +510,8 @@ class CvpClient(object):
                     reponse from server indicates session was logged out.
                 HTTPError: A HTTPError is raised if there was an invalid HTTP
                     response.
+                ReadTimeout: A ReadTimeout is raised if there was a request
+                    timeout when reading from the connection.
                 Timeout: A Timeout is raised if there was a request timeout.
                 TooManyRedirects: A TooManyRedirects is raised if the request
                     exceeds the configured number of maximum redirections
