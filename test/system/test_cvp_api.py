@@ -254,9 +254,16 @@ class TestCvpClient(DutSystemTest):
     def test_api_get_device_by_name(self):
         ''' Verify get_device_by_name
         '''
-        result = self.api.get_device_by_name(self.device['key'])
+        result = self.api.get_device_by_name(self.device['fqdn'])
         self.assertIsNotNone(result)
         self.assertEqual(result, self.device)
+
+    def test_api_get_device_by_name_bad(self):
+        ''' Verify get_device_by_name with bad fqdn
+        '''
+        result = self.api.get_device_by_name('bogus_host_name')
+        self.assertIsNotNone(result)
+        self.assertEqual(result, {})
 
     def _create_configlet(self, name, config):
         # Delete the configlet in case it was left by previous test run

@@ -130,9 +130,8 @@ class CvpApi(object):
                     the 'data' key contains a list of the tasks.
         '''
         self.log.debug('get_tasks:')
-        data = self.clnt.get('/task/getTasks.do?queryparam=&startIndex=%d&'
+        return self.clnt.get('/task/getTasks.do?queryparam=&startIndex=%d&'
                              'endIndex=%d' % (start, end))
-        return data
 
     def get_logs_by_id(self, task_id, start=0, end=0):
         ''' Returns the log entries for the task with the specified TaskId.
@@ -244,12 +243,17 @@ class CvpApi(object):
                 fqdn (str): Fully qualified domain name of the device.
 
             Returns:
-                device (dict): The net element device dict for the device.
+                device (dict): The net element device dict for the device if
+                    otherwise returns an empty hash.
         '''
         self.log.debug('get_device_from_name: fqdn: %s' % fqdn)
         data = self.clnt.get('/inventory/getInventory.do?'
                              'queryparam=%s&startIndex=0&endIndex=0' % fqdn)
-        return data['netElementList'][0]
+        if len(data['netElementList']) > 0:
+            device = data['netElementList'][0]
+        else:
+            device = {}
+        return device
 
     def get_configlets_by_device_id(self, mac, start=0, end=0):
         ''' Returns the list of configlets applied to a device.
