@@ -1,5 +1,5 @@
 Arista Cloudvision\ |reg| Portal RESTful API Client
-=============================================
+===================================================
 
 Table of Contents
 =================
