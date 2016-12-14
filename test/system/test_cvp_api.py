@@ -51,6 +51,7 @@ import re
 import sys
 import time
 import unittest
+from requests.exceptions import Timeout
 
 from cvprac.cvp_client import CvpClient
 from cvprac.cvp_client_errors import CvpApiError
@@ -336,7 +337,7 @@ class TestCvpClient(DutSystemTest):
     def test_api_containers(self):
         ''' Verify add_container and delete_container
         '''
-        name = 'TEST'
+        name = 'CVPRACTEST'
         parent = self.container
         self.api.add_container(name, parent['name'], parent['key'])
         result = self.api.search_topology(name)
@@ -405,6 +406,15 @@ class TestCvpClient(DutSystemTest):
         result = self.api.check_compliance(key, ntype)
         self.assertEqual(result['complianceCode'], '0000')
         self.assertEqual(result['complianceIndication'], 'NONE')
+
+    def test_api_request_timeout(self):
+        ''' Verify api timeout
+        '''
+        self.assertEqual(self.api.request_timeout, 30)
+        self.api.request_timeout = 0.0001
+        with self.assertRaises(Timeout):
+            self.api.get_cvp_info()
+        self.api.request_timeout = 30
 
 if __name__ == '__main__':
     unittest.main()
