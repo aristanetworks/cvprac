@@ -1,3 +1,4 @@
+# pylint: disable=wrong-import-position
 #
 # Copyright (c) 2016, Arista Networks, Inc.
 # All rights reserved.
