@@ -61,7 +61,7 @@ class CvpApi(object):
     '''
     # pylint: disable=too-many-public-methods
 
-    def __init__(self, clnt):
+    def __init__(self, clnt, request_timeout=30):
         ''' Initialize the class.
 
             Args:
@@ -69,6 +69,7 @@ class CvpApi(object):
         '''
         self.clnt = clnt
         self.log = clnt.log
+        self.request_timeout = request_timeout
 
     def get_cvp_info(self):
         ''' Returns information about CVP.
@@ -76,7 +77,8 @@ class CvpApi(object):
             Returns:
                 cvp_info (dict): CVP Information
         '''
-        return self.clnt.get('/cvpInfo/getCvpInfo.do')
+        return self.clnt.get('/cvpInfo/getCvpInfo.do',
+                             timeout=self.request_timeout)
 
     def get_task_by_id(self, task_id):
         ''' Returns the current CVP Task status for the task with the specified
@@ -91,7 +93,8 @@ class CvpApi(object):
         '''
         self.log.debug('get_task_by_id: task_id: %s' % task_id)
         try:
-            task = self.clnt.get('/task/getTaskById.do?taskId=%s' % task_id)
+            task = self.clnt.get('/task/getTaskById.do?taskId=%s' % task_id,
+                                 timeout=self.request_timeout)
         except CvpApiError as error:
             # Catch an invalid task_id error and return None
             if 'Invalid WorkOrderId' in str(error):
@@ -114,7 +117,7 @@ class CvpApi(object):
         self.log.debug('get_tasks_by_status: status: %s' % status)
         data = self.clnt.get(
             '/task/getTasks.do?queryparam=%s&startIndex=%d&endIndex=%d' %
-            (status, start, end))
+            (status, start, end), timeout=self.request_timeout)
         return data['data']
 
     def get_tasks(self, start=0, end=0):
@@ -130,9 +133,9 @@ class CvpApi(object):
                     the 'data' key contains a list of the tasks.
         '''
         self.log.debug('get_tasks:')
-        data = self.clnt.get('/task/getTasks.do?queryparam=&startIndex=%d&'
-                             'endIndex=%d' % (start, end))
-        return data
+        return self.clnt.get('/task/getTasks.do?queryparam=&startIndex=%d&'
+                             'endIndex=%d' % (start, end),
+                             timeout=self.request_timeout)
 
     def get_logs_by_id(self, task_id, start=0, end=0):
         ''' Returns the log entries for the task with the specified TaskId.
@@ -151,7 +154,8 @@ class CvpApi(object):
         self.log.debug('get_log_by_id: task_id: %s' % task_id)
         return self.clnt.get('/task/getLogsById.do?id=%s&queryparam='
                              '&startIndex=%d&endIndex=%d' %
-                             (task_id, start, end))
+                             (task_id, start, end),
+                             timeout=self.request_timeout)
 
     def add_note_to_task(self, task_id, note):
         ''' Add notes to the task.
@@ -163,7 +167,8 @@ class CvpApi(object):
         self.log.debug('add_note_to_task: task_id: %s note: %s' %
                        (task_id, note))
         data = {'workOrderId' : task_id, 'note' : note}
-        self.clnt.post('/task/addNoteToTask.do', data)
+        self.clnt.post('/task/addNoteToTask.do', data=data,
+                       timeout=self.request_timeout)
 
     def execute_task(self, task_id):
         ''' Execute the task.  Note that if the task has failed then inspect
@@ -179,7 +184,8 @@ class CvpApi(object):
         '''
         self.log.debug('execute_task: task_id: %s' % task_id)
         data = {'data' : [task_id]}
-        self.clnt.post('/task/executeTask.do', data)
+        self.clnt.post('/task/executeTask.do', data=data,
+                       timeout=self.request_timeout)
 
     def cancel_task(self, task_id):
         ''' Cancel the task
@@ -189,7 +195,8 @@ class CvpApi(object):
         '''
         self.log.debug('cancel_task: task_id: %s' % task_id)
         data = {'data' : [task_id]}
-        self.clnt.post('/task/cancelTask.do', data)
+        self.clnt.post('/task/cancelTask.do', data=data,
+                       timeout=self.request_timeout)
 
     def get_configlet_by_name(self, name):
         ''' Returns the configlet with the specified name
@@ -201,7 +208,8 @@ class CvpApi(object):
                 configlet (dict): The configlet dict.
         '''
         self.log.debug('get_configlets_by_name: name: %s' % name)
-        return self.clnt.get('/configlet/getConfigletByName.do?name=%s' % name)
+        return self.clnt.get('/configlet/getConfigletByName.do?name=%s' % name,
+                             timeout=self.request_timeout)
 
     def get_configlet_history(self, key, start=0, end=0):
         ''' Returns the configlet history.
@@ -220,7 +228,7 @@ class CvpApi(object):
         self.log.debug('get_configlets_history: key: %s' % key)
         return self.clnt.get('/configlet/getConfigletHistory.do?configletId='
                              '%s&queryparam=&startIndex=%d&endIndex=%d' %
-                             (key, start, end))
+                             (key, start, end), timeout=self.request_timeout)
 
     def get_inventory(self, start=0, end=0):
         ''' Returns the a dict of the net elements known to CVP.
@@ -234,7 +242,7 @@ class CvpApi(object):
         self.log.debug('get_inventory: called')
         data = self.clnt.get('/inventory/getInventory.do?'
                              'queryparam=&startIndex=%d&endIndex=%d' %
-                             (start, end))
+                             (start, end), timeout=self.request_timeout)
         return data['netElementList']
 
     def get_device_by_name(self, fqdn):
@@ -244,12 +252,18 @@ class CvpApi(object):
                 fqdn (str): Fully qualified domain name of the device.
 
             Returns:
-                device (dict): The net element device dict for the device.
+                device (dict): The net element device dict for the device if
+                    otherwise returns an empty hash.
         '''
         self.log.debug('get_device_from_name: fqdn: %s' % fqdn)
         data = self.clnt.get('/inventory/getInventory.do?'
-                             'queryparam=%s&startIndex=0&endIndex=0' % fqdn)
-        return data['netElementList'][0]
+                             'queryparam=%s&startIndex=0&endIndex=0' % fqdn,
+                             timeout=self.request_timeout)
+        if len(data['netElementList']) > 0:
+            device = data['netElementList'][0]
+        else:
+            device = {}
+        return device
 
     def get_configlets_by_device_id(self, mac, start=0, end=0):
         ''' Returns the list of configlets applied to a device.
@@ -267,7 +281,8 @@ class CvpApi(object):
         self.log.debug('get_configlets_by_device: mac: %s' % mac)
         data = self.clnt.get('/provisioning/getConfigletsByNetElementId.do?'
                              'netElementId=%s&queryParam=&startIndex=%d&'
-                             'endIndex=%d' % (mac, start, end))
+                             'endIndex=%d' % (mac, start, end),
+                             timeout=self.request_timeout)
         return data['configletList']
 
     def add_configlet(self, name, config):
@@ -283,10 +298,12 @@ class CvpApi(object):
         self.log.debug('add_configlet: name: %s config: %s' % (name, config))
         body = {'name': name, 'config': config}
         # Create the configlet
-        self.clnt.post('/configlet/addConfiglet.do', body)
+        self.clnt.post('/configlet/addConfiglet.do', data=body,
+                       timeout=self.request_timeout)
 
         # Get the key for the configlet
-        data = self.clnt.get('/configlet/getConfigletByName.do?name=%s' % name)
+        data = self.clnt.get('/configlet/getConfigletByName.do?name=%s' % name,
+                             timeout=self.request_timeout)
         return data['key']
 
     def delete_configlet(self, name, key):
@@ -299,7 +316,8 @@ class CvpApi(object):
         self.log.debug('delete_configlet: name: %s key: %s' % (name, key))
         body = [{'name': name, 'key': key}]
         # Delete the configlet
-        self.clnt.post('/configlet/deleteConfiglet.do', body)
+        self.clnt.post('/configlet/deleteConfiglet.do', data=body,
+                       timeout=self.request_timeout)
 
     def update_configlet(self, config, key, name):
         ''' Update a configlet.
@@ -314,7 +332,8 @@ class CvpApi(object):
 
         # Update the configlet
         body = {'config': config, 'key': key, 'name': name}
-        self.clnt.post('/configlet/updateConfiglet.do', body)
+        self.clnt.post('/configlet/updateConfiglet.do', data=body,
+                       timeout=self.request_timeout)
 
     def apply_configlets_to_device(self, app_name, dev, new_configlets):
         ''' Apply the configlets to the device.
@@ -364,7 +383,8 @@ class CvpApi(object):
                  'parentTask': ''}]
         self.log.debug('apply_configlets_to_device: saveTopology data:\n%s' %
                        data)
-        self.clnt.post('/provisioning/saveTopology.do', data)
+        self.clnt.post('/provisioning/saveTopology.do', data=data,
+                       timeout=self.request_timeout)
 
     def remove_configlets_from_device(self, app_name, dev, del_configlets):
         ''' Remove the configlets from the device.
@@ -422,7 +442,8 @@ class CvpApi(object):
                  'parentTask': ''}]
         self.log.debug('remove_configlets_from_device: saveTopology data:\n%s'
                        % data)
-        self.clnt.post('/provisioning/saveTopology.do', data)
+        self.clnt.post('/provisioning/saveTopology.do', data=data,
+                       timeout=self.request_timeout)
 
     # pylint: disable=too-many-arguments
     def _container_op(self, container_name, container_key, parent_name,
@@ -455,7 +476,8 @@ class CvpApi(object):
                  'parentTask' : ''}]
 
         # Perform the container operation
-        self.clnt.post('/provisioning/saveTopology.do', data)
+        self.clnt.post('/provisioning/saveTopology.do', data=data,
+                       timeout=self.request_timeout)
 
     def add_container(self, container_name, parent_name, parent_key):
         ''' Add the container to the specified parent.
@@ -503,7 +525,8 @@ class CvpApi(object):
         self.log.debug('search_topology: query: %s start: %d end: %d' %
                        (query, start, end))
         data = self.clnt.get('/provisioning/searchTopology.do?queryParam=%s&'
-                             'startIndex=%d&endIndex=%d' % (query, start, end))
+                             'startIndex=%d&endIndex=%d' % (query, start, end),
+                             timeout=self.request_timeout)
         return data
 
     def check_compliance(self, node_key, node_type):
@@ -521,4 +544,5 @@ class CvpApi(object):
         self.log.debug('check_compliance: node_key: %s node_type: %s' %
                        (node_key, node_type))
         data = {'nodeId': node_key, 'nodeType': node_type}
-        return self.clnt.post('/provisioning/checkCompliance.do', data)
+        return self.clnt.post('/provisioning/checkCompliance.do', data=data,
+                              timeout=self.request_timeout)

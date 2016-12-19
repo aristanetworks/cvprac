@@ -1,3 +1,4 @@
+# pylint: disable=wrong-import-position
 #
 # Copyright (c) 2016, Arista Networks, Inc.
 # All rights reserved.
@@ -51,6 +52,7 @@ import re
 import sys
 import time
 import unittest
+from requests.exceptions import Timeout
 
 from cvprac.cvp_client import CvpClient
 from cvprac.cvp_client_errors import CvpApiError
@@ -254,9 +256,16 @@ class TestCvpClient(DutSystemTest):
     def test_api_get_device_by_name(self):
         ''' Verify get_device_by_name
         '''
-        result = self.api.get_device_by_name(self.device['key'])
+        result = self.api.get_device_by_name(self.device['fqdn'])
         self.assertIsNotNone(result)
         self.assertEqual(result, self.device)
+
+    def test_api_get_device_by_name_bad(self):
+        ''' Verify get_device_by_name with bad fqdn
+        '''
+        result = self.api.get_device_by_name('bogus_host_name')
+        self.assertIsNotNone(result)
+        self.assertEqual(result, {})
 
     def _create_configlet(self, name, config):
         # Delete the configlet in case it was left by previous test run
@@ -329,7 +338,7 @@ class TestCvpClient(DutSystemTest):
     def test_api_containers(self):
         ''' Verify add_container and delete_container
         '''
-        name = 'TEST'
+        name = 'CVPRACTEST'
         parent = self.container
         self.api.add_container(name, parent['name'], parent['key'])
         result = self.api.search_topology(name)
@@ -398,6 +407,15 @@ class TestCvpClient(DutSystemTest):
         result = self.api.check_compliance(key, ntype)
         self.assertEqual(result['complianceCode'], '0000')
         self.assertEqual(result['complianceIndication'], 'NONE')
+
+    def test_api_request_timeout(self):
+        ''' Verify api timeout
+        '''
+        self.assertEqual(self.api.request_timeout, 30)
+        self.api.request_timeout = 0.0001
+        with self.assertRaises(Timeout):
+            self.api.get_cvp_info()
+        self.api.request_timeout = 30.0
 
 if __name__ == '__main__':
     unittest.main()
