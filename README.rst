@@ -1,5 +1,6 @@
 Arista Cloudvision\ |reg| Portal RESTful API Client
 ===================================================
+|pypi_version_badge|
 
 Table of Contents
 =================
@@ -288,3 +289,5 @@ THE POSSIBILITY OF SUCH DAMAGE.
 .. |copy|   unicode:: U+000A9 .. COPYRIGHT SIGN
 .. |trademark| unicode:: U+2122 .. TRADEMARK SIGN
 .. |reg| unicode:: U+000AE .. REGISTERED SIGN
+.. |pypi_version_badge| image:: https://img.shields.io/pypi/v/cvprac.svg
+    :target: https://pypi.python.org/pypi/cvprac

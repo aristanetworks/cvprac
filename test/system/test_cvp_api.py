@@ -1,3 +1,4 @@
+# pylint: disable=wrong-import-position
 #
 # Copyright (c) 2016, Arista Networks, Inc.
 # All rights reserved.
@@ -414,7 +415,7 @@ class TestCvpClient(DutSystemTest):
         self.api.request_timeout = 0.0001
         with self.assertRaises(Timeout):
             self.api.get_cvp_info()
-        self.api.request_timeout = 30
+        self.api.request_timeout = 30.0
 
 if __name__ == '__main__':
     unittest.main()
