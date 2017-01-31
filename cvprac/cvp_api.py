@@ -97,7 +97,8 @@ class CvpApi(object):
                                  timeout=self.request_timeout)
         except CvpApiError as error:
             # Catch an invalid task_id error and return None
-            if 'Invalid WorkOrderId' in str(error):
+            if ('Invalid WorkOrderId' in str(error) or
+                    'Entity does not exist' in str(error)):
                 return None
             raise error
         return task
@@ -335,6 +336,15 @@ class CvpApi(object):
         self.clnt.post('/configlet/updateConfiglet.do', data=body,
                        timeout=self.request_timeout)
 
+    def _add_temp_action(self, data):
+        url = ('/provisioning/addTempAction.do?'
+               'format=topology&queryParam=&nodeId=root')
+        self.clnt.post(url, data=data, timeout=self.request_timeout)
+
+    def _save_topology_v2(self, data):
+        url = '/provisioning/v2/saveTopology.do'
+        return self.clnt.post(url, data=data, timeout=self.request_timeout)
+
     def apply_configlets_to_device(self, app_name, dev, new_configlets):
         ''' Apply the configlets to the device.
 
@@ -362,29 +372,35 @@ class CvpApi(object):
 
         info = '%s: Configlet Assign: to Device %s' % (app_name, dev['fqdn'])
         info_preview = '<b>Configlet Assign:</b> to Device' + dev['fqdn']
-        data = [{'id': 1,
-                 'info': info,
-                 'infoPreview': info_preview,
-                 'note': '',
-                 'action': 'associate',
-                 'nodeType': 'configlet',
-                 'nodeId': '',
-                 'configletList': ckeys,
-                 'configletNamesList': cnames,
-                 'ignoreConfigletNamesList': [],
-                 'ignoreConfigletList': [],
-                 'toId': dev['systemMacAddress'],
-                 'toIdType': 'netelement',
-                 'fromId': '',
-                 'nodeName': '',
-                 'fromName': '',
-                 'toName': dev['fqdn'],
-                 'childTasks': [],
-                 'parentTask': ''}]
+        data = {'data': [{'id': 1,
+                          'info': info,
+                          'infoPreview': info_preview,
+                          'note': '',
+                          'action': 'associate',
+                          'nodeType': 'configlet',
+                          'nodeId': '',
+                          'configletList': ckeys,
+                          'configletNamesList': cnames,
+                          'ignoreConfigletNamesList': [],
+                          'ignoreConfigletList': [],
+                          'configletBuilderList': [],
+                          'configletBuilderNamesList': [],
+                          'ignoreConfigletBuilderList': [],
+                          'ignoreConfigletBuilderNamesList': [],
+                          'toId': dev['systemMacAddress'],
+                          'toIdType': 'netelement',
+                          'fromId': '',
+                          'nodeName': '',
+                          'fromName': '',
+                          'toName': dev['fqdn'],
+                          'nodeIpAddress': dev['ipAddress'],
+                          'nodeTargetIpAddress': dev['ipAddress'],
+                          'childTasks': [],
+                          'parentTask': ''}]}
         self.log.debug('apply_configlets_to_device: saveTopology data:\n%s' %
-                       data)
-        self.clnt.post('/provisioning/saveTopology.do', data=data,
-                       timeout=self.request_timeout)
+                       data['data'])
+        self._add_temp_action(data)
+        return self._save_topology_v2([])
 
     def remove_configlets_from_device(self, app_name, dev, del_configlets):
         ''' Remove the configlets from the device.
@@ -421,29 +437,35 @@ class CvpApi(object):
 
         info = '%s Configlet Remove: from Device %s' % (app_name, dev['fqdn'])
         info_preview = '<b>Configlet Remove:</b> from Device' + dev['fqdn']
-        data = [{'id': 1,
-                 'info': info,
-                 'infoPreview': info_preview,
-                 'note': '',
-                 'action': 'associate',
-                 'nodeType': 'configlet',
-                 'nodeId': '',
-                 'configletList': keep_keys,
-                 'configletNamesList': keep_names,
-                 'ignoreConfigletNamesList': del_names,
-                 'ignoreConfigletList': del_keys,
-                 'toId': dev['systemMacAddress'],
-                 'toIdType': 'netelement',
-                 'fromId': '',
-                 'nodeName': '',
-                 'fromName': '',
-                 'toName': dev['fqdn'],
-                 'childTasks': [],
-                 'parentTask': ''}]
+        data = {'data': [{'id': 1,
+                          'info': info,
+                          'infoPreview': info_preview,
+                          'note': '',
+                          'action': 'associate',
+                          'nodeType': 'configlet',
+                          'nodeId': '',
+                          'configletList': keep_keys,
+                          'configletNamesList': keep_names,
+                          'ignoreConfigletNamesList': del_names,
+                          'ignoreConfigletList': del_keys,
+                          'configletBuilderList': [],
+                          'configletBuilderNamesList': [],
+                          'ignoreConfigletBuilderList': [],
+                          'ignoreConfigletBuilderNamesList': [],
+                          'toId': dev['systemMacAddress'],
+                          'toIdType': 'netelement',
+                          'fromId': '',
+                          'nodeName': '',
+                          'fromName': '',
+                          'toName': dev['fqdn'],
+                          'nodeIpAddress': dev['ipAddress'],
+                          'nodeTargetIpAddress': dev['ipAddress'],
+                          'childTasks': [],
+                          'parentTask': ''}]}
         self.log.debug('remove_configlets_from_device: saveTopology data:\n%s'
-                       % data)
-        self.clnt.post('/provisioning/saveTopology.do', data=data,
-                       timeout=self.request_timeout)
+                       % data['data'])
+        self._add_temp_action(data)
+        return self._save_topology_v2([])
 
     # pylint: disable=too-many-arguments
     def _container_op(self, container_name, container_key, parent_name,
@@ -459,25 +481,30 @@ class CvpApi(object):
         '''
         msg = ('%s container %s under container %s' %
                (operation, container_name, parent_name))
-        data = [{'id': 1,
-                 'info': msg,
-                 'infoPreview': msg,
-                 'note': '',
-                 'action': operation,
-                 'nodeType': 'container',
-                 'nodeId': container_key,
-                 'nodeName': container_name,
-                 'toId': parent_key,
-                 'toName': parent_name,
-                 'toIdType': 'container',
-                 'fromId': '',
-                 'fromName': '',
-                 'childTasks' : [],
-                 'parentTask' : ''}]
+        data = {'data': [{'id': 1,
+                          'info': msg,
+                          'infoPreview': msg,
+                          'action': operation,
+                          'nodeType': 'container',
+                          'nodeId': container_key,
+                          'toId': '',
+                          'fromId': '',
+                          'nodeName': container_name,
+                          'fromName': '',
+                          'toName': '',
+                          'childTasks': [],
+                          'parentTask': '',
+                          'toIdType': 'container'}]}
+        if operation is 'add':
+            data['data'][0]['toId'] = parent_key
+            data['data'][0]['toName'] = parent_name
+        elif operation is 'delete':
+            data['data'][0]['fromId'] = parent_key
+            data['data'][0]['fromName'] = parent_name
 
         # Perform the container operation
-        self.clnt.post('/provisioning/saveTopology.do', data=data,
-                       timeout=self.request_timeout)
+        self._add_temp_action(data)
+        return self._save_topology_v2([])
 
     def add_container(self, container_name, parent_name, parent_key):
         ''' Add the container to the specified parent.
@@ -489,7 +516,8 @@ class CvpApi(object):
         '''
         self.log.debug('add_container: container: %s parent: %s parent_key: %s'
                        % (container_name, parent_name, parent_key))
-        self._container_op(container_name, '', parent_name, parent_key, 'add')
+        return self._container_op(container_name, 'new_container', parent_name,
+                                  parent_key, 'add')
 
     def delete_container(self, container_name, container_key, parent_name,
                          parent_key):
@@ -505,8 +533,8 @@ class CvpApi(object):
                        'parent: %s parent_key: %s' %
                        (container_name, container_key, parent_name,
                         parent_key))
-        self._container_op(container_name, container_key, parent_name,
-                           parent_key, 'delete')
+        return self._container_op(container_name, container_key, parent_name,
+                                  parent_key, 'delete')
 
     def search_topology(self, query, start=0, end=0):
         ''' Search the topology for items matching the query parameter.
