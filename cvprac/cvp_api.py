@@ -337,11 +337,33 @@ class CvpApi(object):
                        timeout=self.request_timeout)
 
     def _add_temp_action(self, data):
+        ''' Adds temp action that requires a saveTopology call to take effect.
+
+            Args:
+                data (dict): a data dict with a specific format for the
+                    desired action.
+
+                    Base Ex: data = {'data': [{specific key/value pairs}]}
+        '''
         url = ('/provisioning/addTempAction.do?'
                'format=topology&queryParam=&nodeId=root')
         self.clnt.post(url, data=data, timeout=self.request_timeout)
 
     def _save_topology_v2(self, data):
+        ''' Confirms a previously created temp action.
+
+            Args:
+                data (list): a list that contains a dict with a specific
+                    format for the desired action. Our primary use case is for
+                    confirming existing temp actions so we most often send an
+                    empty list to confirm an existing temp action.
+
+            Returns:
+                response (dict): A dict that contains a status and a list of
+                    task ids created (if any).
+
+                    Ex: {u'data': {u'status': u'success', u'taskIds': []}}
+        '''
         url = '/provisioning/v2/saveTopology.do'
         return self.clnt.post(url, data=data, timeout=self.request_timeout)
 
@@ -352,6 +374,12 @@ class CvpApi(object):
                 app_name (str): The application name to use in info field.
                 dev (dict): The switch device dict
                 new_configlets (list): List of configlet name and key pairs
+
+            Returns:
+                response (dict): A dict that contains a status and a list of
+                    task ids created (if any).
+
+                    Ex: {u'data': {u'status': u'success', u'taskIds': [u'32']}}
         '''
         self.log.debug('apply_configlets_to_device: dev: %s names: %s' %
                        (dev, new_configlets))
@@ -409,6 +437,12 @@ class CvpApi(object):
                 app_name (str): The application name to use in info field.
                 dev (dict): The switch device dict
                 del_configlets (list): List of configlet name and key pairs
+
+            Returns:
+                response (dict): A dict that contains a status and a list of
+                    task ids created (if any).
+
+                    Ex: {u'data': {u'status': u'success', u'taskIds': [u'35']}}
         '''
         self.log.debug('remove_configlets_from_device: dev: %s names: %s' %
                        (dev, del_configlets))
@@ -478,6 +512,12 @@ class CvpApi(object):
                 parent_name (str): Parent container name
                 parent_key (str): Parent container key
                 operation (str): Container operation 'add' or 'delete'.
+
+            Returns:
+                response (dict): A dict that contains a status and a list of
+                    task ids created (if any).
+
+                    Ex: {u'data': {u'status': u'success', u'taskIds': []}}
         '''
         msg = ('%s container %s under container %s' %
                (operation, container_name, parent_name))
@@ -513,6 +553,12 @@ class CvpApi(object):
                 container_name (str): Container name
                 parent_name (str): Parent container name
                 parent_key (str): Parent container key
+
+            Returns:
+                response (dict): A dict that contains a status and a list of
+                    task ids created (if any).
+
+                    Ex: {u'data': {u'status': u'success', u'taskIds': []}}
         '''
         self.log.debug('add_container: container: %s parent: %s parent_key: %s'
                        % (container_name, parent_name, parent_key))
@@ -528,6 +574,12 @@ class CvpApi(object):
                 container_key (str): Container key
                 parent_name (str): Parent container name
                 parent_key (str): Parent container key
+
+            Returns:
+                response (dict): A dict that contains a status and a list of
+                    task ids created (if any).
+
+                    Ex: {u'data': {u'status': u'success', u'taskIds': []}}
         '''
         self.log.debug('delete_container: container: %s container_key: %s '
                        'parent: %s parent_key: %s' %
