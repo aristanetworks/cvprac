@@ -335,12 +335,28 @@ class TestCvpClient(DutSystemTest):
         # Check compliance
         self.test_api_check_compliance()
 
+    def test_api_get_containers(self):
+        ''' Verify get containers
+        '''
+        result = self.api.get_containers()
+        self.assertIsNotNone(result)
+        total = result['total']
+        self.assertEqual(len(result['data']), total)
+
     def test_api_containers(self):
-        ''' Verify add_container and delete_container
+        ''' Verify add_container, get_container_by_name and delete_container
         '''
         name = 'CVPRACTEST'
         parent = self.container
         self.api.add_container(name, parent['name'], parent['key'])
+
+        # Verify get container for exact container name returns only that
+        # container
+        container = self.api.get_containers_by_name(name)
+        self.assertEqual(container['total'], 1)
+        self.assertEqual(container['data'][0]['name'], name)
+
+        # Verify finding created container using search topology
         result = self.api.search_topology(name)
         self.assertEqual(len(result['containerList']), 1)
         container = result['containerList'][0]
@@ -416,6 +432,101 @@ class TestCvpClient(DutSystemTest):
         with self.assertRaises(Timeout):
             self.api.get_cvp_info()
         self.api.request_timeout = 30.0
+
+    def test_api_get_images(self):
+        ''' Verify get images
+        '''
+        result = self.api.get_images()
+        self.assertIsNotNone(result)
+        self.assertEqual(result['total'], len(result['data']))
+
+    def test_api_get_image_bundles(self):
+        ''' Verify get image bundles
+        '''
+        result = self.api.get_image_bundles()
+        self.assertIsNotNone(result)
+        self.assertEqual(result['total'], len(result['data']))
+
+    def test_api_get_image_bundle_by_name(self):
+        ''' Verify get image bundle by name
+        '''
+        bundles = self.api.get_image_bundles()
+        if bundles['total'] > 0:
+            bundle_name = bundles['data'][0]['name']
+            bundle = self.api.get_image_bundle_by_name(bundle_name)
+            self.assertEqual(bundle['name'], bundle_name)
+
+    def test_api_get_image_bundle_by_name_doesnt_exist(self):
+        ''' Verify get image bundle by name returns none if image bundle doesn't exist
+        '''
+        result = self.api.get_image_bundle_by_name('nonexistantimagebundle')
+        self.assertIsNone(result)
+
+    def test_api_apply_image_to_device(self):
+        ''' Verify task gets created when applying an image bundle to a device.
+            This test only runs if at least one image bundle and one device
+            exist in the CVP instance being used for testing.
+        '''
+        bundles = self.api.get_image_bundles()
+        devices = self.api.get_inventory()
+        # Verify at least one image bundle and device exist
+        if bundles['total'] > 0 and len(devices) > 0:
+            # Get device and image bundle
+            b = self.api.get_image_bundle_by_name(bundles['data'][0]['name'])
+            d = self.api.get_device_by_name(devices[0]['fqdn'])
+
+            # Apply image and verify at least one task id was created
+            result = self.api.apply_image_to_element(b, d)
+            self.assertIsNotNone(result)
+            self.assertEqual(result['data']['status'], 'success')
+            taskids = result['data']['taskIds']
+            self.assertIsNotNone(taskids)
+
+            # Verify task was created and in pending state
+            task = self.api.get_task_by_id(taskids[0])
+            self.assertIsNotNone(task)
+            self.assertEqual(task['workOrderUserDefinedStatus'], 'Pending')
+
+            # Cancel task and verify it is cancelled
+            self.api.cancel_task(taskids[0])
+            task = self.api.get_task_by_id(taskids[0])
+            self.assertIsNotNone(task)
+            self.assertEqual(task['workOrderUserDefinedStatus'], 'Cancelled')
+
+    def test_api_apply_remove_image_container(self):
+        ''' Verify image bundle is applied to container and removed.
+            Test only runs if at least one image bundle exists. Test creates
+            a container to apply bundle then removes the container at the end.
+        '''
+        bundles = self.api.get_image_bundles()
+        if bundles['total'] > 0:
+            # Create container, get container info, get bundle info
+            name = 'imagecontainer'
+            parent = self.container
+            self.api.add_container(name, parent['name'], parent['key'])
+            c = self.api.get_containers_by_name(name)
+            c = c['data'][0]
+            b = self.api.get_image_bundle_by_name(bundles['data'][0]['name'])
+            applied_container_count = b['appliedContainersCount']
+
+            # Apply bundle to new container
+            result = self.api.apply_image_to_element(b, c, container=True)
+            self.assertIsNotNone(result)
+            b = self.api.get_image_bundle_by_name(bundles['data'][0]['name'])
+            self.assertEqual(b['appliedContainersCount'],
+                             (applied_container_count + 1))
+
+            # Remove bundle from container
+            result = self.api.remove_image_from_container(b, c)
+            self.assertIsNotNone(result)
+            b = self.api.get_image_bundle_by_name(bundles['data'][0]['name'])
+            self.assertEqual(b['appliedContainersCount'],
+                             applied_container_count)
+
+            # Remove container
+            self.api.delete_container(name, c['key'], parent['name'],
+                                      parent['key'])
+
 
 if __name__ == '__main__':
     unittest.main()

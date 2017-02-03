@@ -266,6 +266,40 @@ class CvpApi(object):
             device = {}
         return device
 
+    def get_containers(self, start=0, end=0):
+        ''' Returns a list of all the containers.
+
+            Args:
+                start (int): Start index for the pagination.  Default is 0.
+                end (int): End index for the pagination.  If end index is 0
+                    then all the records will be returned.  Default is 0.
+
+            Returns:
+                containers (dict): The 'total' key contains the number of
+                containers, the 'data' key contains a list of the containers
+                with associated info.
+        '''
+        self.log.debug('Get list of containers')
+        return self.clnt.get('/inventory/add/searchContainers.do?'
+                             'startIndex=%d&endIndex=%d' % (start, end))
+
+    def get_containers_by_name(self, name):
+        ''' Returns a list of containers that contain 'name' in their name. To
+            get just one container the exact full name of that container needs
+            to be passed in.
+
+            Args:
+                name (str): String to search for in container names.
+
+            Returns:
+                containers (dict): The 'total' key contains the number of
+                containers, the 'data' key contains a list of the containers
+                with associated info.
+        '''
+        self.log.debug('Get info for container %s' % name)
+        return self.clnt.get('/inventory/add/searchContainers.do?'
+                             'queryparam=%s&startIndex=0&endIndex=0' % name)
+
     def get_configlets_by_device_id(self, mac, start=0, end=0):
         ''' Returns the list of configlets applied to a device.
 
@@ -626,3 +660,142 @@ class CvpApi(object):
         data = {'nodeId': node_key, 'nodeType': node_type}
         return self.clnt.post('/provisioning/checkCompliance.do', data=data,
                               timeout=self.request_timeout)
+
+    def get_images(self, start=0, end=0):
+        ''' Return a list of all images.
+
+            Args:
+                start (int): Start index for the pagination.  Default is 0.
+                end (int): End index for the pagination.  If end index is 0
+                    then all the records will be returned.  Default is 0.
+
+            Returns:
+                images (dict): The 'total' key contains the number of images,
+                    the 'data' key contains a list of images and their info.
+        '''
+        self.log.debug('Get info about images')
+        return self.clnt.get('/image/getImages.do?queryparam=&startIndex=%d&'
+                             'endIndex=%d' % (start, end),
+                             timeout=self.request_timeout)
+
+    def get_image_bundles(self, start=0, end=0):
+        ''' Return a list of all image bundles.
+
+            Args:
+                start (int): Start index for the pagination.  Default is 0.
+                end (int): End index for the pagination.  If end index is 0
+                    then all the records will be returned.  Default is 0.
+
+            Returns:
+                image bundles (dict): The 'total' key contains the number of
+                    image bundles, the 'data' key contains a list of image
+                    bundles and their info.
+        '''
+        self.log.debug('Get image bundles that can be applied to devices or'
+                       ' containers')
+        return self.clnt.get('/image/getImageBundles.do?queryparam=&'
+                             'startIndex=%d&endIndex=%d' % (start, end),
+                             timeout=self.request_timeout)
+
+    def get_image_bundle_by_name(self, name):
+        ''' Return a dict of info about an image bundle.
+
+            Args:
+                name (str): Name of image bundle to return info about.
+
+            Returns:
+                image bundle (dict): Dict of info specific to the image bundle
+                    requested or None if the name requested doesn't exist.
+        '''
+        self.log.debug('Attempt to get image bundle %s' % name)
+        try:
+            image = self.clnt.get('/image/getImageBundleByName.do?name=%s'
+                                  % name, timeout=self.request_timeout)
+        except CvpApiError as error:
+            # Catch an invalid task_id error and return None
+            if 'Entity does not exist' in str(error):
+                self.log.debug('Bundle with name %s does not exist' % name)
+                return None
+            raise error
+        return image
+
+    def apply_image_to_element(self, image, element, container=False):
+        ''' Apply an image bundle to a device or container.
+
+            Args:
+                image (dict): The image info.
+                element (dict): Info about element to apply image to. Dict
+                    can contain device info or container info.
+                container (bool): True if applying image to a container.
+                    Element dict will be container info when True.
+
+            Returns:
+                response (dict): A dict that contains a status and a list of
+                    task ids created (if any). Image updates will not run until
+                    task or tasks are executed.
+
+                    Ex: {u'data': {u'status': u'success', u'taskIds': [u'32']}}
+        '''
+        if container:
+            to_name = element['name']
+            to_id_type = 'container'
+        else:
+            to_name = element['fqdn']
+            to_id_type = 'netelement'
+        self.log.debug('Attempt to apply %s to %s %s' % (image['name'],
+                                                         to_id_type, to_name))
+        info = 'Apply image: %s to %s %s' % (image['name'], to_id_type,
+                                             to_name)
+        data = {'data': [{'id': 1,
+                          'info': info,
+                          'infoPreview': info,
+                          'note': '',
+                          'action': 'associate',
+                          'nodeType': 'imagebundle',
+                          'nodeId': image['id'],
+                          'toId': element['key'],
+                          'toIdType': to_id_type,
+                          'fromId': '',
+                          'nodeName': image['name'],
+                          'fromName': '',
+                          'toName': to_name,
+                          'childTasks': [],
+                          'parentTask': ''}]}
+        self._add_temp_action(data)
+        return self._save_topology_v2([])
+
+    def remove_image_from_container(self, image, container):
+        ''' Remove the image bundle from the specified container.
+
+            Args:
+                image (dict): The image info.
+                container (dict): The container info.
+
+            Returns:
+                response (dict): A dict that contains a status and a list of
+                    task ids created (if any).
+
+                    Ex: {u'data': {u'status': u'success', u'taskIds': [u'32']}}
+        '''
+        self.log.debug('Attempt to remove %s from %s' % (image['name'],
+                                                         container['name']))
+        info = 'Remove image: %s from %s' % (image['name'], container['name'])
+        data = {'data': [{'id': 1,
+                          'info': info,
+                          'infoPreview': info,
+                          'note': '',
+                          'action': 'associate',
+                          'nodeType': 'imagebundle',
+                          'nodeId': '',
+                          'toId': container['key'],
+                          'toIdType': 'container',
+                          'fromId': '',
+                          'nodeName': '',
+                          'fromName': '',
+                          'toName': container['name'],
+                          'ignoreNodeId': image['id'],
+                          'ignodeNodeName': image['name'],
+                          'childTasks': [],
+                          'parentTask': ''}]}
+        self._add_temp_action(data)
+        return self._save_topology_v2([])
