@@ -352,9 +352,9 @@ class TestCvpClient(DutSystemTest):
 
         # Verify get container for exact container name returns only that
         # container
-        container = self.api.get_containers_by_name(name)
-        self.assertEqual(container['total'], 1)
-        self.assertEqual(container['data'][0]['name'], name)
+        container = self.api.get_container_by_name(name)
+        self.assertIsNotNone(container)
+        self.assertEqual(container['name'], name)
 
         # Verify finding created container using search topology
         result = self.api.search_topology(name)
@@ -476,7 +476,7 @@ class TestCvpClient(DutSystemTest):
             d = self.api.get_device_by_name(devices[0]['fqdn'])
 
             # Apply image and verify at least one task id was created
-            result = self.api.apply_image_to_element(b, d)
+            result = self.api.apply_image_to_device(b, d)
             self.assertIsNotNone(result)
             self.assertEqual(result['data']['status'], 'success')
             taskids = result['data']['taskIds']
@@ -504,13 +504,12 @@ class TestCvpClient(DutSystemTest):
             name = 'imagecontainer'
             parent = self.container
             self.api.add_container(name, parent['name'], parent['key'])
-            c = self.api.get_containers_by_name(name)
-            c = c['data'][0]
+            c = self.api.get_container_by_name(name)
             b = self.api.get_image_bundle_by_name(bundles['data'][0]['name'])
             applied_container_count = b['appliedContainersCount']
 
             # Apply bundle to new container
-            result = self.api.apply_image_to_element(b, c, container=True)
+            result = self.api.apply_image_to_container(b, c)
             self.assertIsNotNone(result)
             b = self.api.get_image_bundle_by_name(bundles['data'][0]['name'])
             self.assertEqual(b['appliedContainersCount'],

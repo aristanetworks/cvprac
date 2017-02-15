@@ -283,22 +283,23 @@ class CvpApi(object):
         return self.clnt.get('/inventory/add/searchContainers.do?'
                              'startIndex=%d&endIndex=%d' % (start, end))
 
-    def get_containers_by_name(self, name):
-        ''' Returns a list of containers that contain 'name' in their name. To
-            get just one container the exact full name of that container needs
-            to be passed in.
+    def get_container_by_name(self, name):
+        ''' Returns a container that exactly matches the name.
 
             Args:
                 name (str): String to search for in container names.
 
             Returns:
-                containers (dict): The 'total' key contains the number of
-                containers, the 'data' key contains a list of the containers
-                with associated info.
+                container (dict): Container info in dictionary format or None
         '''
         self.log.debug('Get info for container %s' % name)
-        return self.clnt.get('/inventory/add/searchContainers.do?'
-                             'queryparam=%s&startIndex=0&endIndex=0' % name)
+        conts = self.clnt.get('/inventory/add/searchContainers.do?'
+                              'queryparam=%s&startIndex=0&endIndex=0' % name)
+        if conts['total'] > 0 and conts['data']:
+            for cont in conts['data']:
+                if cont['name'] == name:
+                    return cont
+        return None
 
     def get_configlets_by_device_id(self, mac, start=0, end=0):
         ''' Returns the list of configlets applied to a device.
@@ -719,15 +720,12 @@ class CvpApi(object):
             raise error
         return image
 
-    def apply_image_to_element(self, image, element, container=False):
-        ''' Apply an image bundle to a device or container.
+    def apply_image_to_device(self, image, device):
+        ''' Apply an image bundle to a device
 
             Args:
                 image (dict): The image info.
-                element (dict): Info about element to apply image to. Dict
-                    can contain device info or container info.
-                container (bool): True if applying image to a container.
-                    Element dict will be container info when True.
+                device (dict): Info about device to apply image to.
 
             Returns:
                 response (dict): A dict that contains a status and a list of
@@ -736,16 +734,46 @@ class CvpApi(object):
 
                     Ex: {u'data': {u'status': u'success', u'taskIds': [u'32']}}
         '''
-        if container:
-            to_name = element['name']
-            to_id_type = 'container'
-        else:
-            to_name = element['fqdn']
-            to_id_type = 'netelement'
+        return self.apply_image_to_element(image, device, device['fqdn'],
+                                           'netelement')
+
+    def apply_image_to_container(self, image, container):
+        ''' Apply an image bundle to a container
+
+            Args:
+                image (dict): The image info.
+                container (dict): Info about container to apply image to.
+
+            Returns:
+                response (dict): A dict that contains a status and a list of
+                    task ids created (if any). Image updates will not run until
+                    task or tasks are executed.
+
+                    Ex: {u'data': {u'status': u'success', u'taskIds': [u'32']}}
+        '''
+        return self.apply_image_to_element(image, container, container['name'],
+                                           'container')
+
+    def apply_image_to_element(self, image, element, name, id_type):
+        ''' Apply an image bundle to a device or container.
+
+            Args:
+                image (dict): The image info.
+                element (dict): Info about element to apply image to. Dict
+                    can contain device info or container info.
+                name (str): Name of element image is being applied to.
+                id_type (str): Id type of element image is being applied to.
+
+            Returns:
+                response (dict): A dict that contains a status and a list of
+                    task ids created (if any). Image updates will not run until
+                    task or tasks are executed.
+
+                    Ex: {u'data': {u'status': u'success', u'taskIds': [u'32']}}
+        '''
         self.log.debug('Attempt to apply %s to %s %s' % (image['name'],
-                                                         to_id_type, to_name))
-        info = 'Apply image: %s to %s %s' % (image['name'], to_id_type,
-                                             to_name)
+                                                         id_type, name))
+        info = 'Apply image: %s to %s %s' % (image['name'], id_type, name)
         data = {'data': [{'id': 1,
                           'info': info,
                           'infoPreview': info,
@@ -754,11 +782,11 @@ class CvpApi(object):
                           'nodeType': 'imagebundle',
                           'nodeId': image['id'],
                           'toId': element['key'],
-                          'toIdType': to_id_type,
+                          'toIdType': id_type,
                           'fromId': '',
                           'nodeName': image['name'],
                           'fromName': '',
-                          'toName': to_name,
+                          'toName': name,
                           'childTasks': [],
                           'parentTask': ''}]}
         self._add_temp_action(data)
