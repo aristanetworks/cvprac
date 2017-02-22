@@ -402,7 +402,8 @@ class CvpApi(object):
         url = '/provisioning/v2/saveTopology.do'
         return self.clnt.post(url, data=data, timeout=self.request_timeout)
 
-    def apply_configlets_to_device(self, app_name, dev, new_configlets):
+    def apply_configlets_to_device(self, app_name, dev, new_configlets,
+                                   create_task=True):
         ''' Apply the configlets to the device.
 
             Args:
@@ -463,9 +464,11 @@ class CvpApi(object):
         self.log.debug('apply_configlets_to_device: saveTopology data:\n%s' %
                        data['data'])
         self._add_temp_action(data)
-        return self._save_topology_v2([])
+        if create_task:
+            return self._save_topology_v2([])
 
-    def remove_configlets_from_device(self, app_name, dev, del_configlets):
+    def remove_configlets_from_device(self, app_name, dev, del_configlets,
+                                      create_task=True):
         ''' Remove the configlets from the device.
 
             Args:
@@ -534,7 +537,8 @@ class CvpApi(object):
         self.log.debug('remove_configlets_from_device: saveTopology data:\n%s'
                        % data['data'])
         self._add_temp_action(data)
-        return self._save_topology_v2([])
+        if create_task:
+            return self._save_topology_v2([])
 
     # pylint: disable=too-many-arguments
     def _container_op(self, container_name, container_key, parent_name,
@@ -720,7 +724,7 @@ class CvpApi(object):
             raise error
         return image
 
-    def apply_image_to_device(self, image, device):
+    def apply_image_to_device(self, image, device, create_task=True):
         ''' Apply an image bundle to a device
 
             Args:
@@ -735,9 +739,9 @@ class CvpApi(object):
                     Ex: {u'data': {u'status': u'success', u'taskIds': [u'32']}}
         '''
         return self.apply_image_to_element(image, device, device['fqdn'],
-                                           'netelement')
+                                           'netelement', create_task)
 
-    def apply_image_to_container(self, image, container):
+    def apply_image_to_container(self, image, container, create_task=True):
         ''' Apply an image bundle to a container
 
             Args:
@@ -752,9 +756,10 @@ class CvpApi(object):
                     Ex: {u'data': {u'status': u'success', u'taskIds': [u'32']}}
         '''
         return self.apply_image_to_element(image, container, container['name'],
-                                           'container')
+                                           'container', create_task)
 
-    def apply_image_to_element(self, image, element, name, id_type):
+    def apply_image_to_element(self, image, element, name, id_type,
+                               create_task):
         ''' Apply an image bundle to a device or container.
 
             Args:
@@ -790,7 +795,8 @@ class CvpApi(object):
                           'childTasks': [],
                           'parentTask': ''}]}
         self._add_temp_action(data)
-        return self._save_topology_v2([])
+        if create_task:
+            return self._save_topology_v2([])
 
     def remove_image_from_container(self, image, container):
         ''' Remove the image bundle from the specified container.
@@ -826,4 +832,61 @@ class CvpApi(object):
                           'childTasks': [],
                           'parentTask': ''}]}
         self._add_temp_action(data)
+        return self._save_topology_v2([])
+
+    def deploy_device(self, device, container, configlets=None, image=None):
+        ''' Move a device from the undefined container to a target container.
+            Optionally apply device-specific configlets and an image.
+
+            Args:
+                device (dict): unique key for the device
+                container (dict): container info
+                configlets (list): list of dicts with configlet key/name pairs
+                image (dict): optional image info
+
+            Returns:
+                response (dict): A dict that contains a status and a list of
+                    task ids created (if any).
+
+                    Ex: {u'data': {u'status': u'success', u'taskIds': [u'32']}}
+        '''
+        info = 'Deploy device %s to container %s' % (device['fqdn'],
+                                                     container['name'])
+        self.log.debug(info)
+        # Add action for moving device to specified container
+        data = {'data': [{'id': 1,
+                          'info': info,
+                          'infoPreview': info,
+                          'action': 'update',
+                          'nodeType': 'netelement',
+                          'nodeId': device['key'],
+                          'toId': container['key'],
+                          'fromId': 'undefined_container',
+                          'nodeName': device['fqdn'],
+                          'toName': container['name'],
+                          'toIdType': 'container',
+                          'childTasks': [],
+                          'parentTask': ''}]}
+        try:
+            self._add_temp_action(data)
+        except CvpApiError as e:
+            if 'Data already exists' in e:
+                self.log.debug('Device %s already in container %s'
+                               % (device['fqdn'], container['name']))
+                pass
+
+        # Get proposed configlets device will inherit from container it is
+        # being moved to.
+        prop_conf = self.clnt.get('/provisioning/getTempConfigsByNetElementId.do?'
+                                  'netElementId=%s' % device['key'])
+        new_configlets = prop_conf['proposedConfiglets']
+        if configlets:
+            new_configlets.extend(configlets)
+        self.apply_configlets_to_device('deploy_device', device,
+                                        new_configlets, create_task=False)
+
+        # Apply image to the device
+        if image:
+            self.apply_image_to_device(image, device, create_task=False)
+
         return self._save_topology_v2([])
