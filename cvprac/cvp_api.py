@@ -410,6 +410,8 @@ class CvpApi(object):
                 app_name (str): The application name to use in info field.
                 dev (dict): The switch device dict
                 new_configlets (list): List of configlet name and key pairs
+                create_task (bool): Determines whether or not to execute a save
+                    and create the tasks (if any)
 
             Returns:
                 response (dict): A dict that contains a status and a list of
@@ -475,6 +477,8 @@ class CvpApi(object):
                 app_name (str): The application name to use in info field.
                 dev (dict): The switch device dict
                 del_configlets (list): List of configlet name and key pairs
+                create_task (bool): Determines whether or not to execute a save
+                    and create the tasks (if any)
 
             Returns:
                 response (dict): A dict that contains a status and a list of
@@ -627,6 +631,51 @@ class CvpApi(object):
         return self._container_op(container_name, container_key, parent_name,
                                   parent_key, 'delete')
 
+    def move_device_to_container(self, app_name, device, container,
+                                 create_task=True):
+        ''' Add the container to the specified parent.
+
+            Args:
+                app_name (str): String to specify info/signifier of calling app
+                device (dict): Device info
+                container (dict): Container info
+                create_task (bool): Determines whether or not to execute a save
+                    and create the tasks (if any)
+
+            Returns:
+                response (dict): A dict that contains a status and a list of
+                    task ids created (if any).
+
+                    Ex: {u'data': {u'status': u'success', u'taskIds': []}}
+        '''
+        info = '%s moving device %s to container %s' % (app_name,
+                                                        device['fqdn'],
+                                                        container['name'])
+        self.log.debug('Attempting to move device %s to container %s' %
+                       (device['fqdn'], container['name']))
+        data = {'data': [{'id': 1,
+                          'info': info,
+                          'infoPreview': info,
+                          'action': 'update',
+                          'nodeType': 'netelement',
+                          'nodeId': device['key'],
+                          'toId': container['key'],
+                          'fromId': 'undefined_container',
+                          'nodeName': device['fqdn'],
+                          'toName': container['name'],
+                          'toIdType': 'container',
+                          'childTasks': [],
+                          'parentTask': ''}]}
+        try:
+            self._add_temp_action(data)
+        except CvpApiError as e:
+            if 'Data already exists' in e:
+                self.log.debug('Device %s already in container %s'
+                               % (device['fqdn'], container))
+                pass
+        if create_task:
+            return self._save_topology_v2([])
+
     def search_topology(self, query, start=0, end=0):
         ''' Search the topology for items matching the query parameter.
 
@@ -730,6 +779,8 @@ class CvpApi(object):
             Args:
                 image (dict): The image info.
                 device (dict): Info about device to apply image to.
+                create_task (bool): Determines whether or not to execute a save
+                    and create the tasks (if any)
 
             Returns:
                 response (dict): A dict that contains a status and a list of
@@ -747,6 +798,8 @@ class CvpApi(object):
             Args:
                 image (dict): The image info.
                 container (dict): Info about container to apply image to.
+                create_task (bool): Determines whether or not to execute a save
+                    and create the tasks (if any)
 
             Returns:
                 response (dict): A dict that contains a status and a list of
@@ -759,7 +812,7 @@ class CvpApi(object):
                                            'container', create_task)
 
     def apply_image_to_element(self, image, element, name, id_type,
-                               create_task):
+                               create_task=True):
         ''' Apply an image bundle to a device or container.
 
             Args:
@@ -768,6 +821,8 @@ class CvpApi(object):
                     can contain device info or container info.
                 name (str): Name of element image is being applied to.
                 id_type (str): Id type of element image is being applied to.
+                create_task (bool): Determines whether or not to execute a save
+                    and create the tasks (if any)
 
             Returns:
                 response (dict): A dict that contains a status and a list of
@@ -840,9 +895,9 @@ class CvpApi(object):
 
             Args:
                 device (dict): unique key for the device
-                container (dict): container info
+                container (str): name of container to move device to
                 configlets (list): list of dicts with configlet key/name pairs
-                image (dict): optional image info
+                image (str): name of image to apply to device
 
             Returns:
                 response (dict): A dict that contains a status and a list of
@@ -850,31 +905,12 @@ class CvpApi(object):
 
                     Ex: {u'data': {u'status': u'success', u'taskIds': [u'32']}}
         '''
-        info = 'Deploy device %s to container %s' % (device['fqdn'],
-                                                     container['name'])
+        info = 'Deploy device %s to container %s' % (device['fqdn'], container)
         self.log.debug(info)
+        container_info = self.get_container_by_name(container)
         # Add action for moving device to specified container
-        data = {'data': [{'id': 1,
-                          'info': info,
-                          'infoPreview': info,
-                          'action': 'update',
-                          'nodeType': 'netelement',
-                          'nodeId': device['key'],
-                          'toId': container['key'],
-                          'fromId': 'undefined_container',
-                          'nodeName': device['fqdn'],
-                          'toName': container['name'],
-                          'toIdType': 'container',
-                          'childTasks': [],
-                          'parentTask': ''}]}
-        try:
-            self._add_temp_action(data)
-        except CvpApiError as e:
-            if 'Data already exists' in e:
-                self.log.debug('Device %s already in container %s'
-                               % (device['fqdn'], container['name']))
-                pass
-
+        self.move_device_to_container('Deploy device', device, container_info,
+                                      create_task=False)
         # Get proposed configlets device will inherit from container it is
         # being moved to.
         prop_conf = self.clnt.get('/provisioning/getTempConfigsByNetElementId.do?'
@@ -884,9 +920,9 @@ class CvpApi(object):
             new_configlets.extend(configlets)
         self.apply_configlets_to_device('deploy_device', device,
                                         new_configlets, create_task=False)
-
         # Apply image to the device
         if image:
-            self.apply_image_to_device(image, device, create_task=False)
+            image_info = self.get_image_bundle_by_name(image)
+            self.apply_image_to_device(image_info, device, create_task=False)
 
         return self._save_topology_v2([])
