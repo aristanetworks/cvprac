@@ -348,6 +348,7 @@ class TestCvpClient(DutSystemTest):
         '''
         name = 'CVPRACTEST'
         parent = self.container
+        # Verify create container
         self.api.add_container(name, parent['name'], parent['key'])
 
         # Verify get container for exact container name returns only that
@@ -363,6 +364,29 @@ class TestCvpClient(DutSystemTest):
         self.assertEqual(container['name'], name)
         key = container['key']
 
+        # Verify move device to container
+        device = self.api.get_inventory()[0]
+        orig_cont = self.api.get_parent_container_for_device(
+            device['key'])
+        if orig_cont['key'] != 'undefined_container':
+            task = self.api.move_device_to_container(
+                'test', device, container)['data']['taskIds'][0]
+            self.api.cancel_task(task)
+            curr_cont = self.api.get_parent_container_for_device(device['key'])
+            self.assertEqual(curr_cont['key'], key)
+            device = self.api.get_device_by_name(device['fqdn'])
+            if 'parentContainerId' in device:
+                self.assertEqual(device['parentContainerId'], key)
+            task = self.api.move_device_to_container(
+                'test', device, orig_cont)['data']['taskIds'][0]
+            self.api.cancel_task(task)
+            curr_cont = self.api.get_parent_container_for_device(device['key'])
+            self.assertEqual(curr_cont['key'], orig_cont['key'])
+            device = self.api.get_device_by_name(device['fqdn'])
+            if 'parentContainerId' in device:
+                self.assertEqual(device['parentContainerId'], orig_cont['key'])
+
+        # Verify delete container
         self.api.delete_container(name, key, parent['name'], parent['key'])
         result = self.api.search_topology(name)
         self.assertEqual(len(result['containerList']), 0)
