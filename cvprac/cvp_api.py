@@ -234,7 +234,7 @@ class CvpApi(object):
     def get_inventory(self, start=0, end=0):
         ''' Returns the a dict of the net elements known to CVP.
 
-            Returns:
+            Args:
                 start (int): The first inventory entry to return.  Default is 0
                 end (int): The last inventory entry to return.  Default is 0
                     which means to return all inventory entries.  Can be a
@@ -245,6 +245,21 @@ class CvpApi(object):
                              'queryparam=&startIndex=%d&endIndex=%d' %
                              (start, end), timeout=self.request_timeout)
         return data['netElementList']
+
+    def get_device_container_map(self, start=0, end=0):
+        ''' Returns the a dict of the device to parent container mapping.
+
+            Args:
+                start (int): The first inventory entry to return.  Default is 0
+                end (int): The last inventory entry to return.  Default is 0
+                    which means to return all inventory entries.  Can be a
+                    large number to indicate the last inventory entry.
+        '''
+        self.log.debug('get_device_container_map: called')
+        data = self.clnt.get('/inventory/getInventory.do?'
+                             'queryparam=&startIndex=%d&endIndex=%d' %
+                             (start, end), timeout=self.request_timeout)
+        return data['containerList']
 
     def get_device_by_name(self, fqdn):
         ''' Returns the net element device dict for the devices fqdn name.
@@ -293,6 +308,8 @@ class CvpApi(object):
                 container (dict): Container info in dictionary format or None
         '''
         self.log.debug('Get info for container %s' % name)
+        if name == 'Undefined':
+            return {'name': 'Undefined', 'key': 'undefined_container'}
         conts = self.clnt.get('/inventory/add/searchContainers.do?'
                               'queryparam=%s&startIndex=0&endIndex=0' % name)
         if conts['total'] > 0 and conts['data']:
@@ -631,6 +648,20 @@ class CvpApi(object):
         return self._container_op(container_name, container_key, parent_name,
                                   parent_key, 'delete')
 
+    def get_parent_container_for_device(self, device_mac):
+        ''' Add the container to the specified parent.
+
+            Args:
+                device_mac (str): Device mac address
+
+            Returns:
+                response (dict): A dict that contains the parent container info
+        '''
+        device_container_map = self.get_device_container_map()
+        if device_container_map[device_mac]:
+            return self.get_container_by_name(device_container_map[device_mac])
+        return None
+
     def move_device_to_container(self, app_name, device, container,
                                  create_task=True):
         ''' Add the container to the specified parent.
@@ -651,8 +682,13 @@ class CvpApi(object):
         info = '%s moving device %s to container %s' % (app_name,
                                                         device['fqdn'],
                                                         container['name'])
-        self.log.debug('Attempting to move device %s to container %s' %
-                       (device['fqdn'], container['name']))
+        self.log.debug('Attempting to move device %s to container %s'
+                       % (device['fqdn'], container['name']))
+        if 'parentContainerId' in device:
+            from_id = device['parentContainerId']
+        else:
+            parent_cont = self.get_parent_container_for_device(device['key'])
+            from_id = parent_cont['key']
         data = {'data': [{'id': 1,
                           'info': info,
                           'infoPreview': info,
@@ -660,7 +696,7 @@ class CvpApi(object):
                           'nodeType': 'netelement',
                           'nodeId': device['key'],
                           'toId': container['key'],
-                          'fromId': 'undefined_container',
+                          'fromId': from_id,
                           'nodeName': device['fqdn'],
                           'toName': container['name'],
                           'toIdType': 'container',
