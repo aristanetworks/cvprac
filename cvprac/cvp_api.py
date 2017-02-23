@@ -658,7 +658,7 @@ class CvpApi(object):
                 response (dict): A dict that contains the parent container info
         '''
         device_container_map = self.get_device_container_map()
-        if device_container_map[device_mac]:
+        if device_mac in device_container_map:
             return self.get_container_by_name(device_container_map[device_mac])
         return None
 
