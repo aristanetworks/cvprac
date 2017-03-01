@@ -246,20 +246,19 @@ class CvpApi(object):
                              (start, end), timeout=self.request_timeout)
         return data['netElementList']
 
-    def get_device_container_map(self, start=0, end=0):
-        ''' Returns the a dict of the device to parent container mapping.
+    def get_devices_in_container(self, name):
+        ''' Returns a dict of the devices under the named container.
 
             Args:
-                start (int): The first inventory entry to return.  Default is 0
-                end (int): The last inventory entry to return.  Default is 0
-                    which means to return all inventory entries.  Can be a
-                    large number to indicate the last inventory entry.
+                name (str): The name of the container to get devices from
         '''
-        self.log.debug('get_device_container_map: called')
+        self.log.debug('get_devices_in_container: called')
         data = self.clnt.get('/inventory/getInventory.do?'
-                             'queryparam=&startIndex=%d&endIndex=%d' %
-                             (start, end), timeout=self.request_timeout)
-        return data['containerList']
+                             'queryparam=%s&startIndex=0&endIndex=0' % name,
+                             timeout=self.request_timeout)
+        if data['total'] > 0:
+            return data['containerList']
+        return None
 
     def get_device_by_name(self, fqdn):
         ''' Returns the net element device dict for the devices fqdn name.
@@ -308,12 +307,10 @@ class CvpApi(object):
                 container (dict): Container info in dictionary format or None
         '''
         self.log.debug('Get info for container %s' % name)
-        if name == 'Undefined':
-            return {'name': 'Undefined', 'key': 'undefined_container'}
-        conts = self.clnt.get('/inventory/add/searchContainers.do?'
-                              'queryparam=%s&startIndex=0&endIndex=0' % name)
-        if conts['total'] > 0 and conts['data']:
-            for cont in conts['data']:
+        conts = self.clnt.get('/provisioning/searchTopology.do?queryParam=%s'
+                              '&startIndex=0&endIndex=0' % name)
+        if conts['total'] > 0 and conts['containerList']:
+            for cont in conts['containerList']:
                 if cont['name'] == name:
                     return cont
         return None
@@ -657,9 +654,14 @@ class CvpApi(object):
             Returns:
                 response (dict): A dict that contains the parent container info
         '''
-        device_container_map = self.get_device_container_map()
-        if device_mac in device_container_map:
-            return self.get_container_by_name(device_container_map[device_mac])
+        self.log.debug('get_parent_container_for_device: called for %s'
+                       % device_mac)
+        data = self.clnt.get('/provisioning/searchTopology.do?'
+                             'queryParam=%s&startIndex=0&endIndex=0'
+                             % device_mac, timeout=self.request_timeout)
+        if data['total'] > 0:
+            cont_name = data['netElementContainerList'][0]['containerName']
+            return self.get_container_by_name(cont_name)
         return None
 
     def move_device_to_container(self, app_name, device, container,
