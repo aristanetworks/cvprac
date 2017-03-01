@@ -257,7 +257,7 @@ class CvpApi(object):
                              'queryparam=%s&startIndex=0&endIndex=0' % name,
                              timeout=self.request_timeout)
         if data['total'] > 0:
-            return data['containerList']
+            return data['netElementList']
         return None
 
     def get_device_by_name(self, fqdn):
