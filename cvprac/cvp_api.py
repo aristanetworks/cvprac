@@ -921,7 +921,7 @@ class CvpApi(object):
                           'fromName': '',
                           'toName': container['name'],
                           'ignoreNodeId': image['id'],
-                          'ignodeNodeName': image['name'],
+                          'ignoreNodeName': image['name'],
                           'childTasks': [],
                           'parentTask': ''}]}
         self._add_temp_action(data)
