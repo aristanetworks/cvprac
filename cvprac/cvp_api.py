@@ -382,8 +382,8 @@ class CvpApi(object):
 
         # Update the configlet
         body = {'config': config, 'key': key, 'name': name}
-        self.clnt.post('/configlet/updateConfiglet.do', data=body,
-                       timeout=self.request_timeout)
+        return self.clnt.post('/configlet/updateConfiglet.do', data=body,
+                              timeout=self.request_timeout)
 
     def _add_temp_action(self, data):
         ''' Adds temp action that requires a saveTopology call to take effect.

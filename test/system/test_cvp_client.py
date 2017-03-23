@@ -40,6 +40,7 @@
 
        Be sure to create the same account on the switch used for testing.
 '''
+import logging
 import os
 import sys
 import unittest
@@ -97,6 +98,7 @@ class TestCvpClient(DutSystemTest):
         '''
         clnt = CvpClient()
         self.assertIsNotNone(clnt)
+        self.assertEqual(clnt.log.getEffectiveLevel(), logging.INFO)
 
     def test_clnt_init_syslog(self):
         ''' Verify CvpClient init with syslog argument
@@ -111,6 +113,23 @@ class TestCvpClient(DutSystemTest):
         clnt = CvpClient(syslog=True, logger='cvpracTmp', filename=logfile)
         self.assertIsNotNone(clnt)
         os.remove(logfile)
+
+    def test_clnt_init_log_level(self):
+        ''' Verify CvpClient init with setting log level
+        '''
+        clnt = CvpClient(log_level='DEBUG')
+        self.assertIsNotNone(clnt)
+        self.assertEqual(clnt.log.getEffectiveLevel(), logging.DEBUG)
+
+    def test_set_log_level(self):
+        self.clnt.set_log_level('DEBUG')
+        self.assertEqual(self.clnt.log.getEffectiveLevel(), logging.DEBUG)
+        self.clnt.set_log_level('INFO')
+        self.assertEqual(self.clnt.log.getEffectiveLevel(), logging.INFO)
+
+    def test_set_log_level_invalid_value(self):
+        self.clnt.set_log_level('blahblah')
+        self.assertEqual(self.clnt.log.getEffectiveLevel(), logging.INFO)
 
     def test_connect_http_good(self):
         ''' Verify http connection succeeds to a single CVP node

@@ -111,7 +111,8 @@ class CvpClient(object):
     # CVP node.
     NUM_RETRY_REQUESTS = 3
 
-    def __init__(self, logger='cvprac', syslog=False, filename=None):
+    def __init__(self, logger='cvprac', syslog=False, filename=None,
+                 log_level='INFO'):
         ''' Initialize the client and configure logging.  Either syslog, file
             logging, both, or none can be enabled.  If neither syslog
             nor filename is specified then no logging will be performed.
@@ -122,6 +123,7 @@ class CvpClient(object):
                     False.
                 filename (str): Log to the file specified by filename. Default
                     is None.
+                log_level (str): Log level to use for logger. Default is INFO.
         '''
         self.authdata = None
         self.connect_timeout = None
@@ -136,11 +138,11 @@ class CvpClient(object):
         self.url_prefix = None
 
         # Save proper headers
-        self.headers = {'Accept' : 'application/json',
-                        'Content-Type' : 'application/json'}
+        self.headers = {'Accept': 'application/json',
+                        'Content-Type': 'application/json'}
 
         self.log = logging.getLogger(logger)
-        self.log.setLevel(logging.INFO)
+        self.set_log_level(log_level)
         if syslog:
             # Enables sending logging messages to the local syslog server.
             self.log.addHandler(SysLogHandler())
@@ -153,6 +155,19 @@ class CvpClient(object):
 
         # Instantiate the CvpApi class
         self.api = CvpApi(self)
+
+    def set_log_level(self, log_level='INFO'):
+        ''' Set log level for logger. Defaults to INFO if no level passed in or
+            if an invalid level is passed in.
+
+            Args:
+                log_level (str): Log level to use for logger. Default is INFO.
+        '''
+        log_level = log_level.upper()
+        if log_level not in ['NOTSET', 'DEBUG', 'INFO',
+                             'WARNING', 'ERROR', 'CRITICAL']:
+            log_level = 'INFO'
+        self.log.setLevel(getattr(logging, log_level))
 
     def connect(self, nodes, username, password, connect_timeout=10,
                 protocol='http', port=None):
