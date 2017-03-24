@@ -376,6 +376,9 @@ class CvpApi(object):
                 config (str): Switch config statements
                 key (str): Configlet key
                 name (str): Configlet name
+
+            Returns:
+                data (dict): Contains success or failure message
         '''
         self.log.debug('update_configlet: config: %s key: %s name: %s' %
                        (config, key, name))
