@@ -33,7 +33,7 @@ RPMNVR = "$(NAME)-$(VERSION)-$(RPMRELEASE)"
 PEP8_IGNORE = E302,E203,E261
 ########################################################
 
-all: clean check pep8 pyflakes pylint tests coverage_report
+all: clean check pep8 pyflakes pylint tests
 
 check:
 	check-manifest
@@ -60,7 +60,7 @@ pylint:
 systest: clean
 	$(COVERAGE) run --source $(NAME) -m unittest discover test/system -v
 
-tests: systest
+tests: systest coverage_report
 
 rpmcommon: sdist
 	@mkdir -p rpmbuild
