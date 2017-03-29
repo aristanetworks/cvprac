@@ -5,3 +5,5 @@ include *.txt
 include LICENSE
 recursive-include test *.py
 recursive-include test *.yaml
+exclude Jenkinsfile
+exclude pre-commit.sh
