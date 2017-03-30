@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2016, Arista Networks, Inc.
+# Copyright (c) 2017, Arista Networks, Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -32,5 +32,5 @@
 ''' RESTful API Client class for Cloudvision(R) Portal
 '''
 
-__version__ = '0.6.0'
+__version__ = '0.7.0'
 __author__ = 'Arista Networks, Inc.'

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2016, Arista Networks, Inc.
+# Copyright (c) 2017, Arista Networks, Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -713,7 +713,6 @@ class CvpApi(object):
             if 'Data already exists' in e:
                 self.log.debug('Device %s already in container %s'
                                % (device['fqdn'], container))
-                pass
         if create_task:
             return self._save_topology_v2([])
 
