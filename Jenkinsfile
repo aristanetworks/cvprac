@@ -89,6 +89,25 @@ pipeline {
             }
         }
 
+        stage ('Docs') {
+            steps {
+                sh """
+                    source venv/bin/activate
+                    PYTHONPATH=. pdoc --html --html-dir docs --overwrite cvprac
+                """
+            }
+
+            post {
+                always {
+                    publishHTML target: [
+                        reportDir: 'docs/cvprac',
+                        reportFiles: 'index.html',
+                        reportName: 'Module Documentation'
+                    ]
+                }
+            }
+        }
+
         stage ('Cleanup') {
             steps {
                 sh 'rm -rf venv'
