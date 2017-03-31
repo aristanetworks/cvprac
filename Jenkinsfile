@@ -8,7 +8,7 @@ projectName = 'CvpRac'
 emailTo = 'jere@arista.com'
 emailFrom = 'eosplus-dev+jenkins@arista.com'
 
-node() {
+node('exec') {
 
     currentBuild.result = "SUCCESS"
 
@@ -30,6 +30,8 @@ node() {
                     pip install -r dev-requirements.txt
                     pip install codecov
                 """
+                // Stub dummy .cloudvision.yaml file
+                writeFile file: "test/fixtures/cvp_nodes.yaml", text: "---\n- node: 10.81.111.10\n  username: cvpadmin\n  password: cvp123\n- node: 10.81.111.11\n  username: cvpadmin\n  password: cvp123\n- node: 10.81.111.12\n  username: cvpadmin\n  password: cvp123\n"
             }
             catch (Exception err) {
                 throw err
@@ -43,10 +45,22 @@ node() {
                     source venv/bin/activate
                     make clean
                     make check
-                    make pep8
+                    make pep8 | tee pep8_report.txt
                     make pyflakes
-                    make pylint || true
+                    make pylint | tee pylint.out || true
                 """
+                step([$class: 'WarningsPublisher',
+                  parserConfigurations: [[
+                    parserName: 'Pep8',
+                    pattern: 'pep8_report.txt'
+                  ],
+                  [
+                    parserName: 'pylint',
+                    pattern: 'pylint.out'
+                  ]],
+                  unstableTotalAll: '0',
+                  usePreviousBuildAsReference: true
+                ])
             }
             catch (Exception err) {
                 currentBuild.result = "UNSTABLE"
@@ -59,9 +73,13 @@ node() {
                 sh """
                     source venv/bin/activate
                     make tests
+                    make coverage_report
+                    coverage xml
                 """
 
+                step([$class: 'JUnitResultArchiver', testResults: 'coverage.xml'])
                 // publish html
+                /*
                 publishHTML([
                     allowMissing: false,
                     alwaysLinkToLastBuild: false,
@@ -69,6 +87,7 @@ node() {
                     reportDir: 'htmlcov',
                     reportFiles: 'index.html',
                     reportName: 'Coverage Report'])
+                */
 
             }
             catch (Exception err) {
