@@ -1,6 +1,7 @@
 Arista Cloudvision\ |reg| Portal RESTful API Client
 ===================================================
 |pypi_version_badge|
+|System_test_Status|
 
 Table of Contents
 =================
@@ -291,3 +292,5 @@ THE POSSIBILITY OF SUCH DAMAGE.
 .. |reg| unicode:: U+000AE .. REGISTERED SIGN
 .. |pypi_version_badge| image:: https://img.shields.io/pypi/v/cvprac.svg
     :target: https://pypi.python.org/pypi/cvprac
+.. |System_test_Status| image:: https://revproxy.arista.com/eosplus/ci/buildStatus/icon?job=Pipeline_jerearista_test/cvprac-rb/develop&style=plastic
+   :target: https://revproxy.arista.com/eosplus/ci/job/Pipeline_jerearista_test/cvprac-rb/develop
