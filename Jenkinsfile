@@ -73,10 +73,7 @@ pipeline {
                 sh """
                     source venv/bin/activate
                     #make tests || true
-                    nosetests --with-xunit --all-modules --traverse-namespace --with-coverage --cover-package=cvprac --cover-inclusive test/system/* || true
-                    make coverage_report
-                    coverage xml -o report/coverage.xml
-                    coverage html
+                    nosetests --with-xunit --all-modules --traverse-namespace --with-coverage --cover-package=cvprac --cover-inclusive --cover-html test/system/* || true
                 """
             }
 
@@ -84,8 +81,7 @@ pipeline {
                 always {
                     junit keepLongStdio: true, testResults: 'nosetests.xml'
                     publishHTML target: [
-                        target: 'htmlcov',
-                        reportDir: 'htmlcov',
+                        reportDir: 'cover',
                         reportFiles: 'index.html',
                         reportName: 'Coverage Report'
                     ]
