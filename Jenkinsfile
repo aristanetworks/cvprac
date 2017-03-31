@@ -3,26 +3,31 @@
 /**
  * Jenkinsfile
  */
+pipeline {
+options {
+    agent{ label 'exec'}
+    buildDiscarder(
+        // Only keep the 10 most recent builds
+        logRotator(numToKeepStr:'10'))
+    }
+    environment {
+        projectName = 'CvpRac'
+        emailTo = 'jere@arista.com'
+        emailFrom = 'eosplus-dev+jenkins@arista.com'
+    }
 
-projectName = 'CvpRac'
-emailTo = 'jere@arista.com'
-emailFrom = 'eosplus-dev+jenkins@arista.com'
-
-node('exec') {
-
-    currentBuild.result = "SUCCESS"
-
-    try {
+    stages {
 
         stage ('Checkout') {
-            checkout scm
-            def tag = sh(script: 'git describe --tags --match \"v[0-9]*\" --abbrev=7 --always', returnStdout: true)
-            echo ">>> Tag: ${tag} <<<"
+            steps {
+                checkout scm
+            }
         }
 
         stage ('Install_Requirements') {
-            try {
+            steps {
                 sh """
+                    [[ -d venv ]] && rm -rf venv
                     virtualenv --python=python2.7 venv
                     source venv/bin/activate
                     pip install --upgrade pip
@@ -33,90 +38,84 @@ node('exec') {
                 // Stub dummy .cloudvision.yaml file
                 writeFile file: "test/fixtures/cvp_nodes.yaml", text: "---\n- node: 10.81.111.10\n  username: cvpadmin\n  password: cvp123\n- node: 10.81.111.11\n  username: cvpadmin\n  password: cvp123\n- node: 10.81.111.12\n  username: cvpadmin\n  password: cvp123\n"
             }
-            catch (Exception err) {
-                throw err
-            }
-            echo "Install Requirements RESULT: ${currentBuild.result}"
         }
 
         stage ('Check_style') {
-            try {
+            steps {
                 sh """
                     source venv/bin/activate
                     make clean
-                    make check
-                    make pep8 | tee pep8_report.txt
+                    [[ -d report ]] || mkdir report
+                    echo "exclude report" >> MANIFEST.in
+                    echo "exclude htmlcov" >> MANIFEST.in
+                    make check || true
+                    make pep8 | tee report/pep8_report.txt
                     make pyflakes
-                    make pylint | tee pylint.out || true
+                    make pylint | tee report/pylint.out || true
                 """
                 step([$class: 'WarningsPublisher',
                   parserConfigurations: [[
                     parserName: 'Pep8',
-                    pattern: 'pep8_report.txt'
+                    pattern: 'report/pep8_report.txt'
                   ],
                   [
                     parserName: 'pylint',
-                    pattern: 'pylint.out'
+                    pattern: 'report/pylint.out'
                   ]],
                   unstableTotalAll: '0',
                   usePreviousBuildAsReference: true
                 ])
             }
-            catch (Exception err) {
-                currentBuild.result = "UNSTABLE"
-            }
-            echo "Check Style RESULT: ${currentBuild.result}"
         }
 
         stage ('System Test') {
-            try {
+            steps {
                 sh """
                     source venv/bin/activate
-                    make tests
+                    #make tests || true
+                    nosetests --with-xunit --all-modules --traverse-namespace --with-coverage --cover-package=cvprac --cover-inclusive test/system/* || true
                     make coverage_report
-                    coverage xml
+                    coverage xml -o report/coverage.xml
+                    coverage html
                 """
-
-                step([$class: 'JUnitResultArchiver', testResults: 'coverage.xml'])
-                // publish html
-                /*
-                publishHTML([
-                    allowMissing: false,
-                    alwaysLinkToLastBuild: false,
-                    keepAll: true,
-                    reportDir: 'htmlcov',
-                    reportFiles: 'index.html',
-                    reportName: 'Coverage Report'])
-                */
-
             }
-            catch (Exception err) {
-                currentBuild.result = "UNSTABLE"
+
+            post {
+                always {
+                    junit keepLongStdio: true, testResults: 'nosetests.xml'
+                    publishHTML target: [
+                        target: 'htmlcov',
+                        reportDir: 'htmlcov',
+                        reportFiles: 'index.html',
+                        reportName: 'Coverage Report'
+                    ]
+                }
             }
-            echo "System Test RESULT: ${currentBuild.result}"
         }
 
         stage ('Cleanup') {
-            try {
+            steps {
                 sh 'rm -rf venv'
             }
-            catch (Exception err) {
-                currentBuild.result = "UNSTABLE"
-            }
-            echo "Cleanup RESULT: ${currentBuild.result}"
         }
     }
 
-    catch (err) {
-        currentBuild.result = "FAILURE"
-
-            mail body: "${env.JOB_NAME} (${env.BUILD_NUMBER}) ${projectName} build error " +
+    post {
+        failure {
+            mail body: "${env.JOB_NAME} (${env.BUILD_NUMBER}) ${env.projectName} build error " +
                        "is here: ${env.BUILD_URL}\nStarted by ${env.BUILD_CAUSE}" ,
-                 from: emailFrom,
-                 replyTo: emailFrom,
-                 subject: "${projectName} ${env.JOB_NAME} (${env.BUILD_NUMBER}) build failed",
-                 to: emailTo
-
-            throw err
+                 from: env.emailFrom,
+                 //replyTo: env.emailFrom,
+                 subject: "${env.projectName} ${env.JOB_NAME} (${env.BUILD_NUMBER}) build failed",
+                 to: env.emailTo
+        }
+        success {
+            mail body: "${env.JOB_NAME} (${env.BUILD_NUMBER}) ${env.projectName} build successful\n" +
+                       "Started by ${env.BUILD_CAUSE}",
+                 from: env.emailFrom,
+                 //replyTo: env.emailFrom,
+                 subject: "${env.projectName} ${env.JOB_NAME} (${env.BUILD_NUMBER}) build successful",
+                 to: env.emailTo
+        }
     }
 }
