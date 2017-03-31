@@ -32,8 +32,8 @@ if [ "$allownonascii" != "true" ] &&
 	# Note that the use of brackets around a tr range is ok here, (it's
 	# even required, for portability to Solaris 10's /usr/bin/tr), since
 	# the square bracket bytes happen to fall in the designated range.
-	test $(git diff --cached --name-only --diff-filter=A -z $against |
-	  LC_ALL=C tr -d '[ -~]\0' | wc -c) != 0
+	test $(git diff --cached --name-only --diff-filter=A -z ${against} |
+         LC_ALL=C tr -d '[ -~]\0' | wc -c) != 0
 then
 	cat <<\EOF
 Error: Attempt to add a non-ASCII file name.
@@ -57,16 +57,16 @@ msg=''
 
 run(){
     tmp=$(mktemp -t cv-precommit)
-    echo -n "Running ${@:2:2}: "
-    "$@" >$tmp 2>&1
+    echo -n "Running '${*}': "
+    "$@" >"$tmp" 2>&1
     ret=$?
     if [ $ret != 0 ]; then
         let "err = $err + $ret"
-        msg="${msg}\n\t${@:2:2} failed"
+        msg="${msg}\n\t'${*}' failed"
         echo -e "${RED}FAILED${NC}"
-        echo "Tried: ${@}"
-        cat $tmp
-        rm -f $tmp
+        echo "Tried: ${*}"
+        cat "$tmp"
+        rm -f "$tmp"
     else
         echo -e "${GREEN}PASSED${NC}"
     fi
@@ -75,12 +75,13 @@ run(){
 
 START_TIME=$SECONDS
 run make check
+exit
 run make pep8
 run make pyflakes
 run make pylint
 #run bundle exec rake strings:generate
 
-DURATION=$(($SECONDS - $START_TIME))
+DURATION=$((SECONDS - START_TIME))
 echo "pre-commit checks took ${DURATION} seconds."
 echo
 
