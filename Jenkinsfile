@@ -9,7 +9,6 @@ pipeline {
         buildDiscarder(
             // Only keep the 10 most recent builds
             logRotator(numToKeepStr:'10'))
-        }
     }
     environment {
         projectName = 'CvpRac'
