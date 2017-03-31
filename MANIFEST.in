@@ -9,3 +9,5 @@ recursive-include test *.py
 recursive-include test *.yaml
 exclude Jenkinsfile
 exclude pre-commit.sh
+exclude report
+exclude htmlcov
