@@ -75,11 +75,9 @@ run(){
 
 START_TIME=$SECONDS
 run make check
-exit
 run make pep8
 run make pyflakes
 run make pylint
-#run bundle exec rake strings:generate
 
 DURATION=$((SECONDS - START_TIME))
 echo "pre-commit checks took ${DURATION} seconds."
