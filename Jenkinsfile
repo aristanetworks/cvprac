@@ -12,7 +12,7 @@ pipeline {
     }
     environment {
         projectName = 'CvpRac'
-        emailTo = 'jere@arista.com'
+        emailTo = 'eosplus-dev@arista.com'
         emailFrom = 'eosplus-dev+jenkins@arista.com'
     }
 
@@ -36,7 +36,7 @@ pipeline {
                     pip install codecov
                 """
                 // Stub dummy .cloudvision.yaml file
-                writeFile file: "test/fixtures/cvp_nodes.yaml", text: "---\n- node: 10.81.111.10\n  username: cvpadmin\n  password: cvp123\n- node: 10.81.111.11\n  username: cvpadmin\n  password: cvp123\n- node: 10.81.111.12\n  username: cvpadmin\n  password: cvp123\n"
+                writeFile file: "test/fixtures/cvp_nodes.yaml", text: "---\n- node: 10.81.111.9\n  username: cvpadmin\n  password: cvp123\n"
             }
         }
 
