@@ -64,6 +64,7 @@ class TestCvpClient(DutSystemTest):
     ''' Test cases for the CvpClient class.
     '''
     # pylint: disable=too-many-public-methods
+    # pylint: disable=invalid-name
     def setUp(self):
         ''' Instantiate the CvpClient class and connect to the CVP node.
             Log messages to the /tmp/TestCvpClient.log
@@ -72,7 +73,8 @@ class TestCvpClient(DutSystemTest):
         self.clnt = CvpClient(filename='/tmp/TestCvpClient.log')
         self.assertIsNotNone(self.clnt)
         dut = self.duts[0]
-        self.clnt.connect([dut['node']], dut['username'], dut['password'])
+        self.clnt.connect([dut['node']], dut['username'], dut['password'], 10,
+                          dut['protocol'])
         self.api = self.clnt.api
         self.assertIsNotNone(self.api)
 

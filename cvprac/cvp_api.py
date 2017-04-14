@@ -486,6 +486,7 @@ class CvpApi(object):
         if create_task:
             return self._save_topology_v2([])
 
+    # pylint: disable=too-many-locals
     def remove_configlets_from_device(self, app_name, dev, del_configlets,
                                       create_task=True):
         ''' Remove the configlets from the device.
@@ -709,6 +710,7 @@ class CvpApi(object):
                           'parentTask': ''}]}
         try:
             self._add_temp_action(data)
+        # pylint: disable=invalid-name
         except CvpApiError as e:
             if 'Data already exists' in e:
                 self.log.debug('Device %s already in container %s'
@@ -953,8 +955,8 @@ class CvpApi(object):
                                       create_task=False)
         # Get proposed configlets device will inherit from container it is
         # being moved to.
-        prop_conf = self.clnt.get('/provisioning/getTempConfigsByNetElementId.do?'
-                                  'netElementId=%s' % device['key'])
+        prop_conf = self.clnt.get('/provisioning/getTempConfigsByNetElementId.'
+                                  'do?netElementId=%s' % device['key'])
         new_configlets = prop_conf['proposedConfiglets']
         if configlets:
             new_configlets.extend(configlets)

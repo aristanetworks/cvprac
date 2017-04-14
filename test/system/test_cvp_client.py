@@ -57,6 +57,7 @@ class TestCvpClient(DutSystemTest):
     ''' Test cases for the CvpClient class.
     '''
     # pylint: disable=too-many-public-methods
+    # pylint: disable=invalid-name
     NEW_PASSWORD = 'ChangeMe'
 
     def setUp(self):
@@ -122,12 +123,17 @@ class TestCvpClient(DutSystemTest):
         self.assertEqual(clnt.log.getEffectiveLevel(), logging.DEBUG)
 
     def test_set_log_level(self):
+        ''' Verify changing/setting of log level using client setter method
+        '''
         self.clnt.set_log_level('DEBUG')
         self.assertEqual(self.clnt.log.getEffectiveLevel(), logging.DEBUG)
         self.clnt.set_log_level('INFO')
         self.assertEqual(self.clnt.log.getEffectiveLevel(), logging.INFO)
 
     def test_set_log_level_invalid_value(self):
+        ''' Verify an invalid log level value will default the log level to
+            INFO
+        '''
         self.clnt.set_log_level('blahblah')
         self.assertEqual(self.clnt.log.getEffectiveLevel(), logging.INFO)
 
