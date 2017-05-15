@@ -126,6 +126,7 @@ class CvpClient(object):
                 log_level (str): Log level to use for logger. Default is INFO.
         '''
         self.authdata = None
+        self.cert = False
         self.connect_timeout = None
         self.cookies = None
         self.error_msg = ''
@@ -170,7 +171,7 @@ class CvpClient(object):
         self.log.setLevel(getattr(logging, log_level))
 
     def connect(self, nodes, username, password, connect_timeout=10,
-                protocol='http', port=None):
+                port=None, cert=False):
         ''' Login to CVP and get a session ID and cookie.  Currently
             certificates are not verified if the https protocol is specified. A
             warning may be printed out from the requests module for this case.
@@ -181,12 +182,13 @@ class CvpClient(object):
                 password (str): The CVP password
                 connect_timeout (int): The number of seconds to wait for a
                     connection.
-                protocol (str): The type of protocol to use for the connection.
-                    The default value is 'http'.
                 port (int): The TCP port of the endpoint for the connection.
                     If this keyword is not specified, the default value is
                     automatically determined by the transport type.
                     (http=80, https=443)
+                cert (str): Path to a cert file used for a https connection.
+                    If a cert is provided then the connection will not attempt
+                    to fallback to http.
 
             Raises:
                 CvpLoginError: A CvpLoginError is raised if a connection
@@ -200,22 +202,13 @@ class CvpClient(object):
         if not isinstance(nodes, list):
             raise TypeError('nodes argument must be a list')
 
+        self.cert = cert
         self.nodes = nodes
         self.node_cnt = len(nodes)
         self.node_pool = cycle(nodes)
         self.authdata = {'userId': username, 'password': password}
         self.connect_timeout = connect_timeout
-        self.protocol = protocol
-
-        if port is None:
-            if protocol == 'http':
-                port = 80
-            elif protocol == 'https':
-                port = 443
-            else:
-                raise ValueError('No default port for protocol: %s' % protocol)
         self.port = port
-
         self._create_session(all_nodes=True)
         # Verify that we can connect to at least one node
         if not self.session:
@@ -234,9 +227,19 @@ class CvpClient(object):
         self.error_msg = '\n'
         for _ in range(0, num_nodes):
             host = next(self.node_pool)
-            self.url_prefix = ('%s://%s:%d/web' %
-                               (self.protocol, host, self.port))
+            self.url_prefix = ('https://%s:%d/web' % (host, self.port or 443))
             error = self._reset_session()
+            if error and not self.cert:
+                self.log.warning('Failed to connect over https. Potentially'
+                                 ' due to an old version of CVP. Attempting'
+                                 ' fallback to http. Error: %s' % error)
+                # Attempt http fallback if no cert file is provided. The
+                # intention here is that a user providing a cert file
+                # forces https.
+                self.url_prefix = self.url_prefix.replace('https', 'http', 1)
+                if '443' in self.url_prefix:
+                    self.url_prefix = self.url_prefix.replace('443', '80', 1)
+                error = self._reset_session()
             if error is None:
                 break
             self.error_msg += '%s: %s\n' % (host, error)
@@ -334,7 +337,7 @@ class CvpClient(object):
                                      data=json.dumps(self.authdata),
                                      headers=self.headers,
                                      timeout=self.connect_timeout,
-                                     verify=False)
+                                     verify=self.cert)
         self._is_good_response(response, 'Authenticate: %s' % url)
 
         self.cookies = response.cookies
@@ -378,7 +381,6 @@ class CvpClient(object):
                     CVP node.  Destroy the class and re-instantiate.
         '''
         # pylint: disable=too-many-branches
-
         if not self.session:
             raise ValueError('No valid session to CVP node')
 
@@ -420,14 +422,14 @@ class CvpClient(object):
                                                 cookies=self.cookies,
                                                 headers=self.headers,
                                                 timeout=timeout,
-                                                verify=False)
+                                                verify=self.cert)
                 else:
                     response = self.session.post(full_url,
                                                  cookies=self.cookies,
                                                  data=json.dumps(data),
                                                  headers=self.headers,
                                                  timeout=timeout,
-                                                 verify=False)
+                                                 verify=self.cert)
 
             except (ConnectionError, HTTPError, TooManyRedirects) as error:
                 # Any of these errors is a good reason to try another CVP node
@@ -461,8 +463,24 @@ class CvpClient(object):
                     if self.session:
                         error = None
                 continue
+            except CvpApiError as error:
+                self.log.debug(error)
+                if 'Unauthorized User' in error.msg:
+                    # Retry the request to the same node if there was an
+                    # Unauthorized User error because this is how CVP responds
+                    # to a logged out users requests in 2017.1 and beyond.
+                    # Reset the session which will login. If a valid
+                    # session comes back then clear the error so this request
+                    # will be retried on the same node.
+                    retry_cnt -= 1
+                    if retry_cnt > 0:
+                        self._reset_session()
+                        if self.session:
+                            error = None
+                    continue
+                else:
+                    raise error
             break
-
         return response.json()
 
     def get(self, url, timeout=30):

@@ -57,10 +57,13 @@ pyflakes:
 pylint:
 	find ./cvprac ./test -name \*.py | xargs pylint --rcfile .pylintrc
 
+unittest: clean
+	$(COVERAGE) run --source $(NAME) -m unittest discover test/unit -v
+
 systest: clean
 	$(COVERAGE) run --source $(NAME) -m unittest discover test/system -v
 
-tests: systest coverage_report
+tests: unittest systest coverage_report
 
 rpmcommon: sdist
 	@mkdir -p rpmbuild

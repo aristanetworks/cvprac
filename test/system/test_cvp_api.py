@@ -73,8 +73,11 @@ class TestCvpClient(DutSystemTest):
         self.clnt = CvpClient(filename='/tmp/TestCvpClient.log')
         self.assertIsNotNone(self.clnt)
         dut = self.duts[0]
+        cert = False
+        if 'cert' in dut:
+            cert = dut['cert']
         self.clnt.connect([dut['node']], dut['username'], dut['password'], 10,
-                          dut['protocol'])
+                          cert=cert)
         self.api = self.clnt.api
         self.assertIsNotNone(self.api)
 
@@ -164,7 +167,7 @@ class TestCvpClient(DutSystemTest):
         err_msg = 'Timeout waiting for task id %s to be created' % task_id
         self.assertGreater(cnt, 0, msg=err_msg)
 
-        return (task_id, org_config)
+        return task_id, org_config
 
     def test_api_get_cvp_info(self):
         ''' Verify get_cvp_info
@@ -172,6 +175,15 @@ class TestCvpClient(DutSystemTest):
         result = self.api.get_cvp_info()
         self.assertIsNotNone(result)
         self.assertIn('version', result)
+
+    def test_api_check_compliance(self):
+        ''' Verify check_compliance
+        '''
+        key = self.device['key']
+        ntype = self.device['type']
+        result = self.api.check_compliance(key, ntype)
+        self.assertEqual(result['complianceCode'], '0000')
+        self.assertEqual(result['complianceIndication'], 'NONE')
 
     def test_api_task_operations(self):
         ''' Verify get_task_by_id, get_task_by_status, add_note_to_task,
@@ -204,20 +216,39 @@ class TestCvpClient(DutSystemTest):
         result = self.api.get_task_by_id(task_id)
         self.assertIsNotNone(result)
         self.assertEqual(result['note'], note)
-        status = result['workOrderUserDefinedStatus']
-        self.assertEqual(status, 'Pending')
+        self.assertEqual(result['workOrderUserDefinedStatus'], 'Pending')
 
-        # Restore the configlet to what it was before the task was created.
-        configlet = self.dev_configlets[0]
-        self.api.update_configlet(org_config, configlet['key'],
-                                  configlet['name'])
+        result = self.api.check_compliance(self.device['key'],
+                                           self.device['type'])
+        self.assertEqual(result['complianceCode'], '0001')
 
         # Test cancel_task
         self.api.cancel_task(task_id)
+        time.sleep(1)
+        result = self.api.get_task_by_id(task_id)
+        self.assertIsNotNone(result)
+        self.assertEqual(result['workOrderUserDefinedStatus'], 'Cancelled')
+
+        result = self.api.check_compliance(self.device['key'],
+                                           self.device['type'])
+        self.assertEqual(result['complianceCode'], '0001')
 
         # Get the task logs
         result = self.api.get_logs_by_id(task_id)
         self.assertIsNotNone(result)
+
+        result = self.api.check_compliance(self.device['key'],
+                                           self.device['type'])
+        self.assertEqual(result['complianceCode'], '0001')
+
+        # Restore the configlet to what it was before the task was created.
+        task_id = self._get_next_task_id()
+        configlet = self.dev_configlets[0]
+        self.api.update_configlet(org_config, configlet['key'],
+                                  configlet['name'])
+        time.sleep(2)
+        # Cancel task
+        self.api.cancel_task(task_id)
 
         # Check compliance
         self.test_api_check_compliance()
@@ -231,8 +262,8 @@ class TestCvpClient(DutSystemTest):
     def test_api_get_task_by_id_fmt_bad(self):
         ''' Verify get_task_by_id with bad task id
         '''
-        with self.assertRaises(CvpApiError):
-            self.api.get_task_by_id('BOGUS')
+        result = self.api.get_task_by_id('BOGUS')
+        self.assertIsNone(result)
 
     def test_api_get_tasks_by_s_bad(self):
         ''' Verify get_tasks_by_status
@@ -441,15 +472,6 @@ class TestCvpClient(DutSystemTest):
         # Check compliance
         self.test_api_check_compliance()
 
-    def test_api_check_compliance(self):
-        ''' Verify check_compliance
-        '''
-        key = self.device['key']
-        ntype = self.device['type']
-        result = self.api.check_compliance(key, ntype)
-        self.assertEqual(result['complianceCode'], '0000')
-        self.assertEqual(result['complianceIndication'], 'NONE')
-
     def test_api_request_timeout(self):
         ''' Verify api timeout
         '''
@@ -488,7 +510,7 @@ class TestCvpClient(DutSystemTest):
         result = self.api.get_image_bundle_by_name('nonexistantimagebundle')
         self.assertIsNone(result)
 
-    def test_api_apply_image_to_device(self):
+    def test_api_apply_remove_image_device(self):
         ''' Verify task gets created when applying an image bundle to a device.
             This test only runs if at least one image bundle and one device
             exist in the CVP instance being used for testing.
@@ -500,6 +522,7 @@ class TestCvpClient(DutSystemTest):
             # Get device and image bundle
             b = self.api.get_image_bundle_by_name(bundles['data'][0]['name'])
             d = self.api.get_device_by_name(devices[0]['fqdn'])
+            applied_devices_count = b['appliedDevicesCount']
 
             # Apply image and verify at least one task id was created
             result = self.api.apply_image_to_device(b, d)
@@ -508,6 +531,11 @@ class TestCvpClient(DutSystemTest):
             taskids = result['data']['taskIds']
             self.assertIsNotNone(taskids)
 
+            # Verify image bundle has been applied to one additional device
+            b = self.api.get_image_bundle_by_name(bundles['data'][0]['name'])
+            self.assertEqual((applied_devices_count + 1),
+                             b['appliedDevicesCount'])
+
             # Verify task was created and in pending state
             task = self.api.get_task_by_id(taskids[0])
             self.assertIsNotNone(task)
@@ -515,9 +543,21 @@ class TestCvpClient(DutSystemTest):
 
             # Cancel task and verify it is cancelled
             self.api.cancel_task(taskids[0])
+            time.sleep(1)
             task = self.api.get_task_by_id(taskids[0])
             self.assertIsNotNone(task)
             self.assertEqual(task['workOrderUserDefinedStatus'], 'Cancelled')
+
+            # Un-apply image bundle from device
+            result = self.api.remove_image_from_device(b, d)
+            self.assertIsNotNone(result)
+            self.assertEqual(result['data']['status'], 'success')
+            taskids = result['data']['taskIds']
+            self.assertIsNotNone(taskids)
+
+            # Verify image bundle applied to one less device
+            b = self.api.get_image_bundle_by_name(bundles['data'][0]['name'])
+            self.assertEqual(applied_devices_count, b['appliedDevicesCount'])
 
     def test_api_apply_remove_image_container(self):
         ''' Verify image bundle is applied to container and removed.
