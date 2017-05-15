@@ -186,9 +186,11 @@ class CvpClient(object):
                     If this keyword is not specified, the default value is
                     automatically determined by the transport type.
                     (http=80, https=443)
-                cert (str): Path to a cert file used for a https connection.
-                    If a cert is provided then the connection will not attempt
-                    to fallback to http.
+                cert (str or boolean): Path to a cert file used for a https
+                    connection or boolean with default False. If a cert is
+                    provided then the connection will not attempt to fallback
+                    to http. The False default sets the request to not verify
+                    the servers TLS certificate.
 
             Raises:
                 CvpLoginError: A CvpLoginError is raised if a connection
@@ -236,9 +238,8 @@ class CvpClient(object):
                 # Attempt http fallback if no cert file is provided. The
                 # intention here is that a user providing a cert file
                 # forces https.
-                self.url_prefix = self.url_prefix.replace('https', 'http', 1)
-                if '443' in self.url_prefix:
-                    self.url_prefix = self.url_prefix.replace('443', '80', 1)
+                self.url_prefix = ('http://%s:%d/web'
+                                   % (host, self.port or 80))
                 error = self._reset_session()
             if error is None:
                 break
