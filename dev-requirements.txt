@@ -1,5 +1,6 @@
 check-manifest
 coverage
+mock
 pdoc
 pep8
 pyflakes

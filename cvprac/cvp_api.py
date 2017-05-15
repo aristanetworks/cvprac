@@ -96,11 +96,9 @@ class CvpApi(object):
             task = self.clnt.get('/task/getTaskById.do?taskId=%s' % task_id,
                                  timeout=self.request_timeout)
         except CvpApiError as error:
+            self.log.debug('Caught error: %s attempting to get task.' % error)
             # Catch an invalid task_id error and return None
-            if ('Invalid WorkOrderId' in str(error) or
-                    'Entity does not exist' in str(error)):
-                return None
-            raise error
+            return None
         return task
 
     def get_tasks_by_status(self, status, start=0, end=0):
@@ -895,6 +893,22 @@ class CvpApi(object):
         if create_task:
             return self._save_topology_v2([])
 
+    def remove_image_from_device(self, image, device):
+        ''' Remove the image bundle from the specified device.
+
+            Args:
+                image (dict): The image info.
+                device (dict): The device info.
+
+            Returns:
+                response (dict): A dict that contains a status and a list of
+                    task ids created (if any).
+
+                    Ex: {u'data': {u'status': u'success', u'taskIds': [u'32']}}
+        '''
+        return self.remove_image_from_element(image, device, device['fqdn'],
+                                              'netelement')
+
     def remove_image_from_container(self, image, container):
         ''' Remove the image bundle from the specified container.
 
@@ -908,9 +922,26 @@ class CvpApi(object):
 
                     Ex: {u'data': {u'status': u'success', u'taskIds': [u'32']}}
         '''
-        self.log.debug('Attempt to remove %s from %s' % (image['name'],
-                                                         container['name']))
-        info = 'Remove image: %s from %s' % (image['name'], container['name'])
+        return self.remove_image_from_element(image, container,
+                                              container['name'], 'container')
+
+    def remove_image_from_element(self, image, element, name, id_type):
+        ''' Remove the image bundle from the specified container.
+
+            Args:
+                image (dict): The image info.
+                element (dict): The container info.
+                name (): name.
+                id_type (): type.
+
+            Returns:
+                response (dict): A dict that contains a status and a list of
+                    task ids created (if any).
+
+                    Ex: {u'data': {u'status': u'success', u'taskIds': [u'32']}}
+        '''
+        self.log.debug('Attempt to remove %s from %s' % (image['name'], name))
+        info = 'Remove image: %s from %s' % (image['name'], name)
         data = {'data': [{'id': 1,
                           'info': info,
                           'infoPreview': info,
@@ -918,12 +949,12 @@ class CvpApi(object):
                           'action': 'associate',
                           'nodeType': 'imagebundle',
                           'nodeId': '',
-                          'toId': container['key'],
-                          'toIdType': 'container',
+                          'toId': element['key'],
+                          'toIdType': id_type,
                           'fromId': '',
                           'nodeName': '',
                           'fromName': '',
-                          'toName': container['name'],
+                          'toName': name,
                           'ignoreNodeId': image['id'],
                           'ignoreNodeName': image['name'],
                           'childTasks': [],

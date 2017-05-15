@@ -53,6 +53,7 @@ from cvprac.cvp_client_errors import CvpApiError, CvpLoginError, \
 sys.path.append(os.path.join(os.path.dirname(__file__), '../lib'))
 from systestlib import DutSystemTest
 
+
 class TestCvpClient(DutSystemTest):
     ''' Test cases for the CvpClient class.
     '''
@@ -149,8 +150,7 @@ class TestCvpClient(DutSystemTest):
             Uses https protocol and port.
         '''
         dut = self.duts[0]
-        self.clnt.connect([dut['node']], dut['username'], dut['password'],
-                          protocol='https')
+        self.clnt.connect([dut['node']], dut['username'], dut['password'])
 
     def test_connect_username_bad(self):
         ''' Verify connect fails with bad username.
@@ -191,7 +191,7 @@ class TestCvpClient(DutSystemTest):
         '''
         dut = self.duts[0]
         self.clnt.connect(['bogus', dut['node']], dut['username'],
-                          dut['password'], connect_timeout=2)
+                          dut['password'], connect_timeout=5)
 
     def test_connect_nodes_arg_bad(self):
         ''' Verify non-list nodes argument raises a TypeError
@@ -200,12 +200,13 @@ class TestCvpClient(DutSystemTest):
             self.clnt.connect('bogus', 'username', 'password')
 
     def test_connect_port_bad(self):
-        ''' Verify non-http protocol with default port raises a TypeError
+        ''' Verify non default port for https raises an error if appliance is
+            not configured for the port.
         '''
         dut = self.duts[0]
-        with self.assertRaises(ValueError):
+        with self.assertRaises(CvpLoginError):
             self.clnt.connect([dut['node']], dut['username'], dut['password'],
-                              protocol='bogus')
+                              port=700)
 
     def test_get_not_connected(self):
         ''' Verify get with no connection raises a ValueError
@@ -296,7 +297,7 @@ class TestCvpClient(DutSystemTest):
         try:
             # Try a get request and expect a CvpSessionLogOutError
             result = self.clnt.get('/cvpInfo/getCvpInfo.do')
-        except CvpSessionLogOutError as error:
+        except (CvpSessionLogOutError, CvpApiError) as error:
             pass
         except Exception as error:
             # Unexpected error, restore password and re-raise the error.
@@ -389,7 +390,7 @@ class TestCvpClient(DutSystemTest):
         try:
             # Try a post request and expect a CvpSessionLogOutError
             result = self.clnt.post('/login/logout.do', None)
-        except CvpSessionLogOutError as error:
+        except (CvpSessionLogOutError, CvpApiError) as error:
             pass
         except Exception as error:
             # Unexpected error, restore password and re-raise the error.
