@@ -33,17 +33,23 @@
 
 ''' Unit tests for the CvpClient class
 '''
-from itertools import cycle
 import unittest
-from mock import Mock, MagicMock, patch, call
+from itertools import cycle
+from mock import Mock
 from cvprac.cvp_client import CvpClient
 from cvprac.cvp_client_errors import CvpApiError, CvpSessionLogOutError
-from requests.exceptions import HTTPError, Timeout, ReadTimeout
+from requests.exceptions import HTTPError, ReadTimeout
 
 
 class TestClient(unittest.TestCase):
+    """ Unit test cases for CvpClient
+    """
+    # pylint: disable=protected-access
+    # pylint: disable=invalid-name
 
     def setUp(self):
+        """ Setup for CvpClient unittests
+        """
         self.clnt = CvpClient()
         nodes = ['1.1.1.1']
         self.clnt.nodes = nodes
