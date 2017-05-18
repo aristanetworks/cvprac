@@ -60,6 +60,7 @@ class CvpApi(object):
             the class and re-instantiate.
     '''
     # pylint: disable=too-many-public-methods
+    # pylint: disable=too-many-lines
 
     def __init__(self, clnt, request_timeout=30):
         ''' Initialize the class.
@@ -386,30 +387,24 @@ class CvpApi(object):
         return self.clnt.post('/configlet/updateConfiglet.do', data=body,
                               timeout=self.request_timeout)
 
-    def validate_config(self, net_element_id, config):
+    def validate_config(self, device_mac, config):
         ''' Validate a config against a device
 
-	    Your CloudVision user must also exist on the device for this to succeed
-
             Args:
-                net_element_id (str): Device element id (MAC address)
+                device_mac (str): Device MAC address
                 config (str): Switch config statements
 
             Returns:
                 response (dict): A dict that contains the result of the
-		    validation operation
-
+                    validation operation
         '''
-        self.log.debug('validate_config: name: %s config: %s' % (net_element_id, config))
-        body = {'netElementId': net_element_id, 'config': config}
-        
+        self.log.debug('validate_config: name: %s config: %s'
+                       % (device_mac, config))
+        body = {'netElementId': device_mac, 'config': config}
         # Invoke the validate API call
         result = self.clnt.post('/configlet/validateConfig.do', data=body,
-                       timeout=self.request_timeout)
-
+                                timeout=self.request_timeout)
         return result
-
-
 
     def _add_temp_action(self, data):
         ''' Adds temp action that requires a saveTopology call to take effect.

@@ -171,7 +171,7 @@ class CvpClient(object):
         self.log.setLevel(getattr(logging, log_level))
 
     def connect(self, nodes, username, password, connect_timeout=10,
-                port=None, cert=False):
+                protocol='https', port=None, cert=False):
         ''' Login to CVP and get a session ID and cookie.  Currently
             certificates are not verified if the https protocol is specified. A
             warning may be printed out from the requests module for this case.
@@ -182,6 +182,10 @@ class CvpClient(object):
                 password (str): The CVP password
                 connect_timeout (int): The number of seconds to wait for a
                     connection.
+                protocol (str): The protocol to use to connect to CVP.
+                    THIS PARAMETER IS NOT USED AND WILL BE DEPRECATED.
+                    ONLY INCLUDED TO NOT BREAK EXISTING CODE THAT HAS PROTOCOL
+                    SPECIFIED IN CONNECTION.
                 port (int): The TCP port of the endpoint for the connection.
                     If this keyword is not specified, the default value is
                     automatically determined by the transport type.
@@ -210,6 +214,8 @@ class CvpClient(object):
         self.node_pool = cycle(nodes)
         self.authdata = {'userId': username, 'password': password}
         self.connect_timeout = connect_timeout
+        # protocol is deprecated and not used.
+        self.protocol = protocol
         self.port = port
         self._create_session(all_nodes=True)
         # Verify that we can connect to at least one node
@@ -234,7 +240,7 @@ class CvpClient(object):
             if error and not self.cert:
                 self.log.warning('Failed to connect over https. Potentially'
                                  ' due to an old version of CVP. Attempting'
-                                 ' fallback to http. Error: %s' % error)
+                                 ' fallback to http. Error: %s', error)
                 # Attempt http fallback if no cert file is provided. The
                 # intention here is that a user providing a cert file
                 # forces https.
@@ -382,12 +388,12 @@ class CvpClient(object):
                     CVP node.  Destroy the class and re-instantiate.
         '''
         # pylint: disable=too-many-branches
+        # pylint: disable=too-many-statements
+        # pylint: disable=raising-bad-type
         if not self.session:
             raise ValueError('No valid session to CVP node')
-
         # For get or post requests apply both the connect and read timeout.
         timeout = (self.connect_timeout, timeout)
-
         # Retry the request for the number of nodes.
         error = None
         retry_cnt = self.NUM_RETRY_REQUESTS
@@ -401,11 +407,9 @@ class CvpClient(object):
                     # pylint: disable=raising-bad-type
                     # error will not be None here
                     raise error
-
                 # Not the first time through the loop. Retrying request so
                 # create a session to another CVP node.
                 self._create_session()
-
                 # Verify that we can connect to at least one node
                 # otherwise raise the last error
                 if not self.session:
@@ -431,12 +435,10 @@ class CvpClient(object):
                                                  headers=self.headers,
                                                  timeout=timeout,
                                                  verify=self.cert)
-
             except (ConnectionError, HTTPError, TooManyRedirects) as error:
                 # Any of these errors is a good reason to try another CVP node
                 self.log.error(error)
                 continue
-
             except (ReadTimeout, Timeout) as error:
                 self.log.debug(error)
 
@@ -453,7 +455,6 @@ class CvpClient(object):
                                        (req_type, full_url))
             except CvpSessionLogOutError as error:
                 self.log.debug(error)
-
                 # Retry the request to the same node if there was a CVP session
                 # logout. Reset the session which will login. If a valid
                 # session comes back then clear the error so this request will
@@ -480,6 +481,8 @@ class CvpClient(object):
                             error = None
                     continue
                 else:
+                    # pylint: disable=raising-bad-type
+                    # error will not be None here
                     raise error
             break
         return response.json()
