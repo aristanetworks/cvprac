@@ -60,6 +60,7 @@ from cvprac.cvp_client_errors import CvpApiError
 sys.path.append(os.path.join(os.path.dirname(__file__), '../lib'))
 from systestlib import DutSystemTest
 
+
 class TestCvpClient(DutSystemTest):
     ''' Test cases for the CvpClient class.
     '''
@@ -252,6 +253,20 @@ class TestCvpClient(DutSystemTest):
 
         # Check compliance
         self.test_api_check_compliance()
+
+    def test_api_validate_config(self):
+        ''' Verify valid config returns True
+        '''
+        config = 'interface ethernet1\n description test'
+        result = self.api.validate_config(self.device['key'], config)
+        self.assertEqual(result, True)
+
+    def test_api_validate_config_error(self):
+        ''' Verify an invalid config returns False
+        '''
+        config = 'interface ethernet1\n typocommand test'
+        result = self.api.validate_config(self.device['key'], config)
+        self.assertEqual(result, False)
 
     def test_api_get_task_by_id_bad(self):
         ''' Verify get_task_by_id with bad task id

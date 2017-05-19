@@ -404,7 +404,26 @@ class CvpApi(object):
         # Invoke the validate API call
         result = self.clnt.post('/configlet/validateConfig.do', data=body,
                                 timeout=self.request_timeout)
-        return result
+        validated = True
+        if 'warningCount' in result and result['warnings']:
+            for warning in result['warnings']:
+                self.log.warning('Validation of config produced warning - %s'
+                                 % warning)
+        if 'errorCount' in result:
+            self.log.error('Validation of config produced %s errors'
+                           % result['errorCount'])
+            if 'errors' in result:
+                for error in result['errors']:
+                    self.log.error('Validation of config produced error - %s'
+                                   % error)
+            validated = False
+        if 'result' in result:
+            for item in result['result']:
+                if 'messages' in item:
+                    for message in item['messages']:
+                        self.log.info('Validation of config returned'
+                                      ' message - %s' % message)
+        return validated
 
     def _add_temp_action(self, data):
         ''' Adds temp action that requires a saveTopology call to take effect.
