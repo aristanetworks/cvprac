@@ -33,6 +33,7 @@
 '''
 from cvprac.cvp_client_errors import CvpApiError
 
+
 class CvpApi(object):
     ''' CvpApi class contains calls to CVP RESTful API.  The RESTful API
         parameters are passed in as parameters to the method.  The results of
@@ -166,7 +167,7 @@ class CvpApi(object):
         '''
         self.log.debug('add_note_to_task: task_id: %s note: %s' %
                        (task_id, note))
-        data = {'workOrderId' : task_id, 'note' : note}
+        data = {'workOrderId': task_id, 'note': note}
         self.clnt.post('/task/addNoteToTask.do', data=data,
                        timeout=self.request_timeout)
 
@@ -183,7 +184,7 @@ class CvpApi(object):
                 task_id (str): Task ID
         '''
         self.log.debug('execute_task: task_id: %s' % task_id)
-        data = {'data' : [task_id]}
+        data = {'data': [task_id]}
         self.clnt.post('/task/executeTask.do', data=data,
                        timeout=self.request_timeout)
 
@@ -194,7 +195,7 @@ class CvpApi(object):
                 task_id (str): Task ID
         '''
         self.log.debug('cancel_task: task_id: %s' % task_id)
-        data = {'data' : [task_id]}
+        data = {'data': [task_id]}
         self.clnt.post('/task/cancelTask.do', data=data,
                        timeout=self.request_timeout)
 
