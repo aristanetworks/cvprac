@@ -126,8 +126,10 @@ class TestClient(unittest.TestCase):
         self.clnt.node_cnt = 2
         self.clnt.url_prefix = 'https://1.1.1.1:7777/web'
         self.clnt._is_good_response = Mock(return_value='Good')
+        self.assertIsNone(self.clnt.last_used_node)
         self.clnt._make_request('GET', 'url', 2, {'data': 'data'})
         request_return_value.json.assert_called_once_with()
+        self.assertEqual(self.clnt.last_used_node, '1.1.1.1')
 
     def test_make_request_timeout(self):
         """ Test request timeout exception raised if hit on multiple nodes.
@@ -141,8 +143,10 @@ class TestClient(unittest.TestCase):
         self.clnt.node_cnt = 3
         self.clnt.url_prefix = 'https://1.1.1.1:7777/web'
         self.clnt._is_good_response = Mock(return_value='Good')
+        self.assertIsNone(self.clnt.last_used_node)
         with self.assertRaises(ReadTimeout):
             self.clnt._make_request('GET', 'url', 2, {'data': 'data'})
+        self.assertEqual(self.clnt.last_used_node, '1.1.1.1')
 
     def test_make_request_http_error(self):
         """ Test request http exception raised if hit on multiple nodes.
@@ -156,8 +160,10 @@ class TestClient(unittest.TestCase):
         self.clnt.node_cnt = 2
         self.clnt.url_prefix = 'https://1.1.1.1:7777/web'
         self.clnt._is_good_response = Mock(return_value='Good')
+        self.assertIsNone(self.clnt.last_used_node)
         with self.assertRaises(HTTPError):
             self.clnt._make_request('GET', 'url', 2, {'data': 'data'})
+        self.assertEqual(self.clnt.last_used_node, '1.1.1.1')
 
     def test_make_request_no_session_error(self):
         """ Test request exception raised if hit on multiple nodes and
@@ -171,8 +177,10 @@ class TestClient(unittest.TestCase):
         self.clnt.node_cnt = 2
         self.clnt.url_prefix = 'https://1.1.1.1:7777/web'
         self.clnt._is_good_response = Mock(return_value='Good')
+        self.assertIsNone(self.clnt.last_used_node)
         with self.assertRaises(HTTPError):
             self.clnt._make_request('GET', 'url', 2, {'data': 'data'})
+        self.assertEqual(self.clnt.last_used_node, '1.1.1.1')
 
     def test_make_request_response_error(self):
         """ Test request exception raised from CVP response data.
@@ -187,8 +195,10 @@ class TestClient(unittest.TestCase):
         self.clnt.url_prefix = 'https://1.1.1.1:7777/web'
         self.clnt._is_good_response = Mock()
         self.clnt._is_good_response.side_effect = CvpApiError('CvpApiError')
+        self.assertIsNone(self.clnt.last_used_node)
         with self.assertRaises(CvpApiError):
             self.clnt._make_request('GET', 'url', 2, {'data': 'data'})
+        self.assertEqual(self.clnt.last_used_node, '1.1.1.1')
 
     def test_make_request_response_error_unauthorized(self):
         """ Test request exception raised if CVP responds unauthorized user.
@@ -205,8 +215,10 @@ class TestClient(unittest.TestCase):
         self.clnt._is_good_response = Mock()
         self.clnt._is_good_response.side_effect = CvpApiError(
             msg='Unauthorized User')
+        self.assertIsNone(self.clnt.last_used_node)
         with self.assertRaises(CvpApiError):
             self.clnt._make_request('GET', 'url', 2, {'data': 'data'})
+        self.assertEqual(self.clnt.last_used_node, '1.1.1.1')
 
     def test_make_request_response_error_logout(self):
         """ Test request exception raised if CVP logout error hit.
@@ -222,8 +234,10 @@ class TestClient(unittest.TestCase):
         self.clnt.url_prefix = 'https://1.1.1.1:7777/web'
         self.clnt._is_good_response = Mock()
         self.clnt._is_good_response.side_effect = CvpSessionLogOutError('bad')
+        self.assertIsNone(self.clnt.last_used_node)
         with self.assertRaises(CvpSessionLogOutError):
             self.clnt._make_request('GET', 'url', 2, {'data': 'data'})
+        self.assertEqual(self.clnt.last_used_node, '1.1.1.1')
 
 if __name__ == '__main__':
     unittest.main()

@@ -90,6 +90,7 @@ Example:
     >>>
 '''
 
+import re
 import json
 import logging
 from logging.handlers import SysLogHandler
@@ -102,6 +103,7 @@ from requests.exceptions import ConnectionError, HTTPError, Timeout, \
 from cvprac.cvp_api import CvpApi
 from cvprac.cvp_client_errors import CvpApiError, CvpLoginError, \
     CvpRequestError, CvpSessionLogOutError
+
 
 class CvpClient(object):
     ''' Use this class to create a persistent connection to CVP.
@@ -137,6 +139,7 @@ class CvpClient(object):
         self.protocol = None
         self.session = None
         self.url_prefix = None
+        self._last_used_node = None
 
         # Save proper headers
         self.headers = {'Accept': 'application/json',
@@ -156,6 +159,16 @@ class CvpClient(object):
 
         # Instantiate the CvpApi class
         self.api = CvpApi(self)
+
+    @property
+    def last_used_node(self):
+        ''' Returns the node that the last request was sent to regardless of
+            whether the request was successful or not.
+
+            Returns:
+                String identifying the node that the last request was sent to.
+        '''
+        return self._last_used_node
 
     def set_log_level(self, log_level='INFO'):
         ''' Set log level for logger. Defaults to INFO if no level passed in or
@@ -394,6 +407,9 @@ class CvpClient(object):
             raise ValueError('No valid session to CVP node')
         # For get or post requests apply both the connect and read timeout.
         timeout = (self.connect_timeout, timeout)
+        # Keep note of which node is handling this request.
+        self._last_used_node = re.match('http[s]?://(.*):',
+                                        self.url_prefix).group(1)
         # Retry the request for the number of nodes.
         error = None
         retry_cnt = self.NUM_RETRY_REQUESTS
