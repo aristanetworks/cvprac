@@ -73,6 +73,7 @@ class TestCvpClient(DutSystemTest):
         super(TestCvpClient, self).setUp()
         self.clnt = CvpClient(filename='/tmp/TestCvpClient.log')
         self.assertIsNotNone(self.clnt)
+        self.assertIsNone(self.clnt.last_used_node)
         dut = self.duts[0]
         cert = False
         if 'cert' in dut:
@@ -171,11 +172,13 @@ class TestCvpClient(DutSystemTest):
         return task_id, org_config
 
     def test_api_get_cvp_info(self):
-        ''' Verify get_cvp_info
+        ''' Verify get_cvp_info and verify setting of client last_used_node
+            parameter
         '''
         result = self.api.get_cvp_info()
         self.assertIsNotNone(result)
         self.assertIn('version', result)
+        self.assertIn(self.clnt.last_used_node, self.clnt.url_prefix)
 
     def test_api_check_compliance(self):
         ''' Verify check_compliance
