@@ -750,7 +750,7 @@ class CvpApi(object):
             self._add_temp_action(data)
         # pylint: disable=invalid-name
         except CvpApiError as e:
-            if 'Data already exists' in e:
+            if 'Data already exists' in str(e):
                 self.log.debug('Device %s already in container %s'
                                % (device['fqdn'], container))
         if create_task:
