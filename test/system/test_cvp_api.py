@@ -318,6 +318,13 @@ class TestCvpClient(DutSystemTest):
         self.assertIsNotNone(result)
         self.assertEqual(result, {})
 
+    def test_api_get_device_by_name_substring(self):
+        ''' Verify get_device_by_name with partial fqdn returns nothing
+        '''
+        result = self.api.get_device_by_name(self.device['fqdn'][1:])
+        self.assertIsNotNone(result)
+        self.assertEqual(result, {})
+
     def _create_configlet(self, name, config):
         # Delete the configlet in case it was left by previous test run
         try:
