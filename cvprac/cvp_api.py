@@ -275,9 +275,9 @@ class CvpApi(object):
                              'queryparam=%s&startIndex=0&endIndex=0' % fqdn,
                              timeout=self.request_timeout)
         if len(data['netElementList']) > 0:
-            for netElement in data['netElementList']:
-                if netElement['fqdn'] == fqdn:
-                    device = netElement
+            for netelement in data['netElementList']:
+                if netelement['fqdn'] == fqdn:
+                    device = netelement
                     break
             else:
                 device = {}
