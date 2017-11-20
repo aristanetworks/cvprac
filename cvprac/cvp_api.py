@@ -231,7 +231,7 @@ class CvpApi(object):
                              '%s&queryparam=&startIndex=%d&endIndex=%d' %
                              (key, start, end), timeout=self.request_timeout)
 
-    def get_inventory(self, start=0, end=0):
+    def get_inventory(self, start=0, end=0, query=''):
         ''' Returns the a dict of the net elements known to CVP.
 
             Args:
@@ -239,11 +239,14 @@ class CvpApi(object):
                 end (int): The last inventory entry to return.  Default is 0
                     which means to return all inventory entries.  Can be a
                     large number to indicate the last inventory entry.
+                query (string): A value that can be used as a match to filter
+                    returned inventory list. For example get all switches that
+                    are running a specific version of EOS.
         '''
         self.log.debug('get_inventory: called')
         data = self.clnt.get('/inventory/getInventory.do?'
-                             'queryparam=&startIndex=%d&endIndex=%d' %
-                             (start, end), timeout=self.request_timeout)
+                             'queryparam=%s&startIndex=%d&endIndex=%d' %
+                             (query, start, end), timeout=self.request_timeout)
         return data['netElementList']
 
     def get_devices_in_container(self, name):
