@@ -401,6 +401,42 @@ class TestCvpClient(DutSystemTest):
         total = result['total']
         self.assertEqual(len(result['data']), total)
 
+    def test_api_no_container_by_name(self):
+        ''' Verify searching for a container name that doesn't exist returns
+            None
+        '''
+        container = self.api.get_container_by_name('NonExistentContainer')
+        self.assertIsNone(container)
+
+    def test_api_get_devices_in_container(self):
+        ''' Verify searching for devices in a container returns only the
+            devices under the given container name.
+        '''
+        # Get All Devices
+        all_devices = self.api.get_inventory()
+
+        # Grab key of container to test from first device in inventory
+        device = all_devices[0]
+        parent_cont = device['parentContainerId']
+
+        # Make list of all devices from full inventory that are in the
+        # same container as the first device
+        devices_in_container = []
+        for dev in all_devices:
+            if dev['parentContainerId'] == parent_cont:
+                devices_in_container.append(dev)
+
+        # Get the name of the container for the container key from
+        # the first device
+        all_containers = self.api.get_containers()
+        container_name = None
+        for container in all_containers['data']:
+            if container['key'] == parent_cont:
+                container_name = container['name']
+
+        result = self.api.get_devices_in_container(container_name)
+        self.assertEqual(result, devices_in_container)
+
     def test_api_containers(self):
         ''' Verify add_container, get_container_by_name and delete_container
         '''
@@ -421,6 +457,9 @@ class TestCvpClient(DutSystemTest):
         container = result['containerList'][0]
         self.assertEqual(container['name'], name)
         key = container['key']
+        # Verify newly created container has no devices in it
+        new_cont_devices = self.api.get_devices_in_container(name)
+        self.assertEqual(new_cont_devices, [])
 
         # Verify move device to container
         device = self.api.get_inventory()[0]

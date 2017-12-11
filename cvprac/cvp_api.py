@@ -256,12 +256,17 @@ class CvpApi(object):
                 name (str): The name of the container to get devices from
         '''
         self.log.debug('get_devices_in_container: called')
-        data = self.clnt.get('/inventory/getInventory.do?'
-                             'queryparam=%s&startIndex=0&endIndex=0' % name,
-                             timeout=self.request_timeout)
-        if data['total'] > 0:
-            return data['netElementList']
-        return None
+        devices = []
+        container = self.get_container_by_name(name)
+        if container:
+            data = self.clnt.get('/inventory/getInventory.do?'
+                                 'queryparam=%s&startIndex=0&'
+                                 'endIndex=0' % name,
+                                 timeout=self.request_timeout)
+            for device in data['netElementList']:
+                if device['parentContainerId'] == container['key']:
+                    devices.append(device)
+        return devices
 
     def get_device_by_name(self, fqdn):
         ''' Returns the net element device dict for the devices fqdn name.
