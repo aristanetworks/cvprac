@@ -255,6 +255,13 @@ Please note that all contributions that modify the library behavior
 require corresponding test cases otherwise the pull request will be
 rejected.
 
+Contact/Questions
+=================
+
+Cvprac is developed by Arista EOS+ CS and supported by the Arista EOS+ community. Support for the code is provided on a best effort basis by the Arista EOS+ CS team and the community. You can contact the team that develops these modules by sending an email to eosplus-dev@arista.com.
+
+For customers that are looking for a premium level of support, please contact your local account team or email eosplus@arista.com for help.
+
 License
 =======
 
