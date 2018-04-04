@@ -60,6 +60,8 @@ from cvprac.cvp_client_errors import CvpApiError
 sys.path.append(os.path.join(os.path.dirname(__file__), '../lib'))
 from systestlib import DutSystemTest
 
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class TestCvpClient(DutSystemTest):
     ''' Test cases for the CvpClient class.
@@ -655,6 +657,38 @@ class TestCvpClient(DutSystemTest):
             # Remove container
             self.api.delete_container(name, c['key'], parent['name'],
                                       parent['key'])
+
+    def test_api_inventory(self):
+        ''' Verify add_device_to_inventory and delete_device(s)
+        '''
+        # Get a device
+        device = self.api.get_inventory()[0]
+        # Get devices current container assigned
+        orig_cont = self.api.get_parent_container_for_device(device['key'])
+        # delete from inventory
+        self.api.delete_device(device['systemMacAddress'])
+        # verify not found in inventory
+        res = self.api.get_device_by_name(device['fqdn'])
+        self.assertEqual(res, {})
+        # add back to inventory
+        self.api.add_device_to_inventory(device['ipAddress'],
+                                         orig_cont['name'],
+                                         orig_cont['key'])
+        self.api.get_non_connected_device_count()
+        self.api.save_inventory()
+        # verify not found in inventory
+        res = self.api.get_device_by_name(device['fqdn'])
+        self.assertEqual(res['systemMacAddress'], device['systemMacAddress'])
+        
+        # delete from inventory
+        #self.api.delete_device(device['systemMacAddress'])
+        # verify not found in inventory
+        #res = self.api.get_device_by_name(device['fqdn'])
+        #self.assertEqual(res, {})
+        #dut = self.duts[0]
+        #self.api.retry_add_to_inventory(device['ipAddress'], 
+        #                                device['systemMacAddress'],
+        #                                dut['username'], dut['password'])
 
 
 if __name__ == '__main__':

@@ -249,6 +249,87 @@ class CvpApi(object):
                              (query, start, end), timeout=self.request_timeout)
         return data['netElementList']
 
+    def add_device_to_inventory(self, device_ip, parent_name, parent_key):
+        ''' Add the container to the specified parent.
+
+            Args:
+                device_ip (str): ip address of device we are adding
+                parent_name (str): Parent container name
+                parent_key (str): Parent container key
+        '''
+        self.log.debug('add_device_to_inventory: called')
+        data = {'data': [
+                        {
+                             'containerName' : parent_name,
+                             'containerId' : parent_key,
+                             'containerType' : 'Existing',
+                             'ipAddress' : device_ip,
+                             'containerList' : []
+                        }
+                        ]
+                }
+        data = self.clnt.post('/inventory/add/addToInventory.do?'
+                             'startIndex=0&endIndex=0',
+                             data=data,
+                             timeout=self.request_timeout)
+
+    def retry_add_to_inventory(self, device_mac, device_ip, username,
+                            password):
+        '''Retry addition of device to Cvp inventory
+
+            Args:
+                device_mac (str): MAC address of device
+                device_ip (str): ip address assigned to device
+                username (str): username for device login
+                password (str): password for user
+        '''
+        self.log.debug('retry_add_to_inventory: called')
+        data = { "key" : device_mac,
+                 "ipAddress" : device_ip,
+                 "userName" : username,
+                 "password" : password
+               }
+        data = self.clnt.post('/inventory/add/retryAddDeviceToInventory.do?'
+                             'startIndex=0&endIndex=0',
+                             data=data,
+                             timeout=self.request_timeout)
+
+    def delete_device(self, device_mac):
+        '''Delete the device and its pending tasks from Cvp inventory
+
+            Args:
+                device_mac (str): mac address of device we are deleting
+        '''
+        self.log.debug('delete_device: called')
+        return self.delete_devices([device_mac])
+    
+    def delete_devices(self, device_macs):
+        '''Delete the device and its pending tasks from Cvp inventory
+
+            Args:
+                device_macs (list): list of mac address for 
+                                    devices we're deleting
+        '''
+        self.log.debug('delete_devices: called')
+        data = {'data': device_macs}
+        return self.clnt.post('/inventory/deleteDevices.do?',
+                               data=data,
+                               timeout=self.request_timeout)
+
+    def get_non_connected_device_count(self):
+        '''Returns number of devices not connected
+        '''
+        self.log.debug('get_non_connected_device_count: called')
+        return self.clnt.get('/inventory/add/getNonConnectedDeviceCount.do',
+                               timeout=self.request_timeout)
+
+    def save_inventory(self):
+        '''Saves Cvp inventory state
+        '''
+        self.log.debug('save_inventory: called')
+        return self.clnt.post('/inventory/add/saveInventory.do',
+                               timeout=self.request_timeout)
+
     def get_devices_in_container(self, name):
         ''' Returns a dict of the devices under the named container.
 
