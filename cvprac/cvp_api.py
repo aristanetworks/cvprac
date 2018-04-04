@@ -506,8 +506,7 @@ class CvpApi(object):
 
         info = '%s: Configlet Assign: to Device %s' % (app_name, dev['fqdn'])
         info_preview = '<b>Configlet Assign:</b> to Device' + dev['fqdn']
-        data = {'data': [{'id': 1,
-                          'info': info,
+        data = {'data': [{'info': info,
                           'infoPreview': info_preview,
                           'note': '',
                           'action': 'associate',
@@ -582,8 +581,7 @@ class CvpApi(object):
 
         info = '%s Configlet Remove: from Device %s' % (app_name, dev['fqdn'])
         info_preview = '<b>Configlet Remove:</b> from Device' + dev['fqdn']
-        data = {'data': [{'id': 1,
-                          'info': info,
+        data = {'data': [{'info': info,
                           'infoPreview': info_preview,
                           'note': '',
                           'action': 'associate',
@@ -633,8 +631,7 @@ class CvpApi(object):
         '''
         msg = ('%s container %s under container %s' %
                (operation, container_name, parent_name))
-        data = {'data': [{'id': 1,
-                          'info': msg,
+        data = {'data': [{'info': msg,
                           'infoPreview': msg,
                           'action': operation,
                           'nodeType': 'container',
@@ -746,8 +743,7 @@ class CvpApi(object):
         else:
             parent_cont = self.get_parent_container_for_device(device['key'])
             from_id = parent_cont['key']
-        data = {'data': [{'id': 1,
-                          'info': info,
+        data = {'data': [{'info': info,
                           'infoPreview': info,
                           'action': 'update',
                           'nodeType': 'netelement',
@@ -927,8 +923,7 @@ class CvpApi(object):
         self.log.debug('Attempt to apply %s to %s %s' % (image['name'],
                                                          id_type, name))
         info = 'Apply image: %s to %s %s' % (image['name'], id_type, name)
-        data = {'data': [{'id': 1,
-                          'info': info,
+        data = {'data': [{'info': info,
                           'infoPreview': info,
                           'note': '',
                           'action': 'associate',
@@ -995,8 +990,7 @@ class CvpApi(object):
         '''
         self.log.debug('Attempt to remove %s from %s' % (image['name'], name))
         info = 'Remove image: %s from %s' % (image['name'], name)
-        data = {'data': [{'id': 1,
-                          'info': info,
+        data = {'data': [{'info': info,
                           'infoPreview': info,
                           'note': '',
                           'action': 'associate',
