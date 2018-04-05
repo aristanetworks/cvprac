@@ -250,7 +250,7 @@ class CvpApi(object):
         return data['netElementList']
 
     def add_device_to_inventory(self, device_ip, parent_name, parent_key):
-        ''' Add the container to the specified parent.
+        ''' Add the device to the specified parent container.
 
             Args:
                 device_ip (str): ip address of device we are adding
@@ -268,10 +268,10 @@ class CvpApi(object):
                         }
                         ]
                 }
-        data = self.clnt.post('/inventory/add/addToInventory.do?'
-                             'startIndex=0&endIndex=0',
-                             data=data,
-                             timeout=self.request_timeout)
+        self.clnt.post('/inventory/add/addToInventory.do?'
+                       'startIndex=0&endIndex=0',
+                       data=data,
+                       timeout=self.request_timeout)
 
     def retry_add_to_inventory(self, device_mac, device_ip, username,
                             password):
@@ -289,26 +289,30 @@ class CvpApi(object):
                  "userName" : username,
                  "password" : password
                }
-        data = self.clnt.post('/inventory/add/retryAddDeviceToInventory.do?'
-                             'startIndex=0&endIndex=0',
-                             data=data,
-                             timeout=self.request_timeout)
+        self.clnt.post('/inventory/add/retryAddDeviceToInventory.do?'
+                       'startIndex=0&endIndex=0',
+                       data=data,
+                       timeout=self.request_timeout)
 
     def delete_device(self, device_mac):
         '''Delete the device and its pending tasks from Cvp inventory
 
             Args:
                 device_mac (str): mac address of device we are deleting
+            Returns:
+                data (dict): Contains success or failure message
         '''
         self.log.debug('delete_device: called')
         return self.delete_devices([device_mac])
-    
+
     def delete_devices(self, device_macs):
         '''Delete the device and its pending tasks from Cvp inventory
 
             Args:
-                device_macs (list): list of mac address for 
+                device_macs (list): list of mac address for
                                     devices we're deleting
+            Returns:
+                data (dict): Contains success or failure message
         '''
         self.log.debug('delete_devices: called')
         data = {'data': device_macs}
@@ -317,11 +321,17 @@ class CvpApi(object):
                                timeout=self.request_timeout)
 
     def get_non_connected_device_count(self):
-        '''Returns number of devices not connected
+        '''Returns number of devices not accessible/connected in the temporary
+           inventory.
+
+            Returns:
+                data (int): Number of temporary inventory devices not
+                            accessible/connected
         '''
         self.log.debug('get_non_connected_device_count: called')
-        return self.clnt.get('/inventory/add/getNonConnectedDeviceCount.do',
-                               timeout=self.request_timeout)
+        data = self.clnt.get('/inventory/add/getNonConnectedDeviceCount.do',
+                             timeout=self.request_timeout)
+        return data['data']
 
     def save_inventory(self):
         '''Saves Cvp inventory state
