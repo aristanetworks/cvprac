@@ -31,6 +31,7 @@
 #
 ''' Class containing calls to CVP RESTful API.
 '''
+import urllib
 from cvprac.cvp_client_errors import CvpApiError
 
 
@@ -209,7 +210,8 @@ class CvpApi(object):
                 configlet (dict): The configlet dict.
         '''
         self.log.debug('get_configlets_by_name: name: %s' % name)
-        return self.clnt.get('/configlet/getConfigletByName.do?name=%s' % name,
+        return self.clnt.get('/configlet/getConfigletByName.do?name=%s'
+                             % urllib.quote_plus(name),
                              timeout=self.request_timeout)
 
     def get_configlet_history(self, key, start=0, end=0):
@@ -246,7 +248,8 @@ class CvpApi(object):
         self.log.debug('get_inventory: called')
         data = self.clnt.get('/inventory/getInventory.do?'
                              'queryparam=%s&startIndex=%d&endIndex=%d' %
-                             (query, start, end), timeout=self.request_timeout)
+                             (urllib.quote_plus(query), start, end),
+                             timeout=self.request_timeout)
         return data['netElementList']
 
     def add_device_to_inventory(self, device_ip, parent_name, parent_key):
@@ -347,7 +350,7 @@ class CvpApi(object):
         if container:
             data = self.clnt.get('/inventory/getInventory.do?'
                                  'queryparam=%s&startIndex=0&'
-                                 'endIndex=0' % name,
+                                 'endIndex=0' % urllib.quote_plus(name),
                                  timeout=self.request_timeout)
             for device in data['netElementList']:
                 if device['parentContainerId'] == container['key']:
@@ -366,7 +369,8 @@ class CvpApi(object):
         '''
         self.log.debug('get_device_from_name: fqdn: %s' % fqdn)
         data = self.clnt.get('/inventory/getInventory.do?'
-                             'queryparam=%s&startIndex=0&endIndex=0' % fqdn,
+                             'queryparam=%s&startIndex=0&endIndex=0'
+                             % urllib.quote_plus(fqdn),
                              timeout=self.request_timeout)
         if len(data['netElementList']) > 0:
             for netelement in data['netElementList']:
@@ -407,7 +411,8 @@ class CvpApi(object):
         '''
         self.log.debug('Get info for container %s' % name)
         conts = self.clnt.get('/provisioning/searchTopology.do?queryParam=%s'
-                              '&startIndex=0&endIndex=0' % name)
+                              '&startIndex=0&endIndex=0'
+                              % urllib.quote_plus(name))
         if conts['total'] > 0 and conts['containerList']:
             for cont in conts['containerList']:
                 if cont['name'] == name:
@@ -451,7 +456,8 @@ class CvpApi(object):
                        timeout=self.request_timeout)
 
         # Get the key for the configlet
-        data = self.clnt.get('/configlet/getConfigletByName.do?name=%s' % name,
+        data = self.clnt.get('/configlet/getConfigletByName.do?name=%s'
+                             % urllib.quote_plus(name),
                              timeout=self.request_timeout)
         return data['key']
 
@@ -868,7 +874,8 @@ class CvpApi(object):
         self.log.debug('search_topology: query: %s start: %d end: %d' %
                        (query, start, end))
         data = self.clnt.get('/provisioning/searchTopology.do?queryParam=%s&'
-                             'startIndex=%d&endIndex=%d' % (query, start, end),
+                             'startIndex=%d&endIndex=%d'
+                             % (urllib.quote_plus(query), start, end),
                              timeout=self.request_timeout)
         return data
 
@@ -939,7 +946,8 @@ class CvpApi(object):
         self.log.debug('Attempt to get image bundle %s' % name)
         try:
             image = self.clnt.get('/image/getImageBundleByName.do?name=%s'
-                                  % name, timeout=self.request_timeout)
+                                  % urllib.quote_plus(name),
+                                  timeout=self.request_timeout)
         except CvpApiError as error:
             # Catch an invalid task_id error and return None
             if 'Entity does not exist' in str(error):
