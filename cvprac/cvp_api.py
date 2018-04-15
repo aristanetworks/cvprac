@@ -259,22 +259,19 @@ class CvpApi(object):
         '''
         self.log.debug('add_device_to_inventory: called')
         data = {'data': [
-                        {
-                             'containerName' : parent_name,
-                             'containerId' : parent_key,
-                             'containerType' : 'Existing',
-                             'ipAddress' : device_ip,
-                             'containerList' : []
-                        }
-                        ]
-                }
+            {
+                'containerName' : parent_name,
+                'containerId' : parent_key,
+                'containerType' : 'Existing',
+                'ipAddress' : device_ip,
+                'containerList' : []
+            }]}
         self.clnt.post('/inventory/add/addToInventory.do?'
-                       'startIndex=0&endIndex=0',
-                       data=data,
+                       'startIndex=0&endIndex=0', data=data,
                        timeout=self.request_timeout)
 
     def retry_add_to_inventory(self, device_mac, device_ip, username,
-                            password):
+                               password):
         '''Retry addition of device to Cvp inventory
 
             Args:
@@ -284,11 +281,10 @@ class CvpApi(object):
                 password (str): password for user
         '''
         self.log.debug('retry_add_to_inventory: called')
-        data = { "key" : device_mac,
-                 "ipAddress" : device_ip,
-                 "userName" : username,
-                 "password" : password
-               }
+        data = {"key" : device_mac,
+                "ipAddress" : device_ip,
+                "userName" : username,
+                "password" : password}
         self.clnt.post('/inventory/add/retryAddDeviceToInventory.do?'
                        'startIndex=0&endIndex=0',
                        data=data,
@@ -316,9 +312,8 @@ class CvpApi(object):
         '''
         self.log.debug('delete_devices: called')
         data = {'data': device_macs}
-        return self.clnt.post('/inventory/deleteDevices.do?',
-                               data=data,
-                               timeout=self.request_timeout)
+        return self.clnt.post('/inventory/deleteDevices.do?', data=data,
+                              timeout=self.request_timeout)
 
     def get_non_connected_device_count(self):
         '''Returns number of devices not accessible/connected in the temporary
@@ -338,7 +333,7 @@ class CvpApi(object):
         '''
         self.log.debug('save_inventory: called')
         return self.clnt.post('/inventory/add/saveInventory.do',
-                               timeout=self.request_timeout)
+                              timeout=self.request_timeout)
 
     def get_devices_in_container(self, name):
         ''' Returns a dict of the devices under the named container.

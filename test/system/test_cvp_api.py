@@ -679,14 +679,14 @@ class TestCvpClient(DutSystemTest):
         # verify not found in inventory
         res = self.api.get_device_by_name(device['fqdn'])
         self.assertEqual(res['systemMacAddress'], device['systemMacAddress'])
-        
+
         # delete from inventory
-        #self.api.delete_device(device['systemMacAddress'])
+        # self.api.delete_device(device['systemMacAddress'])
         # verify not found in inventory
-        #res = self.api.get_device_by_name(device['fqdn'])
-        #self.assertEqual(res, {})
-        #dut = self.duts[0]
-        #self.api.retry_add_to_inventory(device['ipAddress'], 
+        # res = self.api.get_device_by_name(device['fqdn'])
+        # self.assertEqual(res, {})
+        # dut = self.duts[0]
+        # self.api.retry_add_to_inventory(device['ipAddress'],
         #                                device['systemMacAddress'],
         #                                dut['username'], dut['password'])
 
