@@ -662,9 +662,14 @@ class TestCvpClient(DutSystemTest):
         ''' Verify add_device_to_inventory and delete_device(s)
         '''
         # Get a device
-        device = self.api.get_inventory()[0]
+        full_inv = self.api.get_inventory()
+        device = full_inv[0]
+        # Record number of current/original non connected devices
+        orig_non_connect_count = self.api.get_non_connected_device_count()
         # Get devices current container assigned
         orig_cont = self.api.get_parent_container_for_device(device['key'])
+        # Get devices current configlets
+        orig_configlets = self.api.get_configlets_by_device_id(device['key'])
         # delete from inventory
         self.api.delete_device(device['systemMacAddress'])
         # verify not found in inventory
@@ -674,11 +679,34 @@ class TestCvpClient(DutSystemTest):
         self.api.add_device_to_inventory(device['ipAddress'],
                                          orig_cont['name'],
                                          orig_cont['key'])
-        self.api.get_non_connected_device_count()
-        self.api.save_inventory()
-        # verify not found in inventory
-        res = self.api.get_device_by_name(device['fqdn'])
-        self.assertEqual(res['systemMacAddress'], device['systemMacAddress'])
+        # get non connected device count until it is back to equal or less
+        # than the original non connected device count
+        non_connect_count = self.api.get_non_connected_device_count()
+        for _ in range(3):
+            if non_connect_count <= orig_non_connect_count:
+                break
+            time.sleep(1)
+            non_connect_count = self.api.get_non_connected_device_count()
+        save_result = self.api.save_inventory()
+        self.assertEqual(save_result['data'], 1)
+        post_save_inv = self.api.get_inventory()
+        self.assertEqual(len(post_save_inv), len(full_inv))
+        # verify device is found in inventory again
+        re_added_dev = self.api.get_device_by_name(device['fqdn'])
+        self.assertEqual(re_added_dev['systemMacAddress'],
+                         device['systemMacAddress'])
+        # apply original configlets back to device
+        results = self.api.apply_configlets_to_device("test_api_inventory",
+                                                      device, orig_configlets,
+                                                      create_task=True)
+        # execute returned task and wait for it to complete
+        task_res = self.api.execute_task(results['data']['taskIds'][0])
+        self.assertEqual(task_res, None)
+        task_status = self.api.get_task_by_id(results['data']['taskIds'][0])
+        while task_status['taskStatus'] != 'COMPLETED':
+            task_status = self.api.get_task_by_id(
+                results['data']['taskIds'][0])
+            time.sleep(1)
 
         # delete from inventory
         # self.api.delete_device(device['systemMacAddress'])
