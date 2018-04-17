@@ -689,6 +689,8 @@ class TestCvpClient(DutSystemTest):
         orig_configlets = self.api.get_configlets_by_device_id(device['key'])
         # delete from inventory
         self.api.delete_device(device['systemMacAddress'])
+        # sleep to allow delete to complete
+        time.sleep(1)
         # verify not found in inventory
         res = self.api.get_device_by_name(device['fqdn'])
         self.assertEqual(res, {})
