@@ -490,6 +490,23 @@ class TestCvpClient(DutSystemTest):
         result = self.api.search_topology(name)
         self.assertEqual(len(result['containerList']), 0)
 
+    def test_api_container_url_encode_name(self):
+        ''' Verify special characters can be used in container names
+        '''
+        new_cont_name = 'Rack2+_DC11'
+        parent = self.container
+        # Verify create container
+        self.api.add_container(new_cont_name, parent['name'], parent['key'])
+        # Verify get container for container with special characters in name
+        container = self.api.get_container_by_name(new_cont_name)
+        self.assertIsNotNone(container)
+        self.assertEqual(container['name'], new_cont_name)
+        # Verify delete container
+        self.api.delete_container(new_cont_name, container['key'],
+                                  parent['name'], parent['key'])
+        result = self.api.search_topology(new_cont_name)
+        self.assertEqual(len(result['containerList']), 0)
+
     def test_api_configlets_to_device(self):
         ''' Verify apply_configlets_to_device and remove_configlets_from_device
         '''
