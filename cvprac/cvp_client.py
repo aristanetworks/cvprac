@@ -363,6 +363,19 @@ class CvpClient(object):
         self.cookies = response.cookies
         self.headers['APP_SESSION_ID'] = response.json()['sessionId']
 
+    def logout(self):
+        '''
+
+        :return:
+        '''
+        response = self.session.post('/login/logout.do')
+        if response['data'] == 'success':
+            self.log.info('User logged out.')
+            self.session = None
+        else:
+            err = 'Error trying to logout %s' % response
+            self.log.error(err)
+
     def _make_request(self, req_type, url, timeout, data=None):
         ''' Make a GET or POST request to CVP.  If the request call raises a
             timeout or CvpSessionLogOutError then the request will be retried

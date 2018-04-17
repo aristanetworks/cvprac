@@ -31,6 +31,7 @@
 #
 ''' Class containing calls to CVP RESTful API.
 '''
+import urllib
 from cvprac.cvp_client_errors import CvpApiError
 
 
@@ -209,7 +210,8 @@ class CvpApi(object):
                 configlet (dict): The configlet dict.
         '''
         self.log.debug('get_configlets_by_name: name: %s' % name)
-        return self.clnt.get('/configlet/getConfigletByName.do?name=%s' % name,
+        return self.clnt.get('/configlet/getConfigletByName.do?name=%s'
+                             % urllib.quote_plus(name),
                              timeout=self.request_timeout)
 
     def get_configlet_history(self, key, start=0, end=0):
@@ -231,7 +233,7 @@ class CvpApi(object):
                              '%s&queryparam=&startIndex=%d&endIndex=%d' %
                              (key, start, end), timeout=self.request_timeout)
 
-    def get_inventory(self, start=0, end=0):
+    def get_inventory(self, start=0, end=0, query=''):
         ''' Returns the a dict of the net elements known to CVP.
 
             Args:
@@ -239,12 +241,102 @@ class CvpApi(object):
                 end (int): The last inventory entry to return.  Default is 0
                     which means to return all inventory entries.  Can be a
                     large number to indicate the last inventory entry.
+                query (string): A value that can be used as a match to filter
+                    returned inventory list. For example get all switches that
+                    are running a specific version of EOS.
         '''
         self.log.debug('get_inventory: called')
         data = self.clnt.get('/inventory/getInventory.do?'
-                             'queryparam=&startIndex=%d&endIndex=%d' %
-                             (start, end), timeout=self.request_timeout)
+                             'queryparam=%s&startIndex=%d&endIndex=%d' %
+                             (urllib.quote_plus(query), start, end),
+                             timeout=self.request_timeout)
         return data['netElementList']
+
+    def add_device_to_inventory(self, device_ip, parent_name, parent_key):
+        ''' Add the device to the specified parent container.
+
+            Args:
+                device_ip (str): ip address of device we are adding
+                parent_name (str): Parent container name
+                parent_key (str): Parent container key
+        '''
+        self.log.debug('add_device_to_inventory: called')
+        data = {'data': [
+            {
+                'containerName' : parent_name,
+                'containerId' : parent_key,
+                'containerType' : 'Existing',
+                'ipAddress' : device_ip,
+                'containerList' : []
+            }]}
+        self.clnt.post('/inventory/add/addToInventory.do?'
+                       'startIndex=0&endIndex=0', data=data,
+                       timeout=self.request_timeout)
+
+    def retry_add_to_inventory(self, device_mac, device_ip, username,
+                               password):
+        '''Retry addition of device to Cvp inventory
+
+            Args:
+                device_mac (str): MAC address of device
+                device_ip (str): ip address assigned to device
+                username (str): username for device login
+                password (str): password for user
+        '''
+        self.log.debug('retry_add_to_inventory: called')
+        data = {"key" : device_mac,
+                "ipAddress" : device_ip,
+                "userName" : username,
+                "password" : password}
+        self.clnt.post('/inventory/add/retryAddDeviceToInventory.do?'
+                       'startIndex=0&endIndex=0',
+                       data=data,
+                       timeout=self.request_timeout)
+
+    def delete_device(self, device_mac):
+        '''Delete the device and its pending tasks from Cvp inventory
+
+            Args:
+                device_mac (str): mac address of device we are deleting
+            Returns:
+                data (dict): Contains success or failure message
+        '''
+        self.log.debug('delete_device: called')
+        return self.delete_devices([device_mac])
+
+    def delete_devices(self, device_macs):
+        '''Delete the device and its pending tasks from Cvp inventory
+
+            Args:
+                device_macs (list): list of mac address for
+                                    devices we're deleting
+            Returns:
+                data (dict): Contains success or failure message
+        '''
+        self.log.debug('delete_devices: called')
+        data = {'data': device_macs}
+        return self.clnt.post('/inventory/deleteDevices.do?', data=data,
+                              timeout=self.request_timeout)
+
+    def get_non_connected_device_count(self):
+        '''Returns number of devices not accessible/connected in the temporary
+           inventory.
+
+            Returns:
+                data (int): Number of temporary inventory devices not
+                            accessible/connected
+        '''
+        self.log.debug('get_non_connected_device_count: called')
+        data = self.clnt.get('/inventory/add/getNonConnectedDeviceCount.do',
+                             timeout=self.request_timeout)
+        return data['data']
+
+    def save_inventory(self):
+        '''Saves Cvp inventory state
+        '''
+        self.log.debug('save_inventory: called')
+        return self.clnt.post('/inventory/add/saveInventory.do',
+                              timeout=self.request_timeout)
 
     def get_devices_in_container(self, name):
         ''' Returns a dict of the devices under the named container.
@@ -253,12 +345,17 @@ class CvpApi(object):
                 name (str): The name of the container to get devices from
         '''
         self.log.debug('get_devices_in_container: called')
-        data = self.clnt.get('/inventory/getInventory.do?'
-                             'queryparam=%s&startIndex=0&endIndex=0' % name,
-                             timeout=self.request_timeout)
-        if data['total'] > 0:
-            return data['netElementList']
-        return None
+        devices = []
+        container = self.get_container_by_name(name)
+        if container:
+            data = self.clnt.get('/inventory/getInventory.do?'
+                                 'queryparam=%s&startIndex=0&'
+                                 'endIndex=0' % urllib.quote_plus(name),
+                                 timeout=self.request_timeout)
+            for device in data['netElementList']:
+                if device['parentContainerId'] == container['key']:
+                    devices.append(device)
+        return devices
 
     def get_device_by_name(self, fqdn):
         ''' Returns the net element device dict for the devices fqdn name.
@@ -272,10 +369,16 @@ class CvpApi(object):
         '''
         self.log.debug('get_device_from_name: fqdn: %s' % fqdn)
         data = self.clnt.get('/inventory/getInventory.do?'
-                             'queryparam=%s&startIndex=0&endIndex=0' % fqdn,
+                             'queryparam=%s&startIndex=0&endIndex=0'
+                             % urllib.quote_plus(fqdn),
                              timeout=self.request_timeout)
         if len(data['netElementList']) > 0:
-            device = data['netElementList'][0]
+            for netelement in data['netElementList']:
+                if netelement['fqdn'] == fqdn:
+                    device = netelement
+                    break
+            else:
+                device = {}
         else:
             device = {}
         return device
@@ -308,7 +411,8 @@ class CvpApi(object):
         '''
         self.log.debug('Get info for container %s' % name)
         conts = self.clnt.get('/provisioning/searchTopology.do?queryParam=%s'
-                              '&startIndex=0&endIndex=0' % name)
+                              '&startIndex=0&endIndex=0'
+                              % urllib.quote_plus(name))
         if conts['total'] > 0 and conts['containerList']:
             for cont in conts['containerList']:
                 if cont['name'] == name:
@@ -352,7 +456,8 @@ class CvpApi(object):
                        timeout=self.request_timeout)
 
         # Get the key for the configlet
-        data = self.clnt.get('/configlet/getConfigletByName.do?name=%s' % name,
+        data = self.clnt.get('/configlet/getConfigletByName.do?name=%s'
+                             % urllib.quote_plus(name),
                              timeout=self.request_timeout)
         return data['key']
 
@@ -493,8 +598,7 @@ class CvpApi(object):
 
         info = '%s: Configlet Assign: to Device %s' % (app_name, dev['fqdn'])
         info_preview = '<b>Configlet Assign:</b> to Device' + dev['fqdn']
-        data = {'data': [{'id': 1,
-                          'info': info,
+        data = {'data': [{'info': info,
                           'infoPreview': info_preview,
                           'note': '',
                           'action': 'associate',
@@ -569,8 +673,7 @@ class CvpApi(object):
 
         info = '%s Configlet Remove: from Device %s' % (app_name, dev['fqdn'])
         info_preview = '<b>Configlet Remove:</b> from Device' + dev['fqdn']
-        data = {'data': [{'id': 1,
-                          'info': info,
+        data = {'data': [{'info': info,
                           'infoPreview': info_preview,
                           'note': '',
                           'action': 'associate',
@@ -620,8 +723,7 @@ class CvpApi(object):
         '''
         msg = ('%s container %s under container %s' %
                (operation, container_name, parent_name))
-        data = {'data': [{'id': 1,
-                          'info': msg,
+        data = {'data': [{'info': msg,
                           'infoPreview': msg,
                           'action': operation,
                           'nodeType': 'container',
@@ -733,8 +835,7 @@ class CvpApi(object):
         else:
             parent_cont = self.get_parent_container_for_device(device['key'])
             from_id = parent_cont['key']
-        data = {'data': [{'id': 1,
-                          'info': info,
+        data = {'data': [{'info': info,
                           'infoPreview': info,
                           'action': 'update',
                           'nodeType': 'netelement',
@@ -773,7 +874,8 @@ class CvpApi(object):
         self.log.debug('search_topology: query: %s start: %d end: %d' %
                        (query, start, end))
         data = self.clnt.get('/provisioning/searchTopology.do?queryParam=%s&'
-                             'startIndex=%d&endIndex=%d' % (query, start, end),
+                             'startIndex=%d&endIndex=%d'
+                             % (urllib.quote_plus(query), start, end),
                              timeout=self.request_timeout)
         return data
 
@@ -844,7 +946,8 @@ class CvpApi(object):
         self.log.debug('Attempt to get image bundle %s' % name)
         try:
             image = self.clnt.get('/image/getImageBundleByName.do?name=%s'
-                                  % name, timeout=self.request_timeout)
+                                  % urllib.quote_plus(name),
+                                  timeout=self.request_timeout)
         except CvpApiError as error:
             # Catch an invalid task_id error and return None
             if 'Entity does not exist' in str(error):
@@ -914,8 +1017,7 @@ class CvpApi(object):
         self.log.debug('Attempt to apply %s to %s %s' % (image['name'],
                                                          id_type, name))
         info = 'Apply image: %s to %s %s' % (image['name'], id_type, name)
-        data = {'data': [{'id': 1,
-                          'info': info,
+        data = {'data': [{'info': info,
                           'infoPreview': info,
                           'note': '',
                           'action': 'associate',
@@ -982,8 +1084,7 @@ class CvpApi(object):
         '''
         self.log.debug('Attempt to remove %s from %s' % (image['name'], name))
         info = 'Remove image: %s from %s' % (image['name'], name)
-        data = {'data': [{'id': 1,
-                          'info': info,
+        data = {'data': [{'info': info,
                           'infoPreview': info,
                           'note': '',
                           'action': 'associate',

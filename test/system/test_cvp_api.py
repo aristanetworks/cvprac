@@ -60,6 +60,8 @@ from cvprac.cvp_client_errors import CvpApiError
 sys.path.append(os.path.join(os.path.dirname(__file__), '../lib'))
 from systestlib import DutSystemTest
 
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class TestCvpClient(DutSystemTest):
     ''' Test cases for the CvpClient class.
@@ -318,6 +320,13 @@ class TestCvpClient(DutSystemTest):
         self.assertIsNotNone(result)
         self.assertEqual(result, {})
 
+    def test_api_get_device_by_name_substring(self):
+        ''' Verify get_device_by_name with partial fqdn returns nothing
+        '''
+        result = self.api.get_device_by_name(self.device['fqdn'][1:])
+        self.assertIsNotNone(result)
+        self.assertEqual(result, {})
+
     def _create_configlet(self, name, config):
         # Delete the configlet in case it was left by previous test run
         try:
@@ -394,6 +403,42 @@ class TestCvpClient(DutSystemTest):
         total = result['total']
         self.assertEqual(len(result['data']), total)
 
+    def test_api_no_container_by_name(self):
+        ''' Verify searching for a container name that doesn't exist returns
+            None
+        '''
+        container = self.api.get_container_by_name('NonExistentContainer')
+        self.assertIsNone(container)
+
+    def test_api_get_devices_in_container(self):
+        ''' Verify searching for devices in a container returns only the
+            devices under the given container name.
+        '''
+        # Get All Devices
+        all_devices = self.api.get_inventory()
+
+        # Grab key of container to test from first device in inventory
+        device = all_devices[0]
+        parent_cont = device['parentContainerId']
+
+        # Make list of all devices from full inventory that are in the
+        # same container as the first device
+        devices_in_container = []
+        for dev in all_devices:
+            if dev['parentContainerId'] == parent_cont:
+                devices_in_container.append(dev)
+
+        # Get the name of the container for the container key from
+        # the first device
+        all_containers = self.api.get_containers()
+        container_name = None
+        for container in all_containers['data']:
+            if container['key'] == parent_cont:
+                container_name = container['name']
+
+        result = self.api.get_devices_in_container(container_name)
+        self.assertEqual(result, devices_in_container)
+
     def test_api_containers(self):
         ''' Verify add_container, get_container_by_name and delete_container
         '''
@@ -414,6 +459,9 @@ class TestCvpClient(DutSystemTest):
         container = result['containerList'][0]
         self.assertEqual(container['name'], name)
         key = container['key']
+        # Verify newly created container has no devices in it
+        new_cont_devices = self.api.get_devices_in_container(name)
+        self.assertEqual(new_cont_devices, [])
 
         # Verify move device to container
         device = self.api.get_inventory()[0]
@@ -440,6 +488,23 @@ class TestCvpClient(DutSystemTest):
         # Verify delete container
         self.api.delete_container(name, key, parent['name'], parent['key'])
         result = self.api.search_topology(name)
+        self.assertEqual(len(result['containerList']), 0)
+
+    def test_api_container_url_encode_name(self):
+        ''' Verify special characters can be used in container names
+        '''
+        new_cont_name = 'Rack2+_DC11'
+        parent = self.container
+        # Verify create container
+        self.api.add_container(new_cont_name, parent['name'], parent['key'])
+        # Verify get container for container with special characters in name
+        container = self.api.get_container_by_name(new_cont_name)
+        self.assertIsNotNone(container)
+        self.assertEqual(container['name'], new_cont_name)
+        # Verify delete container
+        self.api.delete_container(new_cont_name, container['key'],
+                                  parent['name'], parent['key'])
+        result = self.api.search_topology(new_cont_name)
         self.assertEqual(len(result['containerList']), 0)
 
     def test_api_configlets_to_device(self):
@@ -609,6 +674,68 @@ class TestCvpClient(DutSystemTest):
             # Remove container
             self.api.delete_container(name, c['key'], parent['name'],
                                       parent['key'])
+
+    def test_api_inventory(self):
+        ''' Verify add_device_to_inventory and delete_device(s)
+        '''
+        # Get a device
+        full_inv = self.api.get_inventory()
+        device = full_inv[0]
+        # Record number of current/original non connected devices
+        orig_non_connect_count = self.api.get_non_connected_device_count()
+        # Get devices current container assigned
+        orig_cont = self.api.get_parent_container_for_device(device['key'])
+        # Get devices current configlets
+        orig_configlets = self.api.get_configlets_by_device_id(device['key'])
+        # delete from inventory
+        self.api.delete_device(device['systemMacAddress'])
+        # sleep to allow delete to complete
+        time.sleep(1)
+        # verify not found in inventory
+        res = self.api.get_device_by_name(device['fqdn'])
+        self.assertEqual(res, {})
+        # add back to inventory
+        self.api.add_device_to_inventory(device['ipAddress'],
+                                         orig_cont['name'],
+                                         orig_cont['key'])
+        # get non connected device count until it is back to equal or less
+        # than the original non connected device count
+        non_connect_count = self.api.get_non_connected_device_count()
+        for _ in range(3):
+            if non_connect_count <= orig_non_connect_count:
+                break
+            time.sleep(1)
+            non_connect_count = self.api.get_non_connected_device_count()
+        save_result = self.api.save_inventory()
+        self.assertEqual(save_result['data'], 1)
+        post_save_inv = self.api.get_inventory()
+        self.assertEqual(len(post_save_inv), len(full_inv))
+        # verify device is found in inventory again
+        re_added_dev = self.api.get_device_by_name(device['fqdn'])
+        self.assertEqual(re_added_dev['systemMacAddress'],
+                         device['systemMacAddress'])
+        # apply original configlets back to device
+        results = self.api.apply_configlets_to_device("test_api_inventory",
+                                                      device, orig_configlets,
+                                                      create_task=True)
+        # execute returned task and wait for it to complete
+        task_res = self.api.execute_task(results['data']['taskIds'][0])
+        self.assertEqual(task_res, None)
+        task_status = self.api.get_task_by_id(results['data']['taskIds'][0])
+        while task_status['taskStatus'] != 'COMPLETED':
+            task_status = self.api.get_task_by_id(
+                results['data']['taskIds'][0])
+            time.sleep(1)
+
+        # delete from inventory
+        # self.api.delete_device(device['systemMacAddress'])
+        # verify not found in inventory
+        # res = self.api.get_device_by_name(device['fqdn'])
+        # self.assertEqual(res, {})
+        # dut = self.duts[0]
+        # self.api.retry_add_to_inventory(device['ipAddress'],
+        #                                device['systemMacAddress'],
+        #                                dut['username'], dut['password'])
 
 
 if __name__ == '__main__':
