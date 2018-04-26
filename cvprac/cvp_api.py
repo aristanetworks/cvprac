@@ -439,6 +439,23 @@ class CvpApi(object):
                              timeout=self.request_timeout)
         return data['configletList']
 
+    def get_configlets(self, configletType='all', searchstring=''):
+        ''' Returns a list of configlets, either with or without filtering.
+
+            Args:
+                configletType: Type of configlet - 'all', 'configlet', 'builder', 'draft', 
+                    'Builderwithoutdraft', 'Generated', 'ignoreDraft'
+                searchstring: String to search for (can be nil to match all)
+        '''
+        self.log.debug('get_configlets: configletType: %s searchstring: %s' % (configletType, searchstring))
+        data = self.clnt.get('/configlet/searchConfiglets.do?'
+                             'type=%s&queryparam=%s&startIndex=0&endIndex=0' % (configletType, searchstring),
+                             timeout=self.request_timeout)
+        if data['total'] > 0:
+            return data
+        return None
+
+    
     def add_configlet(self, name, config):
         ''' Add a configlet and return the key for the configlet.
 
