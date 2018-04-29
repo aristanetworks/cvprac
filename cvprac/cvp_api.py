@@ -1141,28 +1141,6 @@ class CvpApi(object):
 
         return self._save_topology_v2([])
     
-    def capture_ContainerLevelSnapshot(self, snapshotTemplateId='Initial_Template', containerId='root'):
-        ''' Capture a container level snapshot. Defaults to 'Show_Inventory'
-        snapshot being run against the root/tenant container. Optionally, 
-        can specify a specific snapshot template and container ID.
-        
-        Args:
-            snapshotTemplateId (str): Unique identifier for snapshot template to use.
-            containerId (str): Container to apply the snapshot to.
-
-        Returns:
-                response (dict): A dict that contains a status and a list of
-                    task ids created (if any).
-                    
-                    Ex: {u'data': {u'templateId': u'Initial_Template', u'containerId': u'root'}}
-        '''
-        info = 'Apply snapshot: %s to container: %s' % (snapshotTemplateId, containerId)
-        self.log.debug(info)
-        
-        body = {'templateId': snapshotTemplateId, 'containerId': containerId}
-        return self.clnt.post('/snapshot/captureContainerLevelSnapshot.do?', data=body,
-                              timeout=self.request_timeout)
-    
     def get_EventDatabyId(self, eventId, start=0, end=0):
         ''' Query CVP for child event details of parent event ID.
         
