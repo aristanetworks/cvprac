@@ -1131,7 +1131,7 @@ class CvpApi(object):
                                   'do?netElementId=%s' % device['key'])
         new_configlets = prop_conf['proposedConfiglets']
         if configlets:
-            new_configlets.append(configlets)
+            new_configlets.extend(configlets)
         self.apply_configlets_to_device('deploy_device', device,
                                         new_configlets, create_task=False)
         # Apply image to the device
