@@ -367,13 +367,10 @@ class CvpApi(object):
                 device (dict): The net element device dict for the device if
                     otherwise returns an empty hash.
         '''
-        self.log.debug('get_device_from_name: fqdn: %s' % fqdn)
-        data = self.clnt.get('/inventory/getInventory.do?'
-                             'queryparam=%s&startIndex=0&endIndex=0'
-                             % urllib.quote_plus(fqdn),
-                             timeout=self.request_timeout)
-        if len(data['netElementList']) > 0:
-            for netelement in data['netElementList']:
+        self.log.debug('get_device_by_name: fqdn: %s' % fqdn)
+        data = self.get_inventory(start=0, end=0, query=fqdn)
+        if len(data) > 0:
+            for netelement in data:
                 if netelement['fqdn'] == fqdn:
                     device = netelement
                     break
