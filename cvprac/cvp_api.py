@@ -1137,3 +1137,20 @@ class CvpApi(object):
             self.apply_image_to_device(image_info, device, create_task=False)
 
         return self._save_topology_v2([])
+    
+    def get_EventDatabyId(self, eventId, start=0, end=0):
+        ''' Query CVP for child event details of parent event ID.
+        
+        Args:
+            eventId (str): Unique Identifier of parent event.
+            
+        Returns:
+            response (dict): A dict that contains a total number of events and data for each sub-event.
+        '''
+        
+        self.log.debug('get_EventDatabyId: eventID: %s' % eventId)
+        data = self.clnt.get(
+            '/event/getEventDataById.do?eventId=%s&startIndex=%d&endIndex=%d' %
+            (eventId, start, end), timeout=self.request_timeout)
+        return data['data']
+    
