@@ -1100,7 +1100,7 @@ class CvpApi(object):
         self._add_temp_action(data)
         return self._save_topology_v2([])
 
-    def deploy_device(self, device, container, configlets=None, image=None):
+    def deploy_device(self, device, container, configlets=None, image=None, create_task=True):
         ''' Move a device from the undefined container to a target container.
             Optionally apply device-specific configlets and an image.
 
@@ -1135,5 +1135,5 @@ class CvpApi(object):
         if image:
             image_info = self.get_image_bundle_by_name(image)
             self.apply_image_to_device(image_info, device, create_task=False)
-
-        return self._save_topology_v2([])
+        if create_task:
+            return self._save_topology_v2([])
