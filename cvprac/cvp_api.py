@@ -42,7 +42,6 @@ class CvpApi(object):
         Where needed minimal processing is performed on the results.
         Any method that does a cvprac get or post call could raise the
         following errors:
-
         ConnectionError: A ConnectionError is raised if there was a network
             problem (e.g. DNS failure, refused connection, etc)
         CvpApiError: A CvpApiError is raised if there was a JSON error.
@@ -66,7 +65,6 @@ class CvpApi(object):
 
     def __init__(self, clnt, request_timeout=30):
         ''' Initialize the class.
-
             Args:
                 clnt (obj): A CvpClient object
         '''
@@ -76,7 +74,6 @@ class CvpApi(object):
 
     def get_cvp_info(self):
         ''' Returns information about CVP.
-
             Returns:
                 cvp_info (dict): CVP Information
         '''
@@ -86,10 +83,8 @@ class CvpApi(object):
     def get_task_by_id(self, task_id):
         ''' Returns the current CVP Task status for the task with the specified
             TaskId.
-
             Args:
                 task_id (int): CVP task identifier
-
             Returns:
                 task (dict): The CVP task for the associated Id.  Returns None
                     if the task_id was invalid.
@@ -106,13 +101,11 @@ class CvpApi(object):
 
     def get_tasks_by_status(self, status, start=0, end=0):
         ''' Returns a list of tasks with the given status.
-
             Args:
                 status (str): Task status
                 start (int): Start index for the pagination.  Default is 0.
                 end (int): End index for the pagination.  If end index is 0
                     then all the records will be returned.  Default is 0.
-
             Returns:
                 tasks (list): The list of tasks
         '''
@@ -124,12 +117,10 @@ class CvpApi(object):
 
     def get_tasks(self, start=0, end=0):
         ''' Returns a list of all the tasks.
-
             Args:
                 start (int): Start index for the pagination.  Default is 0.
                 end (int): End index for the pagination.  If end index is 0
                     then all the records will be returned.  Default is 0.
-
             Returns:
                 tasks (dict): The 'total' key contains the number of tasks,
                     the 'data' key contains a list of the tasks.
@@ -141,14 +132,12 @@ class CvpApi(object):
 
     def get_logs_by_id(self, task_id, start=0, end=0):
         ''' Returns the log entries for the task with the specified TaskId.
-
             Args:
                 task_id (int): CVP task identifier
                 start (int): The first log entry to return.  Default is 0.
                 end (int): The last log entry to return.  Default is 0 which
                     means to return all log entries.  Can be a large number to
                     indicate the last log entry.
-
             Returns:
                 task (dict): The CVP log for the associated Id.  Returns None
                     if the task_id was invalid.
@@ -161,7 +150,6 @@ class CvpApi(object):
 
     def add_note_to_task(self, task_id, note):
         ''' Add notes to the task.
-
             Args:
                 task_id (str): Task ID
                 note (str): Note to add to the task
@@ -175,12 +163,9 @@ class CvpApi(object):
     def execute_task(self, task_id):
         ''' Execute the task.  Note that if the task has failed then inspect
             the task logs to determine why the task failed.  If you see:
-
               Failure response received from the netElement: Unauthorized User
-
             then it means that the netelement does not have the same user ID
             and/or password as the CVP user executing the task.
-
             Args:
                 task_id (str): Task ID
         '''
@@ -191,7 +176,6 @@ class CvpApi(object):
 
     def cancel_task(self, task_id):
         ''' Cancel the task
-
             Args:
                 task_id (str): Task ID
         '''
@@ -202,10 +186,8 @@ class CvpApi(object):
 
     def get_configlet_by_name(self, name):
         ''' Returns the configlet with the specified name
-
             Args:
                 name (str): Name of the configlet.  Can contain spaces.
-
             Returns:
                 configlet (dict): The configlet dict.
         '''
@@ -216,14 +198,12 @@ class CvpApi(object):
 
     def get_configlet_history(self, key, start=0, end=0):
         ''' Returns the configlet history.
-
             Args:
                 key (str): Key for the configlet.
                 start (int): The first configlet entry to return.  Default is 0
                 end (int): The last configlet entry to return.  Default is 0
                     which means to return all configlet entries.  Can be a
                     large number to indicate the last configlet entry.
-
             Returns:
                 history (dict): The configlet dict with the changes from
                     most recent to oldest.
@@ -235,7 +215,6 @@ class CvpApi(object):
 
     def get_inventory(self, start=0, end=0, query=''):
         ''' Returns the a dict of the net elements known to CVP.
-
             Args:
                 start (int): The first inventory entry to return.  Default is 0
                 end (int): The last inventory entry to return.  Default is 0
@@ -254,7 +233,6 @@ class CvpApi(object):
 
     def add_device_to_inventory(self, device_ip, parent_name, parent_key):
         ''' Add the device to the specified parent container.
-
             Args:
                 device_ip (str): ip address of device we are adding
                 parent_name (str): Parent container name
@@ -276,7 +254,6 @@ class CvpApi(object):
     def retry_add_to_inventory(self, device_mac, device_ip, username,
                                password):
         '''Retry addition of device to Cvp inventory
-
             Args:
                 device_mac (str): MAC address of device
                 device_ip (str): ip address assigned to device
@@ -295,7 +272,6 @@ class CvpApi(object):
 
     def delete_device(self, device_mac):
         '''Delete the device and its pending tasks from Cvp inventory
-
             Args:
                 device_mac (str): mac address of device we are deleting
             Returns:
@@ -306,7 +282,6 @@ class CvpApi(object):
 
     def delete_devices(self, device_macs):
         '''Delete the device and its pending tasks from Cvp inventory
-
             Args:
                 device_macs (list): list of mac address for
                                     devices we're deleting
@@ -321,7 +296,6 @@ class CvpApi(object):
     def get_non_connected_device_count(self):
         '''Returns number of devices not accessible/connected in the temporary
            inventory.
-
             Returns:
                 data (int): Number of temporary inventory devices not
                             accessible/connected
@@ -340,7 +314,6 @@ class CvpApi(object):
 
     def get_devices_in_container(self, name):
         ''' Returns a dict of the devices under the named container.
-
             Args:
                 name (str): The name of the container to get devices from
         '''
@@ -359,21 +332,16 @@ class CvpApi(object):
 
     def get_device_by_name(self, fqdn):
         ''' Returns the net element device dict for the devices fqdn name.
-
             Args:
                 fqdn (str): Fully qualified domain name of the device.
-
             Returns:
                 device (dict): The net element device dict for the device if
                     otherwise returns an empty hash.
         '''
-        self.log.debug('get_device_from_name: fqdn: %s' % fqdn)
-        data = self.clnt.get('/inventory/getInventory.do?'
-                             'queryparam=%s&startIndex=0&endIndex=0'
-                             % urllib.quote_plus(fqdn),
-                             timeout=self.request_timeout)
-        if len(data['netElementList']) > 0:
-            for netelement in data['netElementList']:
+        self.log.debug('get_device_by_name: fqdn: %s' % fqdn)
+        data = self.get_inventory(start=0, end=0, query=fqdn)
+        if len(data) > 0:
+            for netelement in data:
                 if netelement['fqdn'] == fqdn:
                     device = netelement
                     break
@@ -385,12 +353,10 @@ class CvpApi(object):
 
     def get_containers(self, start=0, end=0):
         ''' Returns a list of all the containers.
-
             Args:
                 start (int): Start index for the pagination.  Default is 0.
                 end (int): End index for the pagination.  If end index is 0
                     then all the records will be returned.  Default is 0.
-
             Returns:
                 containers (dict): The 'total' key contains the number of
                 containers, the 'data' key contains a list of the containers
@@ -402,10 +368,8 @@ class CvpApi(object):
 
     def get_container_by_name(self, name):
         ''' Returns a container that exactly matches the name.
-
             Args:
                 name (str): String to search for in container names.
-
             Returns:
                 container (dict): Container info in dictionary format or None
         '''
@@ -421,14 +385,12 @@ class CvpApi(object):
 
     def get_configlets_by_device_id(self, mac, start=0, end=0):
         ''' Returns the list of configlets applied to a device.
-
             Args:
                 mac (str): Device mac address (i.e. device id)
                 start (int): The first configlet entry to return.  Default is 0
                 end (int): The last configlet entry to return.  Default is 0
                     which means to return all configlet entries.  Can be a
                     large number to indicate the last configlet entry.
-
             Returns:
                 configlets (list): The list of configlets applied to the device
         '''
@@ -441,11 +403,9 @@ class CvpApi(object):
 
     def add_configlet(self, name, config):
         ''' Add a configlet and return the key for the configlet.
-
             Args:
                 name (str): Configlet name
                 config (str): Switch config statements
-
             Returns:
                 key (str): The key for the configlet
         '''
@@ -463,7 +423,6 @@ class CvpApi(object):
 
     def delete_configlet(self, name, key):
         ''' Delete the configlet.
-
             Args:
                 name (str): Configlet name
                 key (str): Configlet key
@@ -476,12 +435,10 @@ class CvpApi(object):
 
     def update_configlet(self, config, key, name):
         ''' Update a configlet.
-
             Args:
                 config (str): Switch config statements
                 key (str): Configlet key
                 name (str): Configlet name
-
             Returns:
                 data (dict): Contains success or failure message
         '''
@@ -495,11 +452,9 @@ class CvpApi(object):
 
     def validate_config(self, device_mac, config):
         ''' Validate a config against a device
-
             Args:
                 device_mac (str): Device MAC address
                 config (str): Switch config statements
-
             Returns:
                 response (dict): A dict that contains the result of the
                     validation operation
@@ -533,11 +488,9 @@ class CvpApi(object):
 
     def _add_temp_action(self, data):
         ''' Adds temp action that requires a saveTopology call to take effect.
-
             Args:
                 data (dict): a data dict with a specific format for the
                     desired action.
-
                     Base Ex: data = {'data': [{specific key/value pairs}]}
         '''
         url = ('/provisioning/addTempAction.do?'
@@ -546,17 +499,14 @@ class CvpApi(object):
 
     def _save_topology_v2(self, data):
         ''' Confirms a previously created temp action.
-
             Args:
                 data (list): a list that contains a dict with a specific
                     format for the desired action. Our primary use case is for
                     confirming existing temp actions so we most often send an
                     empty list to confirm an existing temp action.
-
             Returns:
                 response (dict): A dict that contains a status and a list of
                     task ids created (if any).
-
                     Ex: {u'data': {u'status': u'success', u'taskIds': []}}
         '''
         url = '/provisioning/v2/saveTopology.do'
@@ -565,18 +515,15 @@ class CvpApi(object):
     def apply_configlets_to_device(self, app_name, dev, new_configlets,
                                    create_task=True):
         ''' Apply the configlets to the device.
-
             Args:
                 app_name (str): The application name to use in info field.
                 dev (dict): The switch device dict
                 new_configlets (list): List of configlet name and key pairs
                 create_task (bool): Determines whether or not to execute a save
                     and create the tasks (if any)
-
             Returns:
                 response (dict): A dict that contains a status and a list of
                     task ids created (if any).
-
                     Ex: {u'data': {u'status': u'success', u'taskIds': [u'32']}}
         '''
         self.log.debug('apply_configlets_to_device: dev: %s names: %s' %
@@ -632,18 +579,15 @@ class CvpApi(object):
     def remove_configlets_from_device(self, app_name, dev, del_configlets,
                                       create_task=True):
         ''' Remove the configlets from the device.
-
             Args:
                 app_name (str): The application name to use in info field.
                 dev (dict): The switch device dict
                 del_configlets (list): List of configlet name and key pairs
                 create_task (bool): Determines whether or not to execute a save
                     and create the tasks (if any)
-
             Returns:
                 response (dict): A dict that contains a status and a list of
                     task ids created (if any).
-
                     Ex: {u'data': {u'status': u'success', u'taskIds': [u'35']}}
         '''
         self.log.debug('remove_configlets_from_device: dev: %s names: %s' %
@@ -707,18 +651,15 @@ class CvpApi(object):
     def _container_op(self, container_name, container_key, parent_name,
                       parent_key, operation):
         ''' Perform the operation on the container.
-
             Args:
                 container_name (str): Container name
                 container_key (str): Container key, can be empty for add.
                 parent_name (str): Parent container name
                 parent_key (str): Parent container key
                 operation (str): Container operation 'add' or 'delete'.
-
             Returns:
                 response (dict): A dict that contains a status and a list of
                     task ids created (if any).
-
                     Ex: {u'data': {u'status': u'success', u'taskIds': []}}
         '''
         msg = ('%s container %s under container %s' %
@@ -749,16 +690,13 @@ class CvpApi(object):
 
     def add_container(self, container_name, parent_name, parent_key):
         ''' Add the container to the specified parent.
-
             Args:
                 container_name (str): Container name
                 parent_name (str): Parent container name
                 parent_key (str): Parent container key
-
             Returns:
                 response (dict): A dict that contains a status and a list of
                     task ids created (if any).
-
                     Ex: {u'data': {u'status': u'success', u'taskIds': []}}
         '''
         self.log.debug('add_container: container: %s parent: %s parent_key: %s'
@@ -769,17 +707,14 @@ class CvpApi(object):
     def delete_container(self, container_name, container_key, parent_name,
                          parent_key):
         ''' Add the container to the specified parent.
-
             Args:
                 container_name (str): Container name
                 container_key (str): Container key
                 parent_name (str): Parent container name
                 parent_key (str): Parent container key
-
             Returns:
                 response (dict): A dict that contains a status and a list of
                     task ids created (if any).
-
                     Ex: {u'data': {u'status': u'success', u'taskIds': []}}
         '''
         self.log.debug('delete_container: container: %s container_key: %s '
@@ -791,10 +726,8 @@ class CvpApi(object):
 
     def get_parent_container_for_device(self, device_mac):
         ''' Add the container to the specified parent.
-
             Args:
                 device_mac (str): Device mac address
-
             Returns:
                 response (dict): A dict that contains the parent container info
         '''
@@ -811,18 +744,15 @@ class CvpApi(object):
     def move_device_to_container(self, app_name, device, container,
                                  create_task=True):
         ''' Add the container to the specified parent.
-
             Args:
                 app_name (str): String to specify info/signifier of calling app
                 device (dict): Device info
                 container (dict): Container info
                 create_task (bool): Determines whether or not to execute a save
                     and create the tasks (if any)
-
             Returns:
                 response (dict): A dict that contains a status and a list of
                     task ids created (if any).
-
                     Ex: {u'data': {u'status': u'success', u'taskIds': []}}
         '''
         info = '%s moving device %s to container %s' % (app_name,
@@ -859,14 +789,12 @@ class CvpApi(object):
 
     def search_topology(self, query, start=0, end=0):
         ''' Search the topology for items matching the query parameter.
-
             Args:
                 query (str): Query parameter which is the name of the container
                     or device.
                 start (int): Start index for the pagination.  Default is 0.
                 end (int): End index for the pagination.  If end index is 0
                     then all the records will be returned.  Default is 0.
-
             Returns:
                 response (dict): A dict that contains the container and
                     netelement lists.
@@ -882,11 +810,9 @@ class CvpApi(object):
     def check_compliance(self, node_key, node_type):
         ''' Check that a device is in compliance, that is the configlets
             applied to the device match the devices running configuration.
-
             Args:
                 node_key (str): The device key.
                 node_type (str): The device type.
-
             Returns:
                 response (dict): A dict that contains the results of the
                     compliance check.
@@ -899,12 +825,10 @@ class CvpApi(object):
 
     def get_images(self, start=0, end=0):
         ''' Return a list of all images.
-
             Args:
                 start (int): Start index for the pagination.  Default is 0.
                 end (int): End index for the pagination.  If end index is 0
                     then all the records will be returned.  Default is 0.
-
             Returns:
                 images (dict): The 'total' key contains the number of images,
                     the 'data' key contains a list of images and their info.
@@ -916,12 +840,10 @@ class CvpApi(object):
 
     def get_image_bundles(self, start=0, end=0):
         ''' Return a list of all image bundles.
-
             Args:
                 start (int): Start index for the pagination.  Default is 0.
                 end (int): End index for the pagination.  If end index is 0
                     then all the records will be returned.  Default is 0.
-
             Returns:
                 image bundles (dict): The 'total' key contains the number of
                     image bundles, the 'data' key contains a list of image
@@ -935,10 +857,8 @@ class CvpApi(object):
 
     def get_image_bundle_by_name(self, name):
         ''' Return a dict of info about an image bundle.
-
             Args:
                 name (str): Name of image bundle to return info about.
-
             Returns:
                 image bundle (dict): Dict of info specific to the image bundle
                     requested or None if the name requested doesn't exist.
@@ -958,18 +878,15 @@ class CvpApi(object):
 
     def apply_image_to_device(self, image, device, create_task=True):
         ''' Apply an image bundle to a device
-
             Args:
                 image (dict): The image info.
                 device (dict): Info about device to apply image to.
                 create_task (bool): Determines whether or not to execute a save
                     and create the tasks (if any)
-
             Returns:
                 response (dict): A dict that contains a status and a list of
                     task ids created (if any). Image updates will not run until
                     task or tasks are executed.
-
                     Ex: {u'data': {u'status': u'success', u'taskIds': [u'32']}}
         '''
         return self.apply_image_to_element(image, device, device['fqdn'],
@@ -977,18 +894,15 @@ class CvpApi(object):
 
     def apply_image_to_container(self, image, container, create_task=True):
         ''' Apply an image bundle to a container
-
             Args:
                 image (dict): The image info.
                 container (dict): Info about container to apply image to.
                 create_task (bool): Determines whether or not to execute a save
                     and create the tasks (if any)
-
             Returns:
                 response (dict): A dict that contains a status and a list of
                     task ids created (if any). Image updates will not run until
                     task or tasks are executed.
-
                     Ex: {u'data': {u'status': u'success', u'taskIds': [u'32']}}
         '''
         return self.apply_image_to_element(image, container, container['name'],
@@ -997,7 +911,6 @@ class CvpApi(object):
     def apply_image_to_element(self, image, element, name, id_type,
                                create_task=True):
         ''' Apply an image bundle to a device or container.
-
             Args:
                 image (dict): The image info.
                 element (dict): Info about element to apply image to. Dict
@@ -1006,12 +919,10 @@ class CvpApi(object):
                 id_type (str): Id type of element image is being applied to.
                 create_task (bool): Determines whether or not to execute a save
                     and create the tasks (if any)
-
             Returns:
                 response (dict): A dict that contains a status and a list of
                     task ids created (if any). Image updates will not run until
                     task or tasks are executed.
-
                     Ex: {u'data': {u'status': u'success', u'taskIds': [u'32']}}
         '''
         self.log.debug('Attempt to apply %s to %s %s' % (image['name'],
@@ -1037,15 +948,12 @@ class CvpApi(object):
 
     def remove_image_from_device(self, image, device):
         ''' Remove the image bundle from the specified device.
-
             Args:
                 image (dict): The image info.
                 device (dict): The device info.
-
             Returns:
                 response (dict): A dict that contains a status and a list of
                     task ids created (if any).
-
                     Ex: {u'data': {u'status': u'success', u'taskIds': [u'32']}}
         '''
         return self.remove_image_from_element(image, device, device['fqdn'],
@@ -1053,15 +961,12 @@ class CvpApi(object):
 
     def remove_image_from_container(self, image, container):
         ''' Remove the image bundle from the specified container.
-
             Args:
                 image (dict): The image info.
                 container (dict): The container info.
-
             Returns:
                 response (dict): A dict that contains a status and a list of
                     task ids created (if any).
-
                     Ex: {u'data': {u'status': u'success', u'taskIds': [u'32']}}
         '''
         return self.remove_image_from_element(image, container,
@@ -1069,17 +974,14 @@ class CvpApi(object):
 
     def remove_image_from_element(self, image, element, name, id_type):
         ''' Remove the image bundle from the specified container.
-
             Args:
                 image (dict): The image info.
                 element (dict): The container info.
                 name (): name.
                 id_type (): type.
-
             Returns:
                 response (dict): A dict that contains a status and a list of
                     task ids created (if any).
-
                     Ex: {u'data': {u'status': u'success', u'taskIds': [u'32']}}
         '''
         self.log.debug('Attempt to remove %s from %s' % (image['name'], name))
@@ -1103,20 +1005,17 @@ class CvpApi(object):
         self._add_temp_action(data)
         return self._save_topology_v2([])
 
-    def deploy_device(self, device, container, configlets=None, image=None):
+    def deploy_device(self, device, container, configlets=None, image=None, create_task=True):
         ''' Move a device from the undefined container to a target container.
             Optionally apply device-specific configlets and an image.
-
             Args:
                 device (dict): unique key for the device
                 container (str): name of container to move device to
                 configlets (list): list of dicts with configlet key/name pairs
                 image (str): name of image to apply to device
-
             Returns:
                 response (dict): A dict that contains a status and a list of
                     task ids created (if any).
-
                     Ex: {u'data': {u'status': u'success', u'taskIds': [u'32']}}
         '''
         info = 'Deploy device %s to container %s' % (device['fqdn'], container)
@@ -1138,22 +1037,24 @@ class CvpApi(object):
         if image:
             image_info = self.get_image_bundle_by_name(image)
             self.apply_image_to_device(image_info, device, create_task=False)
-
-        return self._save_topology_v2([])
-    
+        if create_task:
+            return self._save_topology_v2([])
     def get_EventDatabyId(self, eventId, start=0, end=0):
         ''' Query CVP for child event details of parent event ID.
         
         Args:
             eventId (str): Unique Identifier of parent event.
-            
+            start(int): Start index for the pagination. Default is 0.
+            end(int): End index for the pagination. If end index is 0
+                then all the records will be returned. Default is 0.
+        
         Returns:
             response (dict): A dict that contains a total number of events and data for each sub-event.
         '''
-        
-        self.log.debug('get_EventDatabyId: eventID: %s' % eventId)
-        data = self.clnt.get(
-            '/event/getEventDataById.do?eventId=%s&startIndex=%d&endIndex=%d' %
-            (eventId, start, end), timeout=self.request_timeout)
-        return data['data']
     
+        self.log.debug('get_EventDatabyId: eventID: %s' % eventId)
+        if eventId:
+            data = self.clnt.get(
+                '/event/getEventDataById.do?eventId=%s&startIndex=%d&endIndex=%d' %
+                (eventId, start, end), timeout=self.request_timeout)
+            return data['data']
