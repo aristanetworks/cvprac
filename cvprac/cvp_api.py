@@ -367,13 +367,10 @@ class CvpApi(object):
                 device (dict): The net element device dict for the device if
                     otherwise returns an empty hash.
         '''
-        self.log.debug('get_device_from_name: fqdn: %s' % fqdn)
-        data = self.clnt.get('/inventory/getInventory.do?'
-                             'queryparam=%s&startIndex=0&endIndex=0'
-                             % urllib.quote_plus(fqdn),
-                             timeout=self.request_timeout)
-        if len(data['netElementList']) > 0:
-            for netelement in data['netElementList']:
+        self.log.debug('get_device_by_name: fqdn: %s' % fqdn)
+        data = self.get_inventory(start=0, end=0, query=fqdn)
+        if len(data) > 0:
+            for netelement in data:
                 if netelement['fqdn'] == fqdn:
                     device = netelement
                     break
@@ -1140,42 +1137,3 @@ class CvpApi(object):
             self.apply_image_to_device(image_info, device, create_task=False)
         if create_task:
             return self._save_topology_v2([])
-    
-    def capture_ContainerLevelSnapshot(self, snapshotTemplateId='Initial_Template', containerId='root'):
-        ''' Capture a container level snapshot. Defaults to 'Show_Inventory'
-        snapshot being run against the root/tenant container. Optionally, 
-        can specify a specific snapshot template and container ID.
-        
-        Args:
-            snapshotTemplateId (str): Unique identifier for snapshot template to use.
-            containerId (str): Container to apply the snapshot to.
-
-        Returns:
-                response (dict): A dict that contains a status and a list of
-                    task ids created (if any).
-                    
-                    Ex: {u'data': {u'templateId': u'Initial_Template', u'containerId': u'root'}}
-        '''
-        info = 'Apply snapshot: %s to container: %s' % (snapshotTemplateId, containerId)
-        self.log.debug(info)
-        
-        body = {'templateId': snapshotTemplateId, 'containerId': containerId}
-        return self.clnt.post('/snapshot/captureContainerLevelSnapshot.do?', data=body,
-                              timeout=self.request_timeout)
-    
-    def get_EventDatabyId(self, eventId, start=0, end=0):
-        ''' Query CVP for child event details of parent event ID.
-        
-        Args:
-            eventId (str): Unique Identifier of parent event.
-            
-        Returns:
-            response (dict): A dict that contains a total number of events and data for each sub-event.
-        '''
-        
-        self.log.debug('get_EventDatabyId: eventID: %s' % eventId)
-        data = self.clnt.get(
-            '/event/getEventDataById.do?eventId=%s&startIndex=%d&endIndex=%d' %
-            (eventId, start, end), timeout=self.request_timeout)
-        return data['data']
-    
