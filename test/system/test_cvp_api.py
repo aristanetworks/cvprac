@@ -564,6 +564,13 @@ class TestCvpClient(DutSystemTest):
             self.api.get_cvp_info()
         self.api.request_timeout = 30.0
 
+    def test_api_get_configlets(self):
+        ''' Verify get configlets
+        '''
+        result = self.api.get_configlets()
+        self.assertIsNotNone(result)
+        self.assertEqual(result['total'], len(result['data']))
+        
     def test_api_get_images(self):
         ''' Verify get images
         '''
