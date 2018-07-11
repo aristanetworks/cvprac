@@ -1137,3 +1137,37 @@ class CvpApi(object):
             self.apply_image_to_device(image_info, device, create_task=False)
         if create_task:
             return self._save_topology_v2([])
+
+    def import_certificate(self, publicCert, privateKey, certType='cvpCert',
+                           passPhrase=''):
+        ''' Imports an SSL certificate to CVP. Expects PEM (base64)
+            with separate certificate and private key. CVP requires that the
+            -----BEGIN/END----- sections be removed, leaving only base64 data.
+            Also remove all \n in cert/key, should be presented as single-line.
+
+            Args:
+                publicCert (str): Base64 Certificate Data.
+                privateKey (str): Base64 Private key.
+                certType (str): cvpCert or dcaCert, Default is cvpCert.
+                passPhrase (str): If passphrase is used on private key, enter here.
+                    Default is no passphrase.
+            Returns:
+                response (dict): A dict that contains status of import.
+                    Ex: {u'eventId': u'event_id',
+                         u'eventType': u'installCVPCertificateSuccess',
+                         u'data': u'success'}
+        '''
+        self.log.debug('import_certificate: publicCert: %s privateKey: masked'
+                       'certType: %s passPhrase: masked'
+                       % (publicCert, certType))
+        data = {"publicCert" : publicCert,
+                "privateKey" : privateKey,
+                "certType" : certType,
+                "passPhrase" : passPhrase}
+    
+        response = self.clnt.post('/ssl/importCertAndPrivateKey.do?',
+                       data=data,
+                       timeout=self.request_timeout)
+        if response['commonName']:
+            return self.clnt.post('/ssl/installCertificate.do')
+        return response
