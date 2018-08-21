@@ -138,11 +138,17 @@ class TestCvpClient(DutSystemTest):
                 task_id (str): Task ID
                 config (str): Previous configlets contents
         '''
-        # Get the next task ID
         task_id = self._get_next_task_id()
 
         # Update the lldp time in the first configlet in the list.
-        configlet = self.dev_configlets[0]
+        configlet = None
+        for conf in self.dev_configlets:
+            if conf['netElementCount'] == 1:
+                configlet = conf
+                break
+        if configlet is None:
+            configlet = self.dev_configlets[0]
+
         config = configlet['config']
         org_config = config
 
@@ -249,7 +255,13 @@ class TestCvpClient(DutSystemTest):
 
         # Restore the configlet to what it was before the task was created.
         task_id = self._get_next_task_id()
-        configlet = self.dev_configlets[0]
+        configlet = None
+        for conf in self.dev_configlets:
+            if conf['netElementCount'] == 1:
+                configlet = conf
+                break
+        if configlet is None:
+            configlet = self.dev_configlets[0]
         self.api.update_configlet(org_config, configlet['key'],
                                   configlet['name'])
         time.sleep(2)
@@ -294,7 +306,13 @@ class TestCvpClient(DutSystemTest):
     def test_api_get_configlet_by_name(self):
         ''' Verify get_configlet_by_name
         '''
-        configlet = self.dev_configlets[0]
+        configlet = None
+        for conf in self.dev_configlets:
+            if conf['netElementCount'] == 1:
+                configlet = conf
+                break
+        if configlet is None:
+            configlet = self.dev_configlets[0]
         result = self.api.get_configlet_by_name(configlet['name'])
         self.assertIsNotNone(result)
         self.assertEqual(result['key'], configlet['key'])
@@ -302,7 +320,13 @@ class TestCvpClient(DutSystemTest):
     def test_api_get_configlet_history(self):
         ''' Verify get_configlet_history
         '''
-        key = self.dev_configlets[0]['key']
+        key = None
+        for conf in self.dev_configlets:
+            if conf['netElementCount'] == 1:
+                key = conf['key']
+                break
+        if key is None:
+            key = self.dev_configlets[0]['key']
         result = self.api.get_configlet_history(key)
         self.assertIsNotNone(result)
 
