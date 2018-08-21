@@ -337,6 +337,16 @@ class TestCvpClient(DutSystemTest):
         self.assertIsNotNone(result)
         self.assertEqual(result, self.device)
 
+    def test_api_get_device_configuration(self):
+        ''' Verify get_device_configuration
+        '''
+        result = self.api.get_device_configuration(self.device['key'])
+        self.assertIsNotNone(result)
+        config_lines = result.splitlines()
+        for line in config_lines:
+            if 'hostname' in line:
+                self.assertEqual(line, 'hostname %s' % self.device['fqdn'])
+
     def test_api_get_device_by_name_bad(self):
         ''' Verify get_device_by_name with bad fqdn
         '''

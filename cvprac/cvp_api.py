@@ -380,6 +380,26 @@ class CvpApi(object):
             device = {}
         return device
 
+    def get_device_configuration(self, device_mac):
+        ''' Returns the running configuration for the device provided.
+
+            Args:
+                device_mac (str): Mac address of the device to get the running
+                    configuration for.
+
+            Returns:
+                device (dict): The net element device dict for the device if
+                    otherwise returns an empty hash.
+        '''
+        self.log.debug('get_device_configuration: device_mac: %s' % device_mac)
+        data = self.clnt.get('/inventory/getInventoryConfiguration.do?'
+                             'netElementId=%s' % device_mac,
+                             timeout=self.request_timeout)
+        running_config = ''
+        if 'output' in data:
+            running_config = data['output']
+        return running_config
+
     def get_containers(self, start=0, end=0):
         ''' Returns a list of all the containers.
 
