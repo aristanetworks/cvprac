@@ -1234,6 +1234,25 @@ class CvpApi(object):
         return self.clnt.post('/changeControl/addOrUpdateChangeControl.do',
                               data=data, timeout=self.request_timeout)
 
+    def add_notes_to_change_control(self, cc_id, notes):
+        ''' Add provided notes to the specified change control.
+
+            Args:
+                cc_id (string): The id for the change control to add notes to.
+                notes (string): The notes to add to the change control.
+
+            Returns:
+                response (dict): A dict that contains...
+
+                Ex: {"data": "success"}
+        '''
+        self.log.debug('add_notes_to_change_control: cc_id %s, notes %s'
+                       % (cc_id, notes))
+        data = {'ccId': cc_id,
+                'notes': notes}
+        return self.clnt.post('/changeControl/addNotesToChangeControl.do',
+                              data=data, timeout=self.request_timeout)
+
     def deploy_device(self, device, container, configlets=None, image=None,
                       create_task=True):
         ''' Move a device from the undefined container to a target container.
