@@ -1120,7 +1120,122 @@ class CvpApi(object):
         self._add_temp_action(data)
         return self._save_topology_v2([])
 
-    def deploy_device(self, device, container, configlets=None, image=None, create_task=True):
+    def get_change_controls(self, query='', start=0, end=0):
+        ''' Returns a list of change controls.
+
+            Args:
+                query (str): Query to look for in change control names
+                start (int): Start index for the pagination.  Default is 0.
+                end (int): End index for the pagination.  If end index is 0
+                    then all the records will be returned.  Default is 0.
+
+            Returns:
+                change controls (list): The list of change controls
+        '''
+        self.log.debug('get_change_controls: query: %s' % query)
+        data = self.clnt.get(
+            '/changeControl/getChangeControls.do?searchText=%s&startIndex=%d'
+            '&endIndex=%d' % (urllib.quote_plus(query), start, end),
+            timeout=self.request_timeout)
+        if 'data' not in data:
+            return None
+        return data['data']
+
+    def get_change_control_available_tasks(self, query='', start=0, end=0):
+        ''' Returns a list of tasks that are available for a change control.
+
+            Args:
+                query (str): Query to look for in task
+                start (int): Start index for the pagination.  Default is 0.
+                end (int): End index for the pagination.  If end index is 0
+                    then all the records will be returned.  Default is 0.
+
+            Returns:
+                tasks (list): The list of available tasks
+        '''
+        self.log.debug('get_change_control_available_tasks: query: %s' % query)
+        data = self.clnt.get(
+            '/changeControl/getTasksByStatus.do?searchText=%s&startIndex=%d'
+            '&endIndex=%d' % (urllib.quote_plus(query), start, end),
+            timeout=self.request_timeout)
+        if 'data' not in data:
+            return None
+        return data['data']
+
+    def create_change_control(self, name, change_control_tasks, timezone,
+                              country_id, date_time, snapshot_template_key='',
+                              change_control_type='Custom',
+                              stop_on_error='false'):
+        ''' Create change control with provided information and return
+            change control ID.
+
+            Args:
+                name (string): The name for the new change control.
+                change_control_tasks (list): A list of key value pairs where
+                    the key is the Task ID and the value is the task order
+                    as an integer.
+                    Ex: [{'taskId': '100', 'taskOrder': 1},
+                         {'taskId': '101', 'taskOrder': 1},
+                         {'taskId': '102', 'taskOrder': 2}]
+                timezone (string): The timezone as a string.
+                    Ex: "America/New_York"
+                country_id (string): The country ID.
+                    Ex: "United States"
+                date_time (string): The date and time for execution.
+                    Time is military time format.
+                    Ex: "2018-08-22 11:30"
+                snapshot_template_key (string): ???
+                change_control_type (string): The type of change control being
+                    created. Options are "Custom" or "Rollback".
+                stop_on_error (string): String representation of a boolean
+                    to set whether this change control will stop if an error is
+                    encountered in one of its tasks.
+
+            Returns:
+                response (dict): A dict that contains...
+
+                Ex: {"data": "success", "ccId": "4"}
+        '''
+        self.log.debug('create_change_control')
+        # {
+        #  "timeZone": "America/New_York",
+        #  "countryId": "United States",
+        #  "dateTime": "2018-08-22 11:30",
+        #  "ccName": "test2",
+        #  "snapshotTemplateKey": "",
+        #  "type": "Custom",
+        #  "stopOnError": "false",
+        #  "deletedTaskIds": [],
+        #  "changeControlTasks": [
+        #    {
+        #      "taskId": "126",
+        #      "taskOrder": 1,
+        #      "snapshotTemplateKey": "",
+        #      "clonedCcId": ""
+        #    }
+        #  ]
+        # }
+        task_data_list = []
+        for taskInfo in change_control_tasks:
+            task_list_entry = {'taskId': taskInfo['taskId'],
+                               'taskOrder': taskInfo['taskOrder'],
+                               'snapshotTemplateKey': '',
+                               'clonedCcId': ''}
+            task_data_list.append(task_list_entry)
+        data = {'timeZone': timezone,
+                'countryId': country_id,
+                'dateTime': date_time,
+                'ccName': name,
+                'snapshotTemplateKey': snapshot_template_key,
+                'type': change_control_type,
+                'stopOnError': stop_on_error,
+                'deletedTaskIds': [],
+                'changeControlTasks': task_data_list}
+        return self.clnt.post('/changeControl/addOrUpdateChangeControl.do',
+                              data=data, timeout=self.request_timeout)
+
+    def deploy_device(self, device, container, configlets=None, image=None,
+                      create_task=True):
         ''' Move a device from the undefined container to a target container.
             Optionally apply device-specific configlets and an image.
 
@@ -1129,6 +1244,8 @@ class CvpApi(object):
                 container (str): name of container to move device to
                 configlets (list): list of dicts with configlet key/name pairs
                 image (str): name of image to apply to device
+                create_task (boolean): Create task for this deploy device
+                    sequence.
 
             Returns:
                 response (dict): A dict that contains a status and a list of
