@@ -1141,7 +1141,7 @@ class CvpApi(object):
             return None
         return data['data']
 
-    def get_change_control_available_tasks(self, query='', start=0, end=0):
+    def change_control_available_tasks(self, query='', start=0, end=0):
         ''' Returns a list of tasks that are available for a change control.
 
             Args:
@@ -1153,7 +1153,7 @@ class CvpApi(object):
             Returns:
                 tasks (list): The list of available tasks
         '''
-        self.log.debug('get_change_control_available_tasks: query: %s' % query)
+        self.log.debug('change_control_available_tasks: query: %s' % query)
         data = self.clnt.get(
             '/changeControl/getTasksByStatus.do?searchText=%s&startIndex=%d'
             '&endIndex=%d' % (urllib.quote_plus(query), start, end),
@@ -1216,9 +1216,9 @@ class CvpApi(object):
         #  ]
         # }
         task_data_list = []
-        for taskInfo in change_control_tasks:
-            task_list_entry = {'taskId': taskInfo['taskId'],
-                               'taskOrder': taskInfo['taskOrder'],
+        for taskinfo in change_control_tasks:
+            task_list_entry = {'taskId': taskinfo['taskId'],
+                               'taskOrder': taskinfo['taskOrder'],
                                'snapshotTemplateKey': '',
                                'clonedCcId': ''}
             task_data_list.append(task_list_entry)
