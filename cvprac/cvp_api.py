@@ -491,13 +491,14 @@ class CvpApi(object):
         self.clnt.post('/configlet/deleteConfiglet.do', data=body,
                        timeout=self.request_timeout)
 
-    def update_configlet(self, config, key, name):
+    def update_configlet(self, config, key, name, wait_task_ids=False):
         ''' Update a configlet.
 
             Args:
                 config (str): Switch config statements
                 key (str): Configlet key
                 name (str): Configlet name
+                wait_task_ids (boolean): Wait for task IDs to generate
 
             Returns:
                 data (dict): Contains success or failure message
@@ -506,7 +507,8 @@ class CvpApi(object):
                        (config, key, name))
 
         # Update the configlet
-        body = {'config': config, 'key': key, 'name': name}
+        body = {'config': config, 'key': key, 'name': name,
+                'waitForTaskIds': wait_task_ids}
         return self.clnt.post('/configlet/updateConfiglet.do', data=body,
                               timeout=self.request_timeout)
 
