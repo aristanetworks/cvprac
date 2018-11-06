@@ -200,6 +200,27 @@ class CvpApi(object):
         self.clnt.post('/task/cancelTask.do', data=data,
                        timeout=self.request_timeout)
 
+    def get_configlets(self, start=0, end=0):
+        ''' Returns a list of all defined configlets.
+
+            Args:
+                start (int): Start index for the pagination. Default is 0.
+                end (int): End index for the pagination. If end index is 0
+                    then all the records will be returned. Default is 0.
+        '''
+        return self.clnt.get('/configlet/getConfiglets.do?'
+                             'startIndex=%d&endIndex=%d'
+                             % (start, end), timeout=self.request_timeout)
+
+    def get_configlet_builder(self, c_id):
+        ''' Returns the configlet builder data for the given configlet ID.
+
+            Args:
+                c_id (str): The ID (key) for the configlet to be queried.
+        '''
+        return self.clnt.get('/configlet/getConfigletBuilder.do?id=%s'
+                             % c_id, timeout=self.request_timeout)
+
     def get_configlet_by_name(self, name):
         ''' Returns the configlet with the specified name
 
@@ -212,6 +233,34 @@ class CvpApi(object):
         self.log.debug('get_configlets_by_name: name: %s' % name)
         return self.clnt.get('/configlet/getConfigletByName.do?name=%s'
                              % urllib.quote_plus(name),
+                             timeout=self.request_timeout)
+
+    def get_configlets_by_container_id(self, c_id, start=0, end=0):
+        ''' Returns a list of configlets applied to the given container.
+
+            Args:
+                c_id (str): The container ID (key) to query.
+                start (int): Start index for the pagination. Default is 0.
+                end (int): End index for the pagination. If end index is 0
+                    then all the records will be returned. Default is 0.
+        '''
+        return self.clnt.get('/provisioning/getConfigletsByContainerId.do?'
+                             'containerId=%s&startIndex=%d&endIndex=%d'
+                             % (c_id, start, end),
+                             timeout=self.request_timeout)
+
+    def get_configlets_by_netelement_id(self, d_id, start=0, end=0):
+        ''' Returns a list of configlets applied to the given device.
+
+            Args:
+                d_id (str): The device ID (key) to query.
+                start (int): Start index for the pagination. Default is 0.
+                end (int): End index for the pagination. If end index is 0
+                    then all the records will be returned. Default is 0.
+        '''
+        return self.clnt.get('/provisioning/getConfigletsByNetElementId.do?'
+                             'netElementId=%s&startIndex=%d&endIndex=%d'
+                             % (d_id, start, end),
                              timeout=self.request_timeout)
 
     def get_configlet_history(self, key, start=0, end=0):
@@ -512,6 +561,20 @@ class CvpApi(object):
         return self.clnt.post('/configlet/updateConfiglet.do', data=body,
                               timeout=self.request_timeout)
 
+    def add_note_to_configlet(self, key, note):
+        ''' Add a note to a configlet.
+
+            Args:
+                key (str): Configlet key
+                note (str): Note to be added to configlet.
+        '''
+        data = {
+            'key': key,
+            'note': note,
+        }
+        return self.clnt.post('/configlet/addNoteToConfiglet.do',
+                              data=data, timeout=self.request_timeout)
+
     def validate_config(self, device_mac, config):
         ''' Validate a config against a device
 
@@ -549,6 +612,24 @@ class CvpApi(object):
                         self.log.info('Validation of config returned'
                                       ' message - %s' % message)
         return validated
+
+    def get_all_temp_actions(self, start=0, end=0):
+        ''' Returns a list of existing temp actions.
+
+            Args:
+                start (int): Start index for the pagination. Default is 0.
+                end (int): End index for the pagination. If end index is 0
+                    then all the records will be returned. Default is 0.
+
+            Returns:
+                response (dict): A dict that contains a list of the current
+                    temp actions.
+        '''
+        url = ('/provisioning/getAllTempActions.do?startIndex=%d&endIndex=%d'
+               % (start, end))
+        data = self.clnt.get(url, timeout=self.request_timeout)
+
+        return data
 
     def _add_temp_action(self, data):
         ''' Adds temp action that requires a saveTopology call to take effect.
@@ -721,6 +802,35 @@ class CvpApi(object):
         self._add_temp_action(data)
         if create_task:
             return self._save_topology_v2([])
+
+    def get_applied_devices(self, configlet_name, start=0, end=0):
+        ''' Returns a list of devices to which the named configlet is applied.
+
+            Args:
+                configlet_name (str): The name of the configlet to be queried.
+                start (int): Start index for the pagination. Default is 0.
+                end (int): End index for the pagination. If end index is 0
+                    then all the records will be returned. Default is 0.
+        '''
+        return self.clnt.get('/configlet/getAppliedDevices.do?'
+                             'configletName=%s&startIndex=%d&endIndex=%d'
+                             % (configlet_name, start, end),
+                             timeout=self.request_timeout)
+
+    def get_applied_containers(self, configlet_name, start=0, end=0):
+        ''' Returns a list of containers to which the named
+            configlet is applied.
+
+            Args:
+                configlet_name (str): The name of the configlet to be queried.
+                start (int): Start index for the pagination. Default is 0.
+                end (int): End index for the pagination. If end index is 0
+                    then all the records will be returned. Default is 0.
+        '''
+        return self.clnt.get('/configlet/getAppliedContainers.do?'
+                             'configletName=%s&startIndex=%d&endIndex=%d'
+                             % (configlet_name, start, end),
+                             timeout=self.request_timeout)
 
     # pylint: disable=too-many-arguments
     def _container_op(self, container_name, container_key, parent_name,
@@ -898,6 +1008,24 @@ class CvpApi(object):
                              timeout=self.request_timeout)
         return data
 
+    def filter_topology(self, node_id='root', fmt='topology',
+                        start=0, end=0):
+        ''' Filter the CVP topology for container and device information.
+
+            Args:
+                node_id (str): The container key to base the filter in.
+                    Default is 'root', for the Tenant container.
+                fmt (str): The type of filter to return. Must be either
+                    'topology' or 'list'. Default is 'topology'.
+                start (int): Start index for the pagination. Default is 0.
+                end (int): End index for the pagination. If end index is 0
+                    then all the records will be returned. Default is 0.
+        '''
+        url = ('/provisioning/filterTopology.do?nodeId=%s&'
+               'format=%s&startIndex=%d&endIndex=%d'
+               % (node_id, fmt, start, end))
+        return self.clnt.get(url, timeout=self.request_timeout)
+
     def check_compliance(self, node_key, node_type):
         ''' Check that a device is in compliance, that is the configlets
             applied to the device match the devices running configuration.
@@ -915,6 +1043,39 @@ class CvpApi(object):
         data = {'nodeId': node_key, 'nodeType': node_type}
         return self.clnt.post('/provisioning/checkCompliance.do', data=data,
                               timeout=self.request_timeout)
+
+    def get_event_by_id(self, e_id):
+        ''' Return information on the requested event ID.
+
+            Args:
+                e_id (str): The event id to be queried.
+        '''
+        return self.clnt.get('/event/getEventById.do?eventId=%s' % e_id,
+                             timeout=self.request_timeout)
+
+    def get_default_snapshot_template(self):
+        ''' Return the default snapshot template.
+
+        '''
+        url = ('/snapshot/getDefaultSnapshotTemplate.do?'
+               'startIndex=0&endIndex=0')
+        return self.clnt.get(url, timeout=self.request_timeout)
+
+    def capture_container_level_snapshot(self, template_key, container_key):
+        ''' Initialize a container level snapshot event.
+
+            Args:
+                template_key (str): The snapshot template key to be used for
+                    the snapshots.
+                container_key (str): The container key to start the
+                    snapshots on.
+        '''
+        data = {
+            'templateId': template_key,
+            'containerId': container_key,
+        }
+        return self.clnt.post('/snapshot/captureContainerLevelSnapshot.do',
+                              data=data, timeout=self.request_timeout)
 
     def get_images(self, start=0, end=0):
         ''' Return a list of all images.
@@ -974,6 +1135,37 @@ class CvpApi(object):
                 return None
             raise error
         return image
+
+    def save_image_bundle(self, name, images, certified=True):
+        ''' Save an image bundle to a cluster.
+
+            Args:
+                name (str): The name of the image bundle to be saved.
+                images (list): A list of image names to include in the bundle.
+                certified (bool): Whether the image bundle is certified or
+                    not. Default is True.
+        '''
+        certified_image = 'true' if certified else 'false'
+        data = {
+            'name': name,
+            'isCertifiedImage': certified_image,
+            'images': images,
+        }
+        return self.clnt.post('/image/saveImageBundle.do', data=data,
+                              timeout=self.request_timeout)
+
+    def update_image_bundle(self, bundle_id, name, images, certified=True):
+        ''' Update an existing image bundle
+        '''
+        certified_image = 'true' if certified else 'false'
+        data = {
+            'id': bundle_id,
+            'name': name,
+            'isCertifiedImage': certified_image,
+            'images': images,
+        }
+        return self.clnt.post('/image/updateImageBundle.do', data=data,
+                              timeout=self.request_timeout)
 
     def apply_image_to_device(self, image, device, create_task=True):
         ''' Apply an image bundle to a device
@@ -1254,6 +1446,65 @@ class CvpApi(object):
                 'notes': notes}
         return self.clnt.post('/changeControl/addNotesToChangeControl.do',
                               data=data, timeout=self.request_timeout)
+
+    def execute_change_controls(self, cc_ids):
+        ''' Execute the change control indicated by its ccId.
+
+            Args:
+                cc_ids (list): A list of change control IDs to be executed.
+        '''
+        cc_id_list = [{'ccId': x} for x in cc_ids]
+        data = {'ccIds': cc_id_list}
+        self.clnt.post('/changeControl/executeCC.do', data=data,
+                       timeout=self.request_timeout)
+
+    def get_change_control_info(self, cc_id):
+        ''' Get the detailed information for a single change control.
+
+            Args:
+                cc_id (string): The id for the change control to be retrieved.
+
+            Returns:
+                response (dict): A dict that contains...
+
+                Ex: {'ccId': '4',
+                     'ccName': 'test_api_1541106830',
+                     'changeControlTasks': {'data': [<task data>],
+                                             'total': 1},
+                     'classId': 68,
+                     'containerName': '',
+                     'countryId': '',
+                     'createdBy': 'cvpadmin',
+                     'createdTimestamp': 1541106831629,
+                     'dateTime': '',
+                     'deviceCount': 1,
+                     'executedBy': 'cvpadmin',
+                     'executedTimestamp': 1541106831927,
+                     'factoryId': 1,
+                     'id': 68,
+                     'key': '4',
+                     'notes': '',
+                     'postSnapshotEndTime': 0,
+                     'postSnapshotStartTime': 0,
+                     'preSnapshotEndTime': 0,
+                     'preSnapshotStartTime': 0,
+                     'progressStatus': {<status>},
+                     'scheduledBy': '',
+                     'scheduledByPassword': '',
+                     'scheduledTimestamp': 0,
+                     'snapshotTemplateKey': '',
+                     'snapshotTemplateName': None,
+                     'status': 'Inprogress',
+                     'stopOnError': False,
+                     'taskCount': 1,
+                     'taskEndTime': 0,
+                     'taskStartTime': 0,
+                     'timeZone': '',
+                     'type': 'Custom'}
+        '''
+        return self.clnt.get('/changeControl/getChangeControlInformation.do?'
+                             'startIndex=0&endIndex=0&ccId=%s' % cc_id,
+                             timeout=self.request_timeout)
 
     def deploy_device(self, device, container, configlets=None, image=None,
                       create_task=True):

@@ -303,6 +303,45 @@ class TestCvpClient(DutSystemTest):
         result = self.api.get_tasks_by_status('BOGUS')
         self.assertIsNotNone(result)
 
+    def test_api_get_configlets(self):
+        ''' Verify get_configlets
+        '''
+        result = self.api.get_configlets()
+
+        # Format the configlet lists into name keyed dictionaries
+        dev_cfglts = {}
+        for cfglt in self.dev_configlets:
+            dev_cfglts.update({cfglt['name']: cfglt})
+
+        rslt_cfglts = {}
+        for cfglt in result['data']:
+            rslt_cfglts.update({cfglt['name']: cfglt})
+
+        # Make sure the device configlets are all returned by the
+        # get_configlets call
+        for cfglt_name in dev_cfglts:
+            self.assertIn(cfglt_name, rslt_cfglts)
+            self.assertDictEqual(dev_cfglts[cfglt_name],
+                                 rslt_cfglts[cfglt_name])
+
+    def test_api_get_configlet_builder(self):
+        ''' Verify get_configlet_builder
+        '''
+        cfglt = self.api.get_configlet_by_name('SYS_TelemetryBuilder')
+        result = self.api.get_configlet_builder(cfglt['key'])
+
+        # Verify the following keys and types are
+        # returned by the request
+        exp_data = {
+            'isAssigned': bool,
+            'name': (unicode, str),
+            'formList': list,
+            'main_script': dict,
+        }
+        self.assertListEqual(exp_data.keys(), result['data'].keys())
+        for key in exp_data:
+            self.assertIsInstance(result['data'][key], exp_data[key])
+
     def test_api_get_configlet_by_name(self):
         ''' Verify get_configlet_by_name
         '''
@@ -316,6 +355,72 @@ class TestCvpClient(DutSystemTest):
         result = self.api.get_configlet_by_name(configlet['name'])
         self.assertIsNotNone(result)
         self.assertEqual(result['key'], configlet['key'])
+
+    def test_api_get_configlets_by_container_id(self):
+        ''' Verify get_configlets_by_container_id
+        '''
+        result = self.api.get_configlets_by_container_id(
+            self.container['key']
+        )
+
+        # Verify the following keys and types are returned by the request
+        exp_data = {
+            'configletList': list,
+            'configletMapper': dict,
+            'total': int,
+        }
+        self.assertListEqual(exp_data.keys(), result.keys())
+        for key in exp_data:
+            self.assertIsInstance(result[key], exp_data[key])
+
+    def test_api_get_configlets_by_netelement_id(self):
+        ''' Verify get_configlets_by_netelement_id
+        '''
+        result = self.api.get_configlets_by_netelement_id(
+            self.device['key']
+        )
+
+        # Verify the following keys and types are returned by the request
+        exp_data = {
+            'configletList': list,
+            'configletMapper': dict,
+            'total': int,
+        }
+        self.assertListEqual(exp_data.keys(), result.keys())
+        for key in exp_data:
+            self.assertIsInstance(result[key], exp_data[key])
+
+    def test_api_get_applied_devices(self):
+        ''' Verify get_applied_devices
+        '''
+        for cfglt in self.dev_configlets:
+            result = self.api.get_applied_devices(cfglt['name'])
+
+            # Verify the following keys and types are
+            # returned by the request
+            exp_data = {
+                'data': list,
+                'total': int,
+            }
+            self.assertListEqual(exp_data.keys(), result.keys())
+            for key in exp_data:
+                self.assertIsInstance(result[key], exp_data[key])
+
+    def test_api_get_applied_containers(self):
+        ''' Verify get_applied_containers
+        '''
+        for cfglt in self.dev_configlets:
+            result = self.api.get_applied_containers(cfglt['name'])
+
+            # Verify the following keys and types are
+            # returned by the request
+            exp_data = {
+                'data': list,
+                'total': int,
+            }
+            self.assertListEqual(exp_data.keys(), result.keys())
+            for key in exp_data:
+                self.assertIsInstance(result[key], exp_data[key])
 
     def test_api_get_configlet_history(self):
         ''' Verify get_configlet_history
@@ -396,6 +501,27 @@ class TestCvpClient(DutSystemTest):
         # Verify configlet was deleted
         with self.assertRaises(CvpApiError):
             self.api.get_configlet_by_name(name)
+
+    def test_api_add_note_to_configlet(self):
+        ''' Verify add_note_to_configlet
+        '''
+        name = 'test_configlet_with_note_%d' % time.time()
+        config = 'lldp timer 9'
+
+        # Add the configlet
+        key = self._create_configlet(name, config)
+
+        # Add a note to the configlet
+        note = 'Updated by cvprac test'
+        result = self.api.add_note_to_configlet(key, note)
+
+        # Verify note was added to configlet
+        result = self.api.get_configlet_by_name(name)
+        self.assertIsNotNone(result)
+        self.assertEqual(result['name'], name)
+        self.assertEqual(result['config'], config)
+        self.assertEqual(result['key'], key)
+        self.assertEqual(result['note'], note)
 
     def _execute_task(self, task_id):
         ''' Execute a task and wait for it to complete.
@@ -598,6 +724,109 @@ class TestCvpClient(DutSystemTest):
             self.api.get_cvp_info()
         self.api.request_timeout = 30.0
 
+    def test_api_get_all_temp_actions(self):
+        ''' Verify get_all_temp_actions
+        '''
+        name = 'test_configlet'
+        config = 'lldp timer 9'
+
+        # Add a configlet
+        key = self._create_configlet(name, config)
+
+        # Apply the configlet to the container
+        data = {
+            'data': [{
+                'info': 'test_api_get_all_temp_actions',
+                'infoPreview': 'test_api_get_all_temp_actions',
+                'action': 'associate',
+                'nodeType': 'configlet',
+                'nodeId': '',
+                'toId': self.container['key'],
+                'fromId': '',
+                'nodeName': '',
+                'fromName': '',
+                'toName': self.container['name'],
+                'toIdType': 'container',
+                'configletList': [key],
+                'configletNamesList': [name],
+                'ignoreConfigletList': [],
+                'ignoreConfigletNamesList': [],
+                'configletBuilderList' : [],
+                'configletBuilderNamesList' : [],
+                'ignoreConfigletBuilderList' : [],
+                'ignoreConfigletBuilderNamesList': [],
+            }]
+        }
+        self.api._add_temp_action(data)
+
+        # Request the list of temp actions
+        result = self.api.get_all_temp_actions()
+
+        # Delete the temporary action and the configlet
+        self.clnt.post('//provisioning/deleteAllTempAction.do')
+        self.api.delete_configlet(name, key)
+
+        # Validate the results
+        # There should be 1 temp action
+        self.assertEqual(result['total'], 1)
+        # The temp action should contain the data from the add action
+        for dkey in data['data'][0]:
+            self.assertIn(dkey, result['data'][0].keys())
+            self.assertEqual(data['data'][0][dkey], result['data'][0][dkey])
+
+    def test_api_get_event_by_id_bad(self):
+        ''' Verify get_event_by_id returns an error for a bad ID
+        '''
+        result = None
+        try:
+            # The api request should fail
+            result = self.api.get_event_by_id('\n*')
+            self.assertIsNone(result)
+        except CvpApiError as ebi_err:
+            # The error should contain 'Invalid Event Id'
+            self.assertIn('Invalid Event Id', str(ebi_err))
+
+    def test_api_get_default_snapshot_template(self):
+        ''' Verify get_default_snapshot_template.
+        '''
+        result = self.api.get_default_snapshot_template()
+        expected = {
+            'ccTasksTagged': 0,
+            'classId': 63,
+            'commandCount': 1,
+            'createdBy': 'System',
+            'createdTimestamp': 1541095435098,
+            'default': True,
+            'factoryId': 1,
+            'id': 63,
+            'isDefault': True,
+            'key': 'Initial_Template',
+            'name': 'Show_Inventory',
+            'note': '',
+        }
+
+        self.maxDiff = None
+        # Remove the snapshotCount and totalSnapshotCount, since these
+        # can change with usage
+        result.pop('snapshotCount', None)
+        result.pop('totalSnapshotCount', None)
+        self.assertDictEqual(result, expected)
+
+    def test_api_capture_container_level_snapshot(self):
+        ''' Verify capture_container_level_snapshot
+        '''
+        # Get the container and snapshot keys
+        container_key = self.container['key']
+        default_snap = self.api.get_default_snapshot_template()
+        snapshot_key = default_snap['key']
+
+        # Initialize the snapshot event
+        result = self.api.capture_container_level_snapshot(snapshot_key,
+                                                           container_key)
+        self.assertIn('data', result)
+        self.assertIn('eventId', result)
+        self.assertEqual('success', result['data'])
+
     def test_api_get_images(self):
         ''' Verify get images
         '''
@@ -611,6 +840,50 @@ class TestCvpClient(DutSystemTest):
         result = self.api.get_image_bundles()
         self.assertIsNotNone(result)
         self.assertEqual(result['total'], len(result['data']))
+
+    def test_api_save_update_image_bundle(self):
+        ''' Verify save_image_bundle and update_image_bundle
+        '''
+        # Get an existing bundle
+        bundles = self.api.get_image_bundles()
+        bundle = self.api.get_image_bundle_by_name(bundles['data'][0]['name'])
+
+        # Get the list of images from the existing bundle
+        images = bundle['images']
+        # Remove the unused keys from the images
+        remove_keys = ['appliedContainersCount', 'appliedDevicesCount',
+                       'factoryId', 'id', 'imageFile', 'imageFileName',
+                       'isHotFix', 'uploadedDateinLongFormat', 'user']
+        for image in images:
+            for key in remove_keys:
+                image.pop(key, None)
+
+        # Create a new bundle with the same images
+        original_name = 'test_image_bundle_%d' % time.time()
+        result = self.api.save_image_bundle(original_name, images)
+        expected = r'Bundle\s*:\s+%s successfully created' % original_name
+        self.assertRegexpMatches(result['data'], expected)
+
+        # Get the bundle ID from the new bundle
+        bundle = self.api.get_image_bundle_by_name(original_name)
+        bundle_id = bundle['id']
+
+        # Update the name of the bundle and mark it as uncertified
+        updated_name = original_name + "_updated"
+        result = self.api.update_image_bundle(bundle_id, updated_name, images,
+                                              certified=False)
+        expected = 'Image bundle updated successfully'
+        self.assertRegexpMatches(result['data'], expected)
+
+        # Verify the updated bundle name has the correct bundle ID
+        # and is not a certified image bundle
+        bundle = self.api.get_image_bundle_by_name(updated_name)
+        self.assertEqual(bundle['id'], bundle_id)
+        self.assertEqual(bundle['isCertifiedImage'], 'false')
+
+        # Verify the original bundle name does not exist
+        bundle = self.api.get_image_bundle_by_name(original_name)
+        self.assertIsNone(bundle)
 
     def test_api_get_image_bundle_by_name(self):
         ''' Verify get image bundle by name
@@ -770,6 +1043,54 @@ class TestCvpClient(DutSystemTest):
         # self.api.retry_add_to_inventory(device['ipAddress'],
         #                                device['systemMacAddress'],
         #                                dut['username'], dut['password'])
+
+    def test_api_change_control(self):
+        ''' Verify get_change_control_info and execute_change_control.
+        '''
+        chg_ctrl_name = 'test_api_%d' % time.time()
+        (task_id, org_config) = self._create_task()
+        chg_ctrl_tasks = [{
+            'taskId': task_id,
+            'taskOrder': 1
+        }]
+        chg_ctrl = self.api.create_change_control(chg_ctrl_name,
+                                                  chg_ctrl_tasks,
+                                                  '', '', '')
+        cc_id = chg_ctrl['ccId']
+
+        # Verify the pending change control information
+        chg_ctrl_pending = self.api.get_change_control_info(cc_id)
+        self.assertEqual(chg_ctrl_pending['status'], 'Pending')
+
+        # Execute the change control
+        self.api.execute_change_controls([cc_id])
+
+        # Verify the in progress/completed change control information
+        chg_ctrl_executed = self.api.get_change_control_info(cc_id)
+        self.assertIn(chg_ctrl_executed['status'], ('Inprogress', 'Completed'))
+
+    def test_api_filter_topology(self):
+        ''' Verify filter_topology.
+        '''
+        # Verify the test container topology returns the test device information
+        topology = self.api.filter_topology(node_id=self.container['key'])
+
+        # Verify the test device is present in the returned data
+        exp_device_key = self.device['key']
+        topo_devices = [x['key'] for
+                        x in topology['topology']['childNetElementList']]
+        self.assertIn(exp_device_key, topo_devices)
+
+        # Verify the test device data is consistent
+        topo_dev_data = [x for x in topology['topology']['childNetElementList']
+                         if x['key'] == exp_device_key][0]
+        # The tempAction field can be either None or [] when empty,
+        # so skip this in the comparison.
+        topo_dev_data.pop('tempAction', None)
+        known_dev_data = dict(self.device)
+        known_dev_data.pop('tempAction', None)
+        self.maxDiff = None  # show the entire diff
+        self.assertDictEqual(topo_dev_data, known_dev_data)
 
 
 if __name__ == '__main__':
