@@ -49,6 +49,7 @@
 '''
 import os
 import re
+import shutil
 import sys
 import time
 import unittest
@@ -826,6 +827,23 @@ class TestCvpClient(DutSystemTest):
         self.assertIn('data', result)
         self.assertIn('eventId', result)
         self.assertEqual('success', result['data'])
+
+    def test_api_add_image(self):
+        ''' Verify add_image
+        '''
+        # Copy the test image file with a timestamp appended
+        image_file = 'test/fixtures/image-file-%s.swix' % time.time()
+        shutil.copyfile('test/fixtures/image-file.swix', image_file)
+
+        # Upload the image to the cluster
+        result = self.api.add_image(image_file)
+
+        # Remove the timestamp copy from the local filesystem
+        os.remove(image_file)
+
+        self.assertNotIn('errorCode', result)
+        self.assertIn('result', result)
+        self.assertEqual(result['result'], 'success')
 
     def test_api_get_images(self):
         ''' Verify get images

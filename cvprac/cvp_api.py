@@ -31,7 +31,10 @@
 #
 ''' Class containing calls to CVP RESTful API.
 '''
+import json
+import os
 import urllib
+import requests
 from cvprac.cvp_client_errors import CvpApiError
 
 
@@ -1076,6 +1079,28 @@ class CvpApi(object):
         }
         return self.clnt.post('/snapshot/captureContainerLevelSnapshot.do',
                               data=data, timeout=self.request_timeout)
+
+    def add_image(self, filepath):
+        ''' Add an image to a CVP cluster.
+
+            Args:
+                filepath (str): Local path to the image to upload.
+        '''
+        # Get the absolute file path to be uploaded
+        imagepath = os.path.abspath(filepath)
+        image = open(imagepath, 'r')
+
+        # Set the request parameters
+        upload_url = '%s/image/addImage.do' % self.clnt.url_prefix
+        kwargs = {}
+        kwargs['cookies'] = self.clnt.cookies
+        kwargs['verify'] = False
+
+        # Upload the file
+        response = requests.post(upload_url, files={'file': image}, **kwargs)
+
+        # Return the response as a dict
+        return json.loads(response.content)
 
     def get_images(self, start=0, end=0):
         ''' Return a list of all images.
