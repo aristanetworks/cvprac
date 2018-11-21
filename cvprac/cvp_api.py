@@ -1064,6 +1064,7 @@ class CvpApi(object):
                'startIndex=0&endIndex=0')
         return self.clnt.get(url, timeout=self.request_timeout)
 
+    # pylint: disable=invalid-name
     def capture_container_level_snapshot(self, template_key, container_key):
         ''' Initialize a container level snapshot event.
 

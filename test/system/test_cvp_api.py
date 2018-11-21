@@ -1,4 +1,5 @@
 # pylint: disable=wrong-import-position
+# pylint: disable=too-many-lines
 #
 # Copyright (c) 2017, Arista Networks, Inc.
 # All rights reserved.
@@ -728,6 +729,7 @@ class TestCvpClient(DutSystemTest):
     def test_api_get_all_temp_actions(self):
         ''' Verify get_all_temp_actions
         '''
+        # pylint: disable=protected-access
         name = 'test_configlet'
         config = 'lldp timer 9'
 
@@ -1066,7 +1068,7 @@ class TestCvpClient(DutSystemTest):
         ''' Verify get_change_control_info and execute_change_control.
         '''
         chg_ctrl_name = 'test_api_%d' % time.time()
-        (task_id, org_config) = self._create_task()
+        (task_id, _) = self._create_task()
         chg_ctrl_tasks = [{
             'taskId': task_id,
             'taskOrder': 1
@@ -1090,7 +1092,7 @@ class TestCvpClient(DutSystemTest):
     def test_api_filter_topology(self):
         ''' Verify filter_topology.
         '''
-        # Verify the test container topology returns the test device information
+        # Verify the test container topology returns the test device info
         topology = self.api.filter_topology(node_id=self.container['key'])
 
         # Verify the test device is present in the returned data
