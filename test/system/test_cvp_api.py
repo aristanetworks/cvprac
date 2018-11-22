@@ -329,19 +329,19 @@ class TestCvpClient(DutSystemTest):
     def test_api_get_configlet_builder(self):
         ''' Verify get_configlet_builder
         '''
-        cfglt = self.api.get_configlet_by_name('SYS_TelemetryBuilder')
+        cfglt = self.api.get_configlet_by_name('SYS_TelemetryBuilderV2')
         result = self.api.get_configlet_builder(cfglt['key'])
 
         # Verify the following keys and types are
         # returned by the request
         exp_data = {
-            'isAssigned': bool,
-            'name': (unicode, str),
-            'formList': list,
-            'main_script': dict,
+            u'isAssigned': bool,
+            u'name': (unicode, str),
+            u'formList': list,
+            u'main_script': dict,
         }
-        self.assertListEqual(exp_data.keys(), result['data'].keys())
         for key in exp_data:
+            self.assertIn(key, result['data'])
             self.assertIsInstance(result['data'][key], exp_data[key])
 
     def test_api_get_configlet_by_name(self):
@@ -794,25 +794,24 @@ class TestCvpClient(DutSystemTest):
         '''
         result = self.api.get_default_snapshot_template()
         expected = {
-            'ccTasksTagged': 0,
-            'classId': 63,
-            'commandCount': 1,
-            'createdBy': 'System',
-            'createdTimestamp': 1541095435098,
-            'default': True,
-            'factoryId': 1,
-            'id': 63,
-            'isDefault': True,
-            'key': 'Initial_Template',
-            'name': 'Show_Inventory',
-            'note': '',
+            u'ccTasksTagged': 0,
+            u'classId': 63,
+            u'commandCount': 1,
+            u'createdBy': u'System',
+            u'default': True,
+            u'factoryId': 1,
+            u'id': 63,
+            u'isDefault': True,
+            u'key': u'Initial_Template',
+            u'name': u'Show_Inventory',
+            u'note': u'',
         }
 
-        self.maxDiff = None
-        # Remove the snapshotCount and totalSnapshotCount, since these
-        # can change with usage
+        # Remove the snapshotCount, totalSnapshotCount and createdTimestamp,
+        # since these can change with usage
         result.pop('snapshotCount', None)
         result.pop('totalSnapshotCount', None)
+        result.pop('createdTimestamp', None)
         self.assertDictEqual(result, expected)
 
     def test_api_capture_container_level_snapshot(self):
@@ -1088,6 +1087,14 @@ class TestCvpClient(DutSystemTest):
         # Verify the in progress/completed change control information
         chg_ctrl_executed = self.api.get_change_control_info(cc_id)
         self.assertIn(chg_ctrl_executed['status'], ('Inprogress', 'Completed'))
+        # Wait until change control is completed before continuing
+        # to next test
+        for x in range(3):
+            chg_ctrl_executed = self.api.get_change_control_info(cc_id)
+            if chg_ctrl_executed['status'] == 'Completed':
+                break
+            else:
+                time.sleep(1)
 
     def test_api_filter_topology(self):
         ''' Verify filter_topology.
@@ -1109,7 +1116,11 @@ class TestCvpClient(DutSystemTest):
         topo_dev_data.pop('tempAction', None)
         known_dev_data = dict(self.device)
         known_dev_data.pop('tempAction', None)
-        self.maxDiff = None  # show the entire diff
+        # The device containerName field appears to be null for filter
+        # topology calls where the nodeID is a container ID.
+        # Skip this in comparison
+        topo_dev_data.pop('containerName', None)
+        known_dev_data.pop('containerName', None)
         self.assertDictEqual(topo_dev_data, known_dev_data)
 
 
