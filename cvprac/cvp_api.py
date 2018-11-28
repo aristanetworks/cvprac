@@ -83,8 +83,11 @@ class CvpApi(object):
             Returns:
                 cvp_info (dict): CVP Information
         '''
-        return self.clnt.get('/cvpInfo/getCvpInfo.do',
+        data = self.clnt.get('/cvpInfo/getCvpInfo.do',
                              timeout=self.request_timeout)
+        if 'version' in data and self.clnt.apiversion is None:
+            self.clnt.set_version(data['version'])
+        return data
 
     def get_task_by_id(self, task_id):
         ''' Returns the current CVP Task status for the task with the specified
@@ -211,9 +214,24 @@ class CvpApi(object):
                 end (int): End index for the pagination. If end index is 0
                     then all the records will be returned. Default is 0.
         '''
-        return self.clnt.get('/configlet/getConfiglets.do?'
-                             'startIndex=%d&endIndex=%d'
-                             % (start, end), timeout=self.request_timeout)
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        configlets = self.clnt.get('/configlet/getConfiglets.do?'
+                                   'startIndex=%d&endIndex=%d' % (start, end),
+                                   timeout=self.request_timeout)
+        if self.clnt.apiversion == 'v1':
+            self.log.debug('v1 Inventory API Call')
+            return configlets
+        else:
+            self.log.debug('v2 Inventory API Call')
+            # New API getConfiglets does not return the actual configlet config
+            # Get the actual configlet config using getConfigletByName
+            if 'data' in configlets:
+                for configlet in configlets['data']:
+                    full_cfglt_data = self.get_configlet_by_name(
+                        configlet['name'])
+                    configlet['config'] = full_cfglt_data['config']
+            return configlets
 
     def get_configlet_builder(self, c_id):
         ''' Returns the configlet builder data for the given configlet ID.
@@ -298,11 +316,45 @@ class CvpApi(object):
                     are running a specific version of EOS.
         '''
         self.log.debug('get_inventory: called')
-        data = self.clnt.get('/inventory/getInventory.do?'
-                             'queryparam=%s&startIndex=%d&endIndex=%d' %
-                             (urllib.quote_plus(query), start, end),
-                             timeout=self.request_timeout)
-        return data['netElementList']
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion == 'v1':
+            self.log.debug('v1 Inventory API Call')
+            data = self.clnt.get('/inventory/getInventory.do?'
+                                 'queryparam=%s&startIndex=%d&endIndex=%d' %
+                                 (urllib.quote_plus(query), start, end),
+                                 timeout=self.request_timeout)
+            return data['netElementList']
+        else:
+            self.log.debug('v2 Inventory API Call')
+            data = self.clnt.get('/inventory/devices?provisioned=true',
+                                 timeout=self.request_timeout)
+            for dev in data:
+                dev['key'] = dev['systemMacAddress']
+                dev['deviceInfo'] = dev['deviceStatus'] = dev['status']
+                dev['isMLAGEnabled'] = dev['mlagEnabled']
+                dev['isDANZEnabled'] = dev['danzEnabled']
+                dev['parentContainerId'] = dev['parentContainerKey']
+                dev['bootupTimeStamp'] = dev['bootupTimestamp']
+                dev['internalBuildId'] = dev['internalBuild']
+                if 'taskIdList' not in dev:
+                    dev['taskIdList'] = []
+                if 'tempAction' not in dev:
+                    dev['tempAction'] = None
+                dev['memTotal'] = 0
+                dev['memFree'] = 0
+                dev['sslConfigAvailable'] = False
+                dev['sslEnabledByCVP'] = False
+                dev['lastSyncUp'] = 0
+                dev['type'] = 'netelement'
+                dev['dcaKey'] = None
+                parent_container = self.get_container_by_id(
+                    dev['parentContainerKey'])
+                if parent_container is not None:
+                    dev['containerName'] = parent_container['name']
+                else:
+                    dev['containerName'] = ''
+            return data
 
     def add_device_to_inventory(self, device_ip, parent_name, parent_key):
         ''' Add the device to the specified parent container.
@@ -313,17 +365,36 @@ class CvpApi(object):
                 parent_key (str): Parent container key
         '''
         self.log.debug('add_device_to_inventory: called')
-        data = {'data': [
-            {
-                'containerName' : parent_name,
-                'containerId' : parent_key,
-                'containerType' : 'Existing',
-                'ipAddress' : device_ip,
-                'containerList' : []
-            }]}
-        self.clnt.post('/inventory/add/addToInventory.do?'
-                       'startIndex=0&endIndex=0', data=data,
-                       timeout=self.request_timeout)
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion == 'v1':
+            self.log.debug('v1 Inventory API Call')
+            data = {'data': [
+                {
+                    'containerName' : parent_name,
+                    'containerId' : parent_key,
+                    'containerType' : 'Existing',
+                    'ipAddress' : device_ip,
+                    'containerList' : []
+                }]}
+            self.clnt.post('/inventory/add/addToInventory.do?'
+                           'startIndex=0&endIndex=0', data=data,
+                           timeout=self.request_timeout)
+        else:
+            self.log.debug('v2 Inventory API Call')
+            data = {'hosts': [device_ip]}
+            self.clnt.post('/inventory/devices', data=data,
+                           timeout=self.request_timeout)
+            dev = None
+            devices = self.get_inventory()
+            for device in devices:
+                if 'ipAddress' in device and device['ipAddress'] == device_ip:
+                    dev = device
+                    break
+            if dev is not None:
+                container = {'key': parent_key, 'name': parent_name}
+                self.move_device_to_container('add_device_to_inventory API v2',
+                                              dev, container, False)
 
     def retry_add_to_inventory(self, device_mac, device_ip, username,
                                password):
@@ -336,14 +407,22 @@ class CvpApi(object):
                 password (str): password for user
         '''
         self.log.debug('retry_add_to_inventory: called')
-        data = {"key" : device_mac,
-                "ipAddress" : device_ip,
-                "userName" : username,
-                "password" : password}
-        self.clnt.post('/inventory/add/retryAddDeviceToInventory.do?'
-                       'startIndex=0&endIndex=0',
-                       data=data,
-                       timeout=self.request_timeout)
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion == 'v1':
+            self.log.debug('v1 Inventory API Call')
+            data = {"key": device_mac,
+                    "ipAddress": device_ip,
+                    "userName": username,
+                    "password": password}
+            self.clnt.post('/inventory/add/retryAddDeviceToInventory.do?'
+                           'startIndex=0&endIndex=0',
+                           data=data,
+                           timeout=self.request_timeout)
+        else:
+            self.log.debug('v2 Inventory API Call')
+            self.log.warning(
+                'retry_add_to_inventory: not implemented for v2 APIs')
 
     def delete_device(self, device_mac):
         '''Delete the device and its pending tasks from Cvp inventory
@@ -379,16 +458,39 @@ class CvpApi(object):
                             accessible/connected
         '''
         self.log.debug('get_non_connected_device_count: called')
-        data = self.clnt.get('/inventory/add/getNonConnectedDeviceCount.do',
-                             timeout=self.request_timeout)
-        return data['data']
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion == 'v1':
+            self.log.debug('v1 Inventory API Call')
+            data = self.clnt.get('/inventory/add/getNonConnectedDeviceCount.do',
+                                 timeout=self.request_timeout)
+            return data['data']
+        else:
+            self.log.debug('v2 Inventory API Call')
+            data = self.clnt.get('/inventory/devices?provisioned=false',
+                                 timeout=self.request_timeout)
+            unprovisioned_devs = 0
+            for dev in data:
+                if 'status' in dev and dev['status'] == '':
+                    unprovisioned_devs += 1
+            return unprovisioned_devs
 
     def save_inventory(self):
         '''Saves Cvp inventory state
         '''
         self.log.debug('save_inventory: called')
-        return self.clnt.post('/inventory/add/saveInventory.do',
-                              timeout=self.request_timeout)
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion == 'v1':
+            self.log.debug('v1 Inventory API Call')
+            return self.clnt.post('/inventory/add/saveInventory.do',
+                                  timeout=self.request_timeout)
+        else:
+            self.log.debug('v2 Inventory API Call')
+            message = 'Save Inventory not implemented/necessary for' +\
+                      ' CVP 2018.2 and beyond'
+            data = {'data': 0, 'message': message}
+            return data
 
     def get_devices_in_container(self, name):
         ''' Returns a dict of the devices under the named container.
@@ -400,11 +502,8 @@ class CvpApi(object):
         devices = []
         container = self.get_container_by_name(name)
         if container:
-            data = self.clnt.get('/inventory/getInventory.do?'
-                                 'queryparam=%s&startIndex=0&'
-                                 'endIndex=0' % urllib.quote_plus(name),
-                                 timeout=self.request_timeout)
-            for device in data['netElementList']:
+            all_devices = self.get_inventory(0, 0, name)
+            for device in all_devices:
                 if device['parentContainerId'] == container['key']:
                     devices.append(device)
         return devices
@@ -466,8 +565,38 @@ class CvpApi(object):
                 with associated info.
         '''
         self.log.debug('Get list of containers')
-        return self.clnt.get('/inventory/add/searchContainers.do?'
-                             'startIndex=%d&endIndex=%d' % (start, end))
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion == 'v1':
+            self.log.debug('v1 Inventory API Call')
+            return self.clnt.get('/inventory/add/searchContainers.do?'
+                                 'startIndex=%d&endIndex=%d' % (start, end))
+        else:
+            self.log.debug('v2 Inventory API Call')
+            containers = self.clnt.get('/inventory/containers')
+            for container in containers:
+                container['name'] = container['Name']
+                container['key'] = container['Key']
+                full_cont_info = self.get_container_by_id(
+                    container['Key'])
+                if (full_cont_info is not None and
+                        container['Name'] != 'Tenant'):
+                    container['parentName'] = full_cont_info['parentName']
+                    full_parent_info = self.get_container_by_name(
+                        full_cont_info['parentName'])
+                    if full_parent_info is not None:
+                        container['parentId'] = full_parent_info['key']
+                    else:
+                        container['parentId'] = None
+                else:
+                    container['parentName'] = None
+                    container['parentId'] = None
+                container['type'] = None
+                container['id'] = 21
+                container['factoryId'] = 1
+                container['userId'] = None
+                container['childContainerId'] = None
+            return {'data': containers, 'total': len(containers)}
 
     def get_container_by_name(self, name):
         ''' Returns a container that exactly matches the name.
@@ -487,6 +616,19 @@ class CvpApi(object):
                 if cont['name'] == name:
                     return cont
         return None
+
+    def get_container_by_id(self, key):
+        ''' Returns a container for the given id.
+
+            Args:
+                key (str): String ID for container to find.
+
+            Returns:
+                container (dict): Container info in dictionary format or None
+        '''
+        self.log.debug('Get info for container %s' % key)
+        return self.clnt.get('/provisioning/getContainerInfoById.do?'
+                             'containerId=%s' % urllib.quote_plus(key))
 
     def get_configlets_by_device_id(self, mac, start=0, end=0):
         ''' Returns the list of configlets applied to a device.
@@ -987,7 +1129,8 @@ class CvpApi(object):
                 self.log.debug('Device %s already in container %s'
                                % (device['fqdn'], container))
         if create_task:
-            return self._save_topology_v2([])
+            resp = self._save_topology_v2([])
+            return resp
 
     def search_topology(self, query, start=0, end=0):
         ''' Search the topology for items matching the query parameter.
@@ -1044,8 +1187,14 @@ class CvpApi(object):
         self.log.debug('check_compliance: node_key: %s node_type: %s' %
                        (node_key, node_type))
         data = {'nodeId': node_key, 'nodeType': node_type}
-        return self.clnt.post('/provisioning/checkCompliance.do', data=data,
+        resp = self.clnt.post('/provisioning/checkCompliance.do', data=data,
                               timeout=self.request_timeout)
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion == 'v2':
+            if resp['complianceIndication'] == u'':
+                resp['complianceIndication'] = 'NONE'
+        return resp
 
     def get_event_by_id(self, e_id):
         ''' Return information on the requested event ID.
@@ -1060,9 +1209,18 @@ class CvpApi(object):
         ''' Return the default snapshot template.
 
         '''
-        url = ('/snapshot/getDefaultSnapshotTemplate.do?'
-               'startIndex=0&endIndex=0')
-        return self.clnt.get(url, timeout=self.request_timeout)
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion == 'v1':
+            self.log.debug('v1 Inventory API Call')
+            url = ('/snapshot/getDefaultSnapshotTemplate.do?'
+                   'startIndex=0&endIndex=0')
+            return self.clnt.get(url, timeout=self.request_timeout)
+        else:
+            self.log.debug('v2 Inventory API Call')
+            self.log.debug('API getDefaultSnapshotTemplate.do'
+                           ' deprecated for CVP 2018.2 and beyond')
+            return None
 
     # pylint: disable=invalid-name
     def capture_container_level_snapshot(self, template_key, container_key):
@@ -1074,12 +1232,21 @@ class CvpApi(object):
                 container_key (str): The container key to start the
                     snapshots on.
         '''
-        data = {
-            'templateId': template_key,
-            'containerId': container_key,
-        }
-        return self.clnt.post('/snapshot/captureContainerLevelSnapshot.do',
-                              data=data, timeout=self.request_timeout)
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion == 'v1':
+            self.log.debug('v1 Inventory API Call')
+            data = {
+                'templateId': template_key,
+                'containerId': container_key,
+            }
+            return self.clnt.post('/snapshot/captureContainerLevelSnapshot.do',
+                                  data=data, timeout=self.request_timeout)
+        else:
+            self.log.debug('v2 Inventory API Call')
+            self.log.debug('API captureContainerLevelSnapshot.do'
+                           ' deprecated for CVP 2018.2 and beyond')
+            return None
 
     def add_image(self, filepath):
         ''' Add an image to a CVP cluster.

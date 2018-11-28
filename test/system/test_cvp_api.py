@@ -170,6 +170,11 @@ class TestCvpClient(DutSystemTest):
 
         # Wait 30 seconds for task to get created
         cnt = 30
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion == 'v2':
+            # Increase timeout by 30 sec for CVP 2018.2 and beyond
+            cnt += 30
         while cnt > 0:
             time.sleep(1)
             result = self.api.get_task_by_id(task_id)
@@ -189,6 +194,8 @@ class TestCvpClient(DutSystemTest):
         self.assertIsNotNone(result)
         self.assertIn('version', result)
         self.assertIn(self.clnt.last_used_node, self.clnt.url_prefix)
+        self.assertEqual(self.clnt.version, result['version'])
+        self.assertIsNotNone(self.clnt.apiversion)
 
     def test_api_check_compliance(self):
         ''' Verify check_compliance
@@ -688,7 +695,14 @@ class TestCvpClient(DutSystemTest):
         self.api.apply_configlets_to_device(label, self.device, [param])
 
         # Validate task was created to apply the configlet to device
-        result = self.api.get_task_by_id(task_id)
+        # Wait 30 seconds for task to get created
+        cnt = 30
+        while cnt > 0:
+            time.sleep(1)
+            result = self.api.get_task_by_id(task_id)
+            if result is not None:
+                break
+            cnt -= 1
         self.assertIsNotNone(result)
         self.assertEqual(result['workOrderId'], task_id)
         self.assertIn(label, result['description'])
@@ -703,7 +717,14 @@ class TestCvpClient(DutSystemTest):
         self.api.remove_configlets_from_device(label, self.device, [param])
 
         # Validate task was created to remove the configlet to device
-        result = self.api.get_task_by_id(task_id)
+        # Wait 30 seconds for task to get created
+        cnt = 30
+        while cnt > 0:
+            time.sleep(1)
+            result = self.api.get_task_by_id(task_id)
+            if result is not None:
+                break
+            cnt -= 1
         self.assertIsNotNone(result)
         self.assertEqual(result['workOrderId'], task_id)
         self.assertIn(label, result['description'])
@@ -780,7 +801,6 @@ class TestCvpClient(DutSystemTest):
     def test_api_get_event_by_id_bad(self):
         ''' Verify get_event_by_id returns an error for a bad ID
         '''
-        result = None
         try:
             # The api request should fail
             result = self.api.get_event_by_id('\n*')
@@ -793,26 +813,27 @@ class TestCvpClient(DutSystemTest):
         ''' Verify get_default_snapshot_template.
         '''
         result = self.api.get_default_snapshot_template()
-        expected = {
-            u'ccTasksTagged': 0,
-            u'classId': 63,
-            u'commandCount': 1,
-            u'createdBy': u'System',
-            u'default': True,
-            u'factoryId': 1,
-            u'id': 63,
-            u'isDefault': True,
-            u'key': u'Initial_Template',
-            u'name': u'Show_Inventory',
-            u'note': u'',
-        }
+        if result is not None:
+            expected = {
+                u'ccTasksTagged': 0,
+                u'classId': 63,
+                u'commandCount': 1,
+                u'createdBy': u'System',
+                u'default': True,
+                u'factoryId': 1,
+                u'id': 63,
+                u'isDefault': True,
+                u'key': u'Initial_Template',
+                u'name': u'Show_Inventory',
+                u'note': u'',
+            }
 
-        # Remove the snapshotCount, totalSnapshotCount and createdTimestamp,
-        # since these can change with usage
-        result.pop('snapshotCount', None)
-        result.pop('totalSnapshotCount', None)
-        result.pop('createdTimestamp', None)
-        self.assertDictEqual(result, expected)
+            # Remove the snapshotCount, totalSnapshotCount and
+            # createdTimestamp, since these can change with usage
+            result.pop('snapshotCount', None)
+            result.pop('totalSnapshotCount', None)
+            result.pop('createdTimestamp', None)
+            self.assertDictEqual(result, expected)
 
     def test_api_capture_container_level_snapshot(self):
         ''' Verify capture_container_level_snapshot
@@ -820,14 +841,15 @@ class TestCvpClient(DutSystemTest):
         # Get the container and snapshot keys
         container_key = self.container['key']
         default_snap = self.api.get_default_snapshot_template()
-        snapshot_key = default_snap['key']
+        if default_snap is not None:
+            snapshot_key = default_snap['key']
 
-        # Initialize the snapshot event
-        result = self.api.capture_container_level_snapshot(snapshot_key,
-                                                           container_key)
-        self.assertIn('data', result)
-        self.assertIn('eventId', result)
-        self.assertEqual('success', result['data'])
+            # Initialize the snapshot event
+            result = self.api.capture_container_level_snapshot(
+                snapshot_key, container_key)
+            self.assertIn('data', result)
+            self.assertIn('eventId', result)
+            self.assertEqual('success', result['data'])
 
     def test_api_add_image(self):
         ''' Verify add_image
@@ -1032,8 +1054,15 @@ class TestCvpClient(DutSystemTest):
                 break
             time.sleep(1)
             non_connect_count = self.api.get_non_connected_device_count()
-        save_result = self.api.save_inventory()
-        self.assertEqual(save_result['data'], 1)
+        results = self.api.save_inventory()
+        # Save Inventory is deprecated for 2018.2 and beyond
+        if self.clnt.apiversion == 'v1':
+            self.assertEqual(results['data'], 1)
+        else:
+            save_msg = 'Save Inventory not implemented/necessary for' +\
+                       ' CVP 2018.2 and beyond'
+            self.assertEqual(results['data'], 0)
+            self.assertEqual(results['message'], save_msg)
         post_save_inv = self.api.get_inventory()
         self.assertEqual(len(post_save_inv), len(full_inv))
         # verify device is found in inventory again
@@ -1089,7 +1118,7 @@ class TestCvpClient(DutSystemTest):
         self.assertIn(chg_ctrl_executed['status'], ('Inprogress', 'Completed'))
         # Wait until change control is completed before continuing
         # to next test
-        for x in range(3):
+        for _ in range(3):
             chg_ctrl_executed = self.api.get_change_control_info(cc_id)
             if chg_ctrl_executed['status'] == 'Completed':
                 break
@@ -1099,6 +1128,9 @@ class TestCvpClient(DutSystemTest):
     def test_api_filter_topology(self):
         ''' Verify filter_topology.
         '''
+        # Set client apiversion if it is not already set
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
         # Verify the test container topology returns the test device info
         topology = self.api.filter_topology(node_id=self.container['key'])
 
@@ -1121,8 +1153,17 @@ class TestCvpClient(DutSystemTest):
         # Skip this in comparison
         topo_dev_data.pop('containerName', None)
         known_dev_data.pop('containerName', None)
-        self.assertDictEqual(topo_dev_data, known_dev_data)
 
+        # Test expected parameter keys are in return data.
+        # Test values for parameters with consistent return values
+        # Ignore comparing values for keys with
+        # known different return value formats
+        diff_val_form_keys = ['dcaKey', 'modelName', 'isDANZEnabled',
+                              'deviceInfo', 'ztpMode', 'isMLAGEnabled']
+        for key in topo_dev_data:
+            self.assertIn(key, known_dev_data)
+            if self.clnt.apiversion == 'v1' or key not in diff_val_form_keys:
+                self.assertEqual(topo_dev_data[key], known_dev_data[key])
 
 if __name__ == '__main__':
     unittest.main()

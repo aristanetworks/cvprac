@@ -127,6 +127,7 @@ class CvpClient(object):
                     is None.
                 log_level (str): Log level to use for logger. Default is INFO.
         '''
+        self.apiversion = None
         self.authdata = None
         self.cert = False
         self.connect_timeout = None
@@ -139,6 +140,7 @@ class CvpClient(object):
         self.protocol = None
         self.session = None
         self.url_prefix = None
+        self.version = None
         self._last_used_node = None
 
         # Save proper headers
@@ -182,6 +184,33 @@ class CvpClient(object):
                              'WARNING', 'ERROR', 'CRITICAL']:
             log_level = 'INFO'
         self.log.setLevel(getattr(logging, log_level))
+
+    def set_version(self, version):
+        '''
+
+        :param version:
+        :return:
+        '''
+        self.version = version
+        split_version = version.split('.')
+        print split_version
+        # Expect version string to be at least two long
+        # Ex: 2018.2
+        # Ex: 2018.1.4
+        # Ex: 2017.2
+        if len(split_version) > 2:
+            # Set apiversion to v2 for 2018.2 and beyond.
+            if int(split_version[0]) > 2017 and int(split_version[1]) > 1:
+                print 'FOUND V2'
+                self.apiversion = 'v2'
+            else:
+                print 'FOUND V1'
+                self.apiversion = 'v1'
+        else:
+            # If version is shorter than 2 elements for some reason default
+            # to v2
+            print 'SHORT VERSION STRING SET v2'
+            self.apiversion = 'v2'
 
     def connect(self, nodes, username, password, connect_timeout=10,
                 protocol='https', port=None, cert=False):
