@@ -171,7 +171,7 @@ class TestCvpClient(DutSystemTest):
         # Wait 30 seconds for task to get created
         cnt = 30
         if self.clnt.apiversion is None:
-            self.get_cvp_info()
+            self.api.get_cvp_info()
         if self.clnt.apiversion == 'v2':
             # Increase timeout by 30 sec for CVP 2018.2 and beyond
             cnt += 30
@@ -1095,6 +1095,9 @@ class TestCvpClient(DutSystemTest):
     def test_api_change_control(self):
         ''' Verify get_change_control_info and execute_change_control.
         '''
+        # Set client apiversion if it is not already set
+        if self.clnt.apiversion is None:
+            self.api.get_cvp_info()
         chg_ctrl_name = 'test_api_%d' % time.time()
         (task_id, _) = self._create_task()
         chg_ctrl_tasks = [{
@@ -1124,13 +1127,17 @@ class TestCvpClient(DutSystemTest):
                 break
             else:
                 time.sleep(1)
+        # For 2018.2 give a few extra seconds for device status to get
+        # back in compliance.
+        if self.clnt.apiversion == 'v2':
+            time.sleep(5)
 
     def test_api_filter_topology(self):
         ''' Verify filter_topology.
         '''
         # Set client apiversion if it is not already set
         if self.clnt.apiversion is None:
-            self.get_cvp_info()
+            self.api.get_cvp_info()
         # Verify the test container topology returns the test device info
         topology = self.api.filter_topology(node_id=self.container['key'])
 
