@@ -252,9 +252,14 @@ class CvpApi(object):
                 configlet (dict): The configlet dict.
         '''
         self.log.debug('get_configlets_by_name: name: %s' % name)
-        return self.clnt.get('/configlet/getConfigletByName.do?name=%s'
-                             % urllib.quote_plus(name),
-                             timeout=self.request_timeout)
+        try:
+            return self.clnt.get('/configlet/getConfigletByName.do?name=%s'
+                                % urllib.quote_plus(name),
+                                timeout=self.request_timeout)
+        except AttributeError:
+            return self.clnt.get('/configlet/getConfigletByName.do?name=%s'
+                                % urllib.parse.quote_plus(name),
+                                timeout=self.request_timeout)
 
     def get_configlets_by_container_id(self, c_id, start=0, end=0):
         ''' Returns a list of configlets applied to the given container.
@@ -320,10 +325,16 @@ class CvpApi(object):
             self.get_cvp_info()
         if self.clnt.apiversion == 'v1':
             self.log.debug('v1 Inventory API Call')
-            data = self.clnt.get('/inventory/getInventory.do?'
-                                 'queryparam=%s&startIndex=%d&endIndex=%d' %
-                                 (urllib.quote_plus(query), start, end),
-                                 timeout=self.request_timeout)
+            try:
+                data = self.clnt.get('/inventory/getInventory.do?'
+                                    'queryparam=%s&startIndex=%d&endIndex=%d' %
+                                    (urllib.quote_plus(query), start, end),
+                                    timeout=self.request_timeout)
+            except AttributeError:
+                data = self.clnt.get('/inventory/getInventory.do?'
+                                    'queryparam=%s&startIndex=%d&endIndex=%d' %
+                                    (urllib.parse.quote_plus(query), start, end),
+                                    timeout=self.request_timeout)
             return data['netElementList']
         else:
             self.log.debug('v2 Inventory API Call')
@@ -608,9 +619,14 @@ class CvpApi(object):
                 container (dict): Container info in dictionary format or None
         '''
         self.log.debug('Get info for container %s' % name)
-        conts = self.clnt.get('/provisioning/searchTopology.do?queryParam=%s'
-                              '&startIndex=0&endIndex=0'
-                              % urllib.quote_plus(name))
+        try:
+            conts = self.clnt.get('/provisioning/searchTopology.do?queryParam=%s'
+                                '&startIndex=0&endIndex=0'
+                                % urllib.quote_plus(name))
+        except AttributeError:
+            conts = self.clnt.get('/provisioning/searchTopology.do?queryParam=%s'
+                                '&startIndex=0&endIndex=0'
+                                % urllib.parse.quote_plus(name))
         if conts['total'] > 0 and conts['containerList']:
             for cont in conts['containerList']:
                 if cont['name'] == name:
@@ -627,8 +643,12 @@ class CvpApi(object):
                 container (dict): Container info in dictionary format or None
         '''
         self.log.debug('Get info for container %s' % key)
-        return self.clnt.get('/provisioning/getContainerInfoById.do?'
-                             'containerId=%s' % urllib.quote_plus(key))
+        try:
+            return self.clnt.get('/provisioning/getContainerInfoById.do?'
+                                'containerId=%s' % urllib.quote_plus(key))
+        except AttributeError:
+            return self.clnt.get('/provisioning/getContainerInfoById.do?'
+                                'containerId=%s' % urllib.parse.quote_plus(key))
 
     def get_configlets_by_device_id(self, mac, start=0, end=0):
         ''' Returns the list of configlets applied to a device.
@@ -667,9 +687,14 @@ class CvpApi(object):
                        timeout=self.request_timeout)
 
         # Get the key for the configlet
-        data = self.clnt.get('/configlet/getConfigletByName.do?name=%s'
-                             % urllib.quote_plus(name),
-                             timeout=self.request_timeout)
+        try:
+            data = self.clnt.get('/configlet/getConfigletByName.do?name=%s'
+                                % urllib.quote_plus(name),
+                                timeout=self.request_timeout)
+        except AttributeError:
+            data = self.clnt.get('/configlet/getConfigletByName.do?name=%s'
+                                % urllib.parse.quote_plus(name),
+                                timeout=self.request_timeout)
         return data['key']
 
     def delete_configlet(self, name, key):
@@ -1148,10 +1173,16 @@ class CvpApi(object):
         '''
         self.log.debug('search_topology: query: %s start: %d end: %d' %
                        (query, start, end))
-        data = self.clnt.get('/provisioning/searchTopology.do?queryParam=%s&'
-                             'startIndex=%d&endIndex=%d'
-                             % (urllib.quote_plus(query), start, end),
-                             timeout=self.request_timeout)
+        try:
+            data = self.clnt.get('/provisioning/searchTopology.do?queryParam=%s&'
+                                'startIndex=%d&endIndex=%d'
+                                % (urllib.quote_plus(query), start, end),
+                                timeout=self.request_timeout)
+        except AttributeError:
+            data = self.clnt.get('/provisioning/searchTopology.do?queryParam=%s&'
+                                'startIndex=%d&endIndex=%d'
+                                % (urllib.parse.quote_plus(query), start, end),
+                                timeout=self.request_timeout)
         return data
 
     def filter_topology(self, node_id='root', fmt='topology',
@@ -1318,9 +1349,14 @@ class CvpApi(object):
         '''
         self.log.debug('Attempt to get image bundle %s' % name)
         try:
-            image = self.clnt.get('/image/getImageBundleByName.do?name=%s'
-                                  % urllib.quote_plus(name),
-                                  timeout=self.request_timeout)
+            try:
+                image = self.clnt.get('/image/getImageBundleByName.do?name=%s'
+                                    % urllib.quote_plus(name),
+                                    timeout=self.request_timeout)
+            except AttributeError:
+                image = self.clnt.get('/image/getImageBundleByName.do?name=%s'
+                                    % urllib.parse.quote_plus(name),
+                                    timeout=self.request_timeout)
         except CvpApiError as error:
             # Catch an invalid task_id error and return None
             if 'Entity does not exist' in str(error):
@@ -1520,10 +1556,16 @@ class CvpApi(object):
                 change controls (list): The list of change controls
         '''
         self.log.debug('get_change_controls: query: %s' % query)
-        data = self.clnt.get(
-            '/changeControl/getChangeControls.do?searchText=%s&startIndex=%d'
-            '&endIndex=%d' % (urllib.quote_plus(query), start, end),
-            timeout=self.request_timeout)
+        try:
+            data = self.clnt.get(
+                '/changeControl/getChangeControls.do?searchText=%s&startIndex=%d'
+                '&endIndex=%d' % (urllib.quote_plus(query), start, end),
+                timeout=self.request_timeout)
+        except AttributeError:
+            data = self.clnt.get(
+                '/changeControl/getChangeControls.do?searchText=%s&startIndex=%d'
+                '&endIndex=%d' % (urllib.parse.quote_plus(query), start, end),
+                timeout=self.request_timeout)
         if 'data' not in data:
             return None
         return data['data']
@@ -1541,10 +1583,16 @@ class CvpApi(object):
                 tasks (list): The list of available tasks
         '''
         self.log.debug('change_control_available_tasks: query: %s' % query)
-        data = self.clnt.get(
-            '/changeControl/getTasksByStatus.do?searchText=%s&startIndex=%d'
-            '&endIndex=%d' % (urllib.quote_plus(query), start, end),
-            timeout=self.request_timeout)
+        try:
+            data = self.clnt.get(
+                '/changeControl/getTasksByStatus.do?searchText=%s&startIndex=%d'
+                '&endIndex=%d' % (urllib.quote_plus(query), start, end),
+                timeout=self.request_timeout)
+        except AttributeError:
+            data = self.clnt.get(
+                '/changeControl/getTasksByStatus.do?searchText=%s&startIndex=%d'
+                '&endIndex=%d' % (urllib.parse.quote_plus(query), start, end),
+                timeout=self.request_timeout)
         if 'data' not in data:
             return None
         return data['data']

@@ -68,7 +68,7 @@ Example:
     >>> clnt = CvpClient()
     >>> clnt.connect(['cvp1', 'cvp2', 'cvp3'], 'cvp_user', 'cvp_word')
     >>> result = clnt.get('/cvpInfo/getCvpInfo.do')
-    >>> print result
+    >>> print(result)
     {u'version': u'2016.1.0'}
     >>>
 
@@ -85,10 +85,11 @@ Example:
     >>> clnt = CvpClient()
     >>> clnt.connect(['cvp1', 'cvp2', 'cvp3'], 'cvp_user', 'cvp_word')
     >>> result = clnt.api.get_cvp_info()
-    >>> print result
+    >>> print(result)
     {u'version': u'2016.1.0'}
     >>>
 '''
+from __future__ import print_function
 
 import re
 import json
@@ -193,7 +194,7 @@ class CvpClient(object):
         '''
         self.version = version
         split_version = version.split('.')
-        print split_version
+        print(split_version)
         # Expect version string to be at least two long
         # Ex: 2018.2
         # Ex: 2018.1.4
@@ -201,15 +202,15 @@ class CvpClient(object):
         if len(split_version) > 2:
             # Set apiversion to v2 for 2018.2 and beyond.
             if int(split_version[0]) > 2017 and int(split_version[1]) > 1:
-                print 'FOUND V2'
+                print('FOUND V2')
                 self.apiversion = 'v2'
             else:
-                print 'FOUND V1'
+                print('FOUND V1')
                 self.apiversion = 'v1'
         else:
             # If version is shorter than 2 elements for some reason default
             # to v2
-            print 'SHORT VERSION STRING SET v2'
+            print('SHORT VERSION STRING SET v2')
             self.apiversion = 'v2'
 
     def connect(self, nodes, username, password, connect_timeout=10,
