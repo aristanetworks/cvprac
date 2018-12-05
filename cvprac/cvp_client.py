@@ -127,6 +127,7 @@ class CvpClient(object):
                     is None.
                 log_level (str): Log level to use for logger. Default is INFO.
         '''
+        self.apiversion = None
         self.authdata = None
         self.cert = False
         self.connect_timeout = None
@@ -139,6 +140,7 @@ class CvpClient(object):
         self.protocol = None
         self.session = None
         self.url_prefix = None
+        self.version = None
         self._last_used_node = None
 
         # Save proper headers
@@ -182,6 +184,34 @@ class CvpClient(object):
                              'WARNING', 'ERROR', 'CRITICAL']:
             log_level = 'INFO'
         self.log.setLevel(getattr(logging, log_level))
+
+    def set_version(self, version):
+        '''
+
+        :param version:
+        :return:
+        '''
+        self.version = version
+        split_version = version.split('.')
+        self.log.info('Version %s', split_version)
+        # Expect version string to be at least two long
+        # Ex: 2018.2
+        # Ex: 2018.1.4
+        # Ex: 2017.2
+        if len(split_version) > 2:
+            # Set apiversion to v2 for 2018.2 and beyond.
+            if int(split_version[0]) > 2017 and int(split_version[1]) > 1:
+                self.log.info('Setting API version to v2')
+                self.apiversion = 'v2'
+            else:
+                self.log.info('Setting API version to v1')
+                self.apiversion = 'v1'
+        else:
+            # If version is shorter than 2 elements for some reason default
+            # to v2
+            self.log.info('Version has less than 2 elements.'
+                          ' Setting API version to v2')
+            self.apiversion = 'v2'
 
     def connect(self, nodes, username, password, connect_timeout=10,
                 protocol='https', port=None, cert=False):
@@ -300,7 +330,13 @@ class CvpClient(object):
         if not response.ok:
             msg = '%s: Request Error: %s' % (prefix, response.reason)
             self.log.error(msg)
-            raise CvpRequestError(msg)
+            if 'Unauthorized' in response.reason:
+                # Check for Unauthorized User error because this is how
+                # CVP responds to a logged out users requests in 2018
+                # and beyond.
+                raise CvpApiError(msg)
+            else:
+                raise CvpRequestError(msg)
 
         if 'LOG OUT MESSAGE' in response.text:
             msg = ('%s: Request Error: session logged out' % prefix)
@@ -496,7 +532,7 @@ class CvpClient(object):
                 continue
             except CvpApiError as error:
                 self.log.debug(error)
-                if 'Unauthorized User' in error.msg:
+                if 'Unauthorized' in error.msg:
                     # Retry the request to the same node if there was an
                     # Unauthorized User error because this is how CVP responds
                     # to a logged out users requests in 2017.1 and beyond.

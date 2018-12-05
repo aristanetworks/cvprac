@@ -250,8 +250,14 @@ class TestCvpClient(DutSystemTest):
         '''
         dut = self.duts[0]
         self.clnt.connect([dut['node']], dut['username'], dut['password'])
-        with self.assertRaises(CvpRequestError):
-            self.clnt.get('/aaa/getServerById.do')
+        if self.clnt.apiversion is None:
+            self.clnt.api.get_cvp_info()
+        if self.clnt.apiversion == 'v1':
+            with self.assertRaises(CvpRequestError):
+                self.clnt.get('/aaa/getServerById.do')
+        else:
+            with self.assertRaises(CvpApiError):
+                self.clnt.get('/aaa/getServerById.do')
 
     def test_get_cvp_url_bad(self):
         ''' Verify get with bad URL returns an error
@@ -351,8 +357,14 @@ class TestCvpClient(DutSystemTest):
         '''
         dut = self.duts[0]
         self.clnt.connect([dut['node']], dut['username'], dut['password'])
-        with self.assertRaises(CvpApiError):
-            self.clnt.post('/aaa/saveAAADetails.do', None)
+        if self.clnt.apiversion is None:
+            self.clnt.api.get_cvp_info()
+        if self.clnt.apiversion == 'v1':
+            with self.assertRaises(CvpApiError):
+                self.clnt.post('/aaa/saveAAADetails.do', None)
+        else:
+            with self.assertRaises(CvpRequestError):
+                self.clnt.post('/aaa/saveAAADetails.do', None)
 
     def test_post_cvp_url_bad(self):
         ''' Verify post with bad URL returns an error
