@@ -193,7 +193,7 @@ class CvpClient(object):
         '''
         self.version = version
         split_version = version.split('.')
-        print split_version
+        self.log.info('Version %s', split_version)
         # Expect version string to be at least two long
         # Ex: 2018.2
         # Ex: 2018.1.4
@@ -201,15 +201,16 @@ class CvpClient(object):
         if len(split_version) > 2:
             # Set apiversion to v2 for 2018.2 and beyond.
             if int(split_version[0]) > 2017 and int(split_version[1]) > 1:
-                print 'FOUND V2'
+                self.log.info('Setting API version to v2')
                 self.apiversion = 'v2'
             else:
-                print 'FOUND V1'
+                self.log.info('Setting API version to v1')
                 self.apiversion = 'v1'
         else:
             # If version is shorter than 2 elements for some reason default
             # to v2
-            print 'SHORT VERSION STRING SET v2'
+            self.log.info('Version has less than 2 elements.'
+                          ' Setting API version to v2')
             self.apiversion = 'v2'
 
     def connect(self, nodes, username, password, connect_timeout=10,

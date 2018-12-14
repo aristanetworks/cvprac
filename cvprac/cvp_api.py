@@ -33,7 +33,10 @@
 '''
 import json
 import os
-import urllib
+try:
+    from urllib.parse import quote_plus as qplus
+except AttributeError:
+    from urllib import quote_plus as qplus
 import requests
 from cvprac.cvp_client_errors import CvpApiError
 
@@ -253,7 +256,7 @@ class CvpApi(object):
         '''
         self.log.debug('get_configlets_by_name: name: %s' % name)
         return self.clnt.get('/configlet/getConfigletByName.do?name=%s'
-                             % urllib.quote_plus(name),
+                             % qplus(name),
                              timeout=self.request_timeout)
 
     def get_configlets_by_container_id(self, c_id, start=0, end=0):
@@ -322,7 +325,7 @@ class CvpApi(object):
             self.log.debug('v1 Inventory API Call')
             data = self.clnt.get('/inventory/getInventory.do?'
                                  'queryparam=%s&startIndex=%d&endIndex=%d' %
-                                 (urllib.quote_plus(query), start, end),
+                                 (qplus(query), start, end),
                                  timeout=self.request_timeout)
             return data['netElementList']
         else:
@@ -610,7 +613,7 @@ class CvpApi(object):
         self.log.debug('Get info for container %s' % name)
         conts = self.clnt.get('/provisioning/searchTopology.do?queryParam=%s'
                               '&startIndex=0&endIndex=0'
-                              % urllib.quote_plus(name))
+                              % qplus(name))
         if conts['total'] > 0 and conts['containerList']:
             for cont in conts['containerList']:
                 if cont['name'] == name:
@@ -628,7 +631,7 @@ class CvpApi(object):
         '''
         self.log.debug('Get info for container %s' % key)
         return self.clnt.get('/provisioning/getContainerInfoById.do?'
-                             'containerId=%s' % urllib.quote_plus(key))
+                             'containerId=%s' % qplus(key))
 
     def get_configlets_by_device_id(self, mac, start=0, end=0):
         ''' Returns the list of configlets applied to a device.
@@ -668,7 +671,7 @@ class CvpApi(object):
 
         # Get the key for the configlet
         data = self.clnt.get('/configlet/getConfigletByName.do?name=%s'
-                             % urllib.quote_plus(name),
+                             % qplus(name),
                              timeout=self.request_timeout)
         return data['key']
 
@@ -1150,7 +1153,7 @@ class CvpApi(object):
                        (query, start, end))
         data = self.clnt.get('/provisioning/searchTopology.do?queryParam=%s&'
                              'startIndex=%d&endIndex=%d'
-                             % (urllib.quote_plus(query), start, end),
+                             % (qplus(query), start, end),
                              timeout=self.request_timeout)
         return data
 
@@ -1319,7 +1322,7 @@ class CvpApi(object):
         self.log.debug('Attempt to get image bundle %s' % name)
         try:
             image = self.clnt.get('/image/getImageBundleByName.do?name=%s'
-                                  % urllib.quote_plus(name),
+                                  % qplus(name),
                                   timeout=self.request_timeout)
         except CvpApiError as error:
             # Catch an invalid task_id error and return None
@@ -1522,7 +1525,7 @@ class CvpApi(object):
         self.log.debug('get_change_controls: query: %s' % query)
         data = self.clnt.get(
             '/changeControl/getChangeControls.do?searchText=%s&startIndex=%d'
-            '&endIndex=%d' % (urllib.quote_plus(query), start, end),
+            '&endIndex=%d' % (qplus(query), start, end),
             timeout=self.request_timeout)
         if 'data' not in data:
             return None
@@ -1543,7 +1546,7 @@ class CvpApi(object):
         self.log.debug('change_control_available_tasks: query: %s' % query)
         data = self.clnt.get(
             '/changeControl/getTasksByStatus.do?searchText=%s&startIndex=%d'
-            '&endIndex=%d' % (urllib.quote_plus(query), start, end),
+            '&endIndex=%d' % (qplus(query), start, end),
             timeout=self.request_timeout)
         if 'data' not in data:
             return None
