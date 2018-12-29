@@ -38,7 +38,7 @@ from cvprac.cvp_client_errors import CvpApiError
 
 try:
     from urllib import quote_plus as qplus
-except AttributeError:
+except (AttributeError, ImportError):
     from urllib.parse import quote_plus as qplus
 
 
