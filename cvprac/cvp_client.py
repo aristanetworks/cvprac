@@ -302,17 +302,20 @@ class CvpClient(object):
             be set to None.
         '''
         self.session = requests.Session()
-        error = None
+        return_error = None
         try:
             self._login()
         except (ConnectionError, CvpApiError, CvpRequestError,
                 CvpSessionLogOutError, HTTPError, ReadTimeout, Timeout,
                 TooManyRedirects) as error:
             self.log.error(error)
+            # Use outer scope var for return to handle
+            # Python 3 UnboundLocalError
+            return_error = error
             # Any error that occurs during login is a good reason not to use
             # this CVP node.
             self.session = None
-        return error
+        return return_error
 
     def _is_good_response(self, response, prefix):
         ''' Check for errors in a response from a GET or POST request.
@@ -412,7 +415,7 @@ class CvpClient(object):
             err = 'Error trying to logout %s' % response
             self.log.error(err)
 
-    def _make_request(self, req_type, url, timeout, data=None):
+    def _make_request(self, req_type, url, timeout, data=None, files=None):
         ''' Make a GET or POST request to CVP.  If the request call raises a
             timeout or CvpSessionLogOutError then the request will be retried
             on the same CVP node.  Otherwise the request will be tried on the
@@ -425,6 +428,8 @@ class CvpClient(object):
                     bytes sent from the server.
                 data (dict): Dict of key/value pairs to pass as parameters into
                     the request. Default is None.
+                files (dict): Dict of file name to files for upload. Currently
+                    only used for adding images to CVP. Default is None.
 
             Returns:
                 The JSON response.
@@ -451,6 +456,7 @@ class CvpClient(object):
         '''
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-statements
+        # pylint: disable=too-many-arguments
         # pylint: disable=raising-bad-type
         if not self.session:
             raise ValueError('No valid session to CVP node')
@@ -494,12 +500,23 @@ class CvpClient(object):
                                                 timeout=timeout,
                                                 verify=self.cert)
                 else:
-                    response = self.session.post(full_url,
-                                                 cookies=self.cookies,
-                                                 data=json.dumps(data),
-                                                 headers=self.headers,
-                                                 timeout=timeout,
-                                                 verify=self.cert)
+                    if files is None:
+                        response = self.session.post(full_url,
+                                                     cookies=self.cookies,
+                                                     data=json.dumps(data),
+                                                     headers=self.headers,
+                                                     timeout=timeout,
+                                                     verify=self.cert)
+                    else:
+                        fhs = dict()
+                        fhs['Accept'] = self.headers['Accept']
+                        fhs['APP_SESSION_ID'] = self.headers['APP_SESSION_ID']
+                        response = self.session.post(full_url,
+                                                     cookies=self.cookies,
+                                                     headers=fhs,
+                                                     timeout=timeout,
+                                                     verify=self.cert,
+                                                     files=files)
             except (ConnectionError, HTTPError, TooManyRedirects) as error:
                 # Any of these errors is a good reason to try another CVP node
                 self.log.error(error)
@@ -587,7 +604,7 @@ class CvpClient(object):
         '''
         return self._make_request('GET', url, timeout)
 
-    def post(self, url, data=None, timeout=30):
+    def post(self, url, data=None, files=None, timeout=30):
         ''' Make a POST request to CVP.  If the request call raises an error
             or if the JSON response contains a CVP session related error then
             retry the request on another CVP node.
@@ -596,6 +613,8 @@ class CvpClient(object):
                 url (str): Portion of request URL that comes after the host.
                 data (dict): Dict of key/value pairs to pass as parameters into
                     the request. Default is None.
+                files (dict): Dict of file name to files for upload. Currently
+                    only used for adding images to CVP. Default is None.
                 timeout (int): Number of seconds the client will wait between
                     bytes sent from the server.  Default value is 30 seconds.
 
@@ -622,4 +641,4 @@ class CvpClient(object):
                     request failed and no session could be established to a
                     CVP node.  Destroy the class and re-instantiate.
         '''
-        return self._make_request('POST', url, timeout, data=data)
+        return self._make_request('POST', url, timeout, data=data, files=files)
