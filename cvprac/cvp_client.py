@@ -415,7 +415,8 @@ class CvpClient(object):
             err = 'Error trying to logout %s' % response
             self.log.error(err)
 
-    def _make_request(self, req_type, url, timeout, data=None, files=None):
+    def _make_request(self, req_type, url, timeout, data=None,
+                      files=None):
         ''' Make a GET or POST request to CVP.  If the request call raises a
             timeout or CvpSessionLogOutError then the request will be retried
             on the same CVP node.  Otherwise the request will be tried on the
@@ -460,38 +461,95 @@ class CvpClient(object):
         # pylint: disable=raising-bad-type
         if not self.session:
             raise ValueError('No valid session to CVP node')
-        # For get or post requests apply both the connect and read timeout.
-        timeout = (self.connect_timeout, timeout)
         # Keep note of which node is handling this request.
         self._last_used_node = re.match('http[s]?://(.*):',
                                         self.url_prefix).group(1)
         # Retry the request for the number of nodes.
-        error = None
-        retry_cnt = self.NUM_RETRY_REQUESTS
-        node_cnt = self.node_cnt
-        while node_cnt > 0:
-            if error:
-                # Decrement count as another node will be tried, if there
-                # are no more nodes then raise the error.
-                node_cnt -= 1
-                if node_cnt == 0:
-                    # pylint: disable=raising-bad-type
-                    # error will not be None here
+        response = None
+        for node_num in range(self.node_cnt):
+            # Set full URL based on current node
+            full_url = self.url_prefix + url
+            try:
+                response = self._send_request(req_type, full_url, timeout,
+                                              data, files)
+            except CvpApiError as error:
+                # If this is not an Unauthorized CvpApiError raise the error
+                if 'Unauthorized' not in error.msg:
                     raise error
-                # Not the first time through the loop. Retrying request so
-                # create a session to another CVP node.
+                # If this is the final CVP node raise error
+                if node_num + 1 == self.node_cnt:
+                    raise error
+                # Create a new session to retry on another CVP node.
                 self._create_session()
                 # Verify that we can connect to at least one node
                 # otherwise raise the last error
                 if not self.session:
-                    # pylint: disable=raising-bad-type
-                    # error will not be None here
                     raise error
+                continue
+            except (ConnectionError, HTTPError, TooManyRedirects, ReadTimeout,
+                    Timeout, CvpSessionLogOutError) as error:
+                # If this is the final CVP node raise error
+                if node_num + 1 == self.node_cnt:
+                    raise error
+                # Create a new session to retry on another CVP node.
+                self._create_session()
+                # Verify that we can connect to at least one node
+                # otherwise raise the last error
+                if not self.session:
+                    raise error
+                continue
+            break
+        if response:
+            return response.json()
 
-                retry_cnt = self.NUM_RETRY_REQUESTS
-                error = None
+    def _send_request(self, req_type, full_url, timeout, data=None,
+                      files=None):
+        ''' Make a GET or POST request to CVP.  If the request call raises a
+            timeout or CvpSessionLogOutError then the request will be retried
+            on the same CVP node.  Otherwise the request will be tried on the
+            next CVP node.
 
-            full_url = self.url_prefix + url
+            Args:
+                req_type (str): Either 'GET' or 'POST'.
+                full_url (str): Portion of request URL that comes after the
+                    host.
+                timeout (int): Number of seconds the client will wait between
+                    bytes sent from the server.
+                data (dict): Dict of key/value pairs to pass as parameters into
+                    the request. Default is None.
+                files (dict): Dict of file name to files for upload. Currently
+                    only used for adding images to CVP. Default is None.
+
+            Returns:
+                The JSON response.
+
+            Raises:
+                ConnectionError: A ConnectionError is raised if there was a
+                    network problem (e.g. DNS failure, refused connection, etc)
+                CvpApiError: A CvpApiError is raised if there was a JSON error.
+                CvpRequestError: A CvpRequestError is raised if the request
+                    is not properly constructed.
+                CvpSessionLogOutError: A CvpSessionLogOutError is raised if
+                    reponse from server indicates session was logged out.
+                HTTPError: A HTTPError is raised if there was an invalid HTTP
+                    response.
+                ReadTimeout: A ReadTimeout is raised if there was a request
+                    timeout when reading from the connection.
+                Timeout: A Timeout is raised if there was a request timeout.
+                TooManyRedirects: A TooManyRedirects is raised if the request
+                    exceeds the configured number of maximum redirections
+                ValueError: A ValueError is raised when there is no valid
+                    CVP session.  This occurs because the previous get or post
+                    request failed and no session could be established to a
+                    CVP node.  Destroy the class and re-instantiate.
+        '''
+        # pylint: disable=too-many-branches
+        # pylint: disable=too-many-statements
+        # pylint: disable=too-many-arguments
+        # pylint: disable=raising-bad-type
+        # For get or post requests apply both the connect and read timeout.
+        timeout = (self.connect_timeout, timeout)
+        for req_try in range(self.NUM_RETRY_REQUESTS):
             try:
                 if req_type == 'GET':
                     response = self.session.get(full_url,
@@ -520,16 +578,14 @@ class CvpClient(object):
             except (ConnectionError, HTTPError, TooManyRedirects) as error:
                 # Any of these errors is a good reason to try another CVP node
                 self.log.error(error)
-                continue
+                raise error
             except (ReadTimeout, Timeout) as error:
                 self.log.debug(error)
-
-                # Retry the request if there was a timeout. Decrement the
-                # retry count and if greater than zero retry the request
-                # to the same node.
-                retry_cnt -= 1
-                if retry_cnt > 0:
-                    error = None
+                # If there was a timeout and this is not the final try,
+                # retry this request to the same node. If this is the final
+                # try raise the error so another CVP node can be tried
+                if req_try + 1 == self.NUM_RETRY_REQUESTS:
+                    raise error
                 continue
 
             try:
@@ -541,12 +597,13 @@ class CvpClient(object):
                 # logout. Reset the session which will login. If a valid
                 # session comes back then clear the error so this request will
                 # be retried on the same node.
-                retry_cnt -= 1
-                if retry_cnt > 0:
+                if req_try + 1 == self.NUM_RETRY_REQUESTS:
+                    raise error
+                else:
                     self._reset_session()
-                    if self.session:
-                        error = None
-                continue
+                    if not self.session:
+                        raise error
+                    continue
             except CvpApiError as error:
                 self.log.debug(error)
                 if 'Unauthorized' in error.msg:
@@ -556,18 +613,17 @@ class CvpClient(object):
                     # Reset the session which will login. If a valid
                     # session comes back then clear the error so this request
                     # will be retried on the same node.
-                    retry_cnt -= 1
-                    if retry_cnt > 0:
+                    if req_try + 1 == self.NUM_RETRY_REQUESTS:
+                        raise error
+                    else:
                         self._reset_session()
-                        if self.session:
-                            error = None
-                    continue
+                        if not self.session:
+                            raise error
+                        continue
                 else:
                     # pylint: disable=raising-bad-type
-                    # error will not be None here
                     raise error
-            break
-        return response.json()
+            return response
 
     def get(self, url, timeout=30):
         ''' Make a GET request to CVP.  If the request call raises an error
