@@ -343,10 +343,14 @@ class TestCvpClient(DutSystemTest):
         # returned by the request
         exp_data = {
             u'isAssigned': bool,
-            u'name': (unicode, str),
             u'formList': list,
             u'main_script': dict,
         }
+        # Handle unicode type for Python 2 vs Python 3
+        if sys.version_info.major < 3:
+            exp_data[u'name'] = (unicode, str)
+        else:
+            exp_data[u'name'] = str
         for key in exp_data:
             self.assertIn(key, result['data'])
             self.assertIsInstance(result['data'][key], exp_data[key])
@@ -375,11 +379,11 @@ class TestCvpClient(DutSystemTest):
         # Verify the following keys and types are returned by the request
         exp_data = {
             'configletList': list,
-            'configletMapper': dict,
             'total': int,
+            'configletMapper': dict,
         }
-        self.assertListEqual(exp_data.keys(), result.keys())
         for key in exp_data:
+            self.assertIn(key, result)
             self.assertIsInstance(result[key], exp_data[key])
 
     def test_api_get_configlets_by_netelement_id(self):
@@ -392,11 +396,11 @@ class TestCvpClient(DutSystemTest):
         # Verify the following keys and types are returned by the request
         exp_data = {
             'configletList': list,
-            'configletMapper': dict,
             'total': int,
+            'configletMapper': dict,
         }
-        self.assertListEqual(exp_data.keys(), result.keys())
         for key in exp_data:
+            self.assertIn(key, result)
             self.assertIsInstance(result[key], exp_data[key])
 
     def test_api_get_applied_devices(self):
@@ -411,8 +415,8 @@ class TestCvpClient(DutSystemTest):
                 'data': list,
                 'total': int,
             }
-            self.assertListEqual(exp_data.keys(), result.keys())
             for key in exp_data:
+                self.assertIn(key, result)
                 self.assertIsInstance(result[key], exp_data[key])
 
     def test_api_get_applied_containers(self):
@@ -427,8 +431,8 @@ class TestCvpClient(DutSystemTest):
                 'data': list,
                 'total': int,
             }
-            self.assertListEqual(exp_data.keys(), result.keys())
             for key in exp_data:
+                self.assertIn(key, result)
                 self.assertIsInstance(result[key], exp_data[key])
 
     def test_api_get_configlet_history(self):
@@ -531,6 +535,8 @@ class TestCvpClient(DutSystemTest):
         self.assertEqual(result['config'], config)
         self.assertEqual(result['key'], key)
         self.assertEqual(result['note'], note)
+        # Delete test configlet
+        self.api.delete_configlet(name, key)
 
     def _execute_task(self, task_id):
         ''' Execute a task and wait for it to complete.
@@ -851,22 +857,38 @@ class TestCvpClient(DutSystemTest):
             self.assertIn('eventId', result)
             self.assertEqual('success', result['data'])
 
-    def test_api_add_image(self):
-        ''' Verify add_image
+    def test_api_add_image_cancel_image(self):
+        ''' Verify add_image and cancel_image
         '''
+        # Get number of current images
+        orig_images = self.api.get_images()
+
         # Copy the test image file with a timestamp appended
-        image_file = 'test/fixtures/image-file-%s.swix' % time.time()
+        image_file_name = 'image-file-%s.swix' % time.time()
+        image_file = 'test/fixtures/%s' % image_file_name
         shutil.copyfile('test/fixtures/image-file.swix', image_file)
 
         # Upload the image to the cluster
-        result = self.api.add_image(image_file)
+        add_response = self.api.add_image(image_file)
 
         # Remove the timestamp copy from the local filesystem
         os.remove(image_file)
 
-        self.assertNotIn('errorCode', result)
-        self.assertIn('result', result)
-        self.assertEqual(result['result'], 'success')
+        # Check return status good
+        self.assertIn('result', add_response)
+        self.assertEqual(add_response['result'], 'success')
+
+        # Verify image added
+        post_add_images = self.api.get_images()
+        self.assertEqual(orig_images['total'] + 1, post_add_images['total'])
+
+        # Cancel/Discard added image
+        cancel_resp = self.api.cancel_image(image_file_name)
+        self.assertEqual(cancel_resp['data'], 'success')
+
+        # Verify image cancelled/discarded
+        post_cancel_images = self.api.get_images()
+        self.assertEqual(orig_images['total'], post_cancel_images['total'])
 
     def test_api_get_images(self):
         ''' Verify get images
@@ -882,11 +904,13 @@ class TestCvpClient(DutSystemTest):
         self.assertIsNotNone(result)
         self.assertEqual(result['total'], len(result['data']))
 
-    def test_api_save_update_image_bundle(self):
+    def test_api_save_update_delete_image_bundle(self):
         ''' Verify save_image_bundle and update_image_bundle
         '''
+        # pylint: disable=too-many-locals
         # Get an existing bundle
         bundles = self.api.get_image_bundles()
+        total = bundles['total']
         bundle = self.api.get_image_bundle_by_name(bundles['data'][0]['name'])
 
         # Get the list of images from the existing bundle
@@ -905,6 +929,11 @@ class TestCvpClient(DutSystemTest):
         expected = r'Bundle\s*:\s+%s successfully created' % original_name
         self.assertRegexpMatches(result['data'], expected)
 
+        # Assert bundle added
+        new_bundles = self.api.get_image_bundles()
+        new_total = new_bundles['total']
+        self.assertEqual(total + 1, new_total)
+
         # Get the bundle ID from the new bundle
         bundle = self.api.get_image_bundle_by_name(original_name)
         bundle_id = bundle['id']
@@ -913,18 +942,30 @@ class TestCvpClient(DutSystemTest):
         updated_name = original_name + "_updated"
         result = self.api.update_image_bundle(bundle_id, updated_name, images,
                                               certified=False)
-        expected = 'Image bundle updated successfully'
-        self.assertRegexpMatches(result['data'], expected)
+        self.assertRegexpMatches(result['data'],
+                                 'Image bundle updated successfully')
 
         # Verify the updated bundle name has the correct bundle ID
         # and is not a certified image bundle
         bundle = self.api.get_image_bundle_by_name(updated_name)
+        bundle_id = bundle['id']
+        bundle_name = bundle['name']
         self.assertEqual(bundle['id'], bundle_id)
         self.assertEqual(bundle['isCertifiedImage'], 'false')
 
         # Verify the original bundle name does not exist
         bundle = self.api.get_image_bundle_by_name(original_name)
         self.assertIsNone(bundle)
+
+        # Remove new bundle
+        result = self.api.delete_image_bundle(bundle_id,
+                                              bundle_name)
+        self.assertEqual(result['data'], 'success')
+
+        # Assert new bundle successfully removed
+        new_bundles = self.api.get_image_bundles()
+        new_total = new_bundles['total']
+        self.assertEqual(total, new_total)
 
     def test_api_get_image_bundle_by_name(self):
         ''' Verify get image bundle by name
@@ -1126,7 +1167,7 @@ class TestCvpClient(DutSystemTest):
             if chg_ctrl_executed['status'] == 'Completed':
                 break
             else:
-                time.sleep(1)
+                time.sleep(2)
         # For 2018.2 give a few extra seconds for device status to get
         # back in compliance.
         if self.clnt.apiversion == 'v2':
