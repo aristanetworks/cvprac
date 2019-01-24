@@ -1630,7 +1630,7 @@ class CvpApi(object):
         for taskinfo in change_control_tasks:
             task_list_entry = {'taskId': taskinfo['taskId'],
                                'taskOrder': taskinfo['taskOrder'],
-                               'snapshotTemplateKey': '',
+                               'snapshotTemplateKey': snapshot_template_key,
                                'clonedCcId': ''}
             task_data_list.append(task_list_entry)
         data = {'timeZone': timezone,
