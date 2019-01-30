@@ -1172,6 +1172,71 @@ class TestCvpClient(DutSystemTest):
         # back in compliance.
         if self.clnt.apiversion == 'v2':
             time.sleep(5)
+        else:
+            time.sleep(2)
+
+    def test_api_cancel_change_control(self):
+        ''' Verify cancel_change_control.
+        '''
+        # Set client apiversion if it is not already set
+        if self.clnt.apiversion is None:
+            self.api.get_cvp_info()
+        chg_ctrl_name = 'test_api_%d' % time.time()
+        (task_id, _) = self._create_task()
+        chg_ctrl_tasks = [{
+            'taskId': task_id,
+            'taskOrder': 1
+        }]
+        chg_ctrl = self.api.create_change_control(chg_ctrl_name,
+                                                  chg_ctrl_tasks,
+                                                  '', '', '')
+        cc_id = chg_ctrl['ccId']
+
+        # Verify the pending change control information
+        chg_ctrl_pending = self.api.get_change_control_info(cc_id)
+        self.assertEqual(chg_ctrl_pending['status'], 'Pending')
+
+        # Cancel the change control
+        self.api.cancel_change_controls([cc_id])
+        time.sleep(3)
+
+        # Verify the cancelled change control information
+        chg_ctrl_cancelled = self.api.get_change_control_info(cc_id)
+        self.assertEquals(chg_ctrl_cancelled['status'], 'Cancelled')
+
+    def test_api_delete_change_control(self):
+        ''' Verify delete_change_control.
+        '''
+        # Set client apiversion if it is not already set
+        if self.clnt.apiversion is None:
+            self.api.get_cvp_info()
+        chg_ctrl_name = 'test_api_%d' % time.time()
+        (task_id, _) = self._create_task()
+        chg_ctrl_tasks = [{
+            'taskId': task_id,
+            'taskOrder': 1
+        }]
+        chg_ctrl = self.api.create_change_control(chg_ctrl_name,
+                                                  chg_ctrl_tasks,
+                                                  '', '', '')
+        cc_id = chg_ctrl['ccId']
+
+        # Verify the pending change control information
+        chg_ctrl_pending = self.api.get_change_control_info(cc_id)
+        self.assertEqual(chg_ctrl_pending['status'], 'Pending')
+
+        # Delete the change control
+        self.api.delete_change_controls([cc_id])
+        time.sleep(3)
+
+        # Verify the deleted change control information no longer exists
+        chg_ctrl_cancelled = self.api.get_change_control_info(cc_id)
+        self.assertIsNone(chg_ctrl_cancelled)
+
+        # Cancel previously created task
+        cancel_task_resp = self.api.cancel_task(task_id)
+        time.sleep(1)
+        self.assertIsNone(cancel_task_resp)
 
     def test_api_filter_topology(self):
         ''' Verify filter_topology.
