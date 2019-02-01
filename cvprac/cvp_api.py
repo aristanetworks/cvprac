@@ -32,6 +32,7 @@
 ''' Class containing calls to CVP RESTful API.
 '''
 import os
+import time
 # This import is for proper file IO handling support for both Python 2 and 3
 # pylint: disable=redefined-builtin
 from io import open
@@ -390,16 +391,27 @@ class CvpApi(object):
             data = {'hosts': [device_ip]}
             self.clnt.post('/inventory/devices', data=data,
                            timeout=self.request_timeout)
+
+            # It can take a few moments for the device to appear in inventory
             dev = None
-            devices = self.get_inventory()
-            for device in devices:
-                if 'ipAddress' in device and device['ipAddress'] == device_ip:
-                    dev = device
-                    break
-            if dev is not None:
-                container = {'key': parent_key, 'name': parent_name}
-                self.move_device_to_container('add_device_to_inventory API v2',
-                                              dev, container, False)
+            timeout = time.time() + 60      # Try for 60 seconds
+            while not dev and time.time() < timeout:
+                devices = self.get_inventory()
+                for device in devices:
+                    if 'ipAddress' in device and device['ipAddress'] == device_ip:
+                        dev = device
+                        break
+                if not dev:
+                    time.sleep(5)
+
+            if not dev:
+                # Device did not show up in inventory
+                raise RuntimeError('Device {} failed to appear in inventory'
+                                   .format(device_ip))
+
+            container = {'key': parent_key, 'name': parent_name}
+            self.move_device_to_container('add_device_to_inventory API v2',
+                                          dev, container, False)
 
     def retry_add_to_inventory(self, device_mac, device_ip, username,
                                password):
