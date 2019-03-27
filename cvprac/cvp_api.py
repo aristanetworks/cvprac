@@ -1687,6 +1687,26 @@ class CvpApi(object):
         self.clnt.post('/changeControl/executeCC.do', data=data,
                        timeout=self.request_timeout)
 
+    def cancel_change_controls(self, cc_ids):
+        ''' Cancel the provided change controls.
+
+            Args:
+                cc_ids (list): A list of change control IDs to be cancelled.
+        '''
+        data = {'ccIds': cc_ids}
+        self.clnt.post('/changeControl/cancelChangeControl.do', data=data,
+                       timeout=self.request_timeout)
+
+    def delete_change_controls(self, cc_ids):
+        ''' Delete the provided change controls.
+
+            Args:
+                cc_ids (list): A list of change control IDs to be deleted.
+        '''
+        data = {'ccIds': cc_ids}
+        self.clnt.post('/changeControl/deleteChangeControls.do', data=data,
+                       timeout=self.request_timeout)
+
     def get_change_control_info(self, cc_id):
         ''' Get the detailed information for a single change control.
 
@@ -1731,9 +1751,16 @@ class CvpApi(object):
                      'timeZone': '',
                      'type': 'Custom'}
         '''
-        return self.clnt.get('/changeControl/getChangeControlInformation.do?'
-                             'startIndex=0&endIndex=0&ccId=%s' % cc_id,
-                             timeout=self.request_timeout)
+        try:
+            resp = self.clnt.get(
+                '/changeControl/getChangeControlInformation.do?'
+                'startIndex=0&endIndex=0&ccId=%s' % cc_id,
+                timeout=self.request_timeout)
+        except CvpApiError as error:
+            if 'No data found' in error.msg:
+                return None
+            raise
+        return resp
 
     def deploy_device(self, device, container, configlets=None, image=None,
                       create_task=True):

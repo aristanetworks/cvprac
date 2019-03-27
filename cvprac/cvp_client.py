@@ -499,8 +499,19 @@ class CvpClient(object):
                     raise error
                 continue
             break
+        resp_data = None
         if response:
-            return response.json()
+            try:
+                resp_data = response.json()
+            except ValueError as error:
+                self.log.debug('Error trying to decode request response %s',
+                               error)
+                self.log.debug('Attempt to return response text')
+                resp_data = dict(data=response.text)
+        else:
+            self.log.debug('Received no response for request %s %s',
+                           req_type, url)
+        return resp_data
 
     def _send_request(self, req_type, full_url, timeout, data=None,
                       files=None):
