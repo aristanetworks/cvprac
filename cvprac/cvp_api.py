@@ -362,6 +362,48 @@ class CvpApi(object):
                     dev['containerName'] = ''
             return data
 
+    def add_devices_to_undefined(self, device_ips, wait=True):
+        ''' Add the list of devices to the undefined container.
+
+            Args:
+                device_ips (list): ip addresses of devices to be added
+                wait (boolean): If True, wait up to 60 seconds for
+                    new device to appear in the undefined container
+        '''
+
+        self.log.debug('add_devices_to_undefined: called')
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion == 'v1':
+            self.log.debug('v1 Inventory API Call')
+            self.log.warning(
+                'add_devices_to_undefined: not implemented for v1 APIs')
+        else:
+            self.log.debug('v2 Inventory API Call')
+            data = {'hosts': device_ips}
+            self.clnt.post('/inventory/devices', data=data,
+                           timeout=self.request_timeout)
+
+            if wait:
+                # It can take a few moments for devices to appear in inventory
+                dev = None
+                timeout = time.time() + 60      # Try for 60 seconds
+                while not dev and time.time() < timeout:
+                    devices = self.get_inventory()
+                    for device in devices:
+                        if ('ipAddress' in device and
+                                device['ipAddress'] == device_ip):
+                            dev = device
+                            break
+                    if not dev:
+                        time.sleep(5)
+
+                if not dev:
+                    # Device did not show up in inventory
+                    raise RuntimeError('Device {} failed to appear in '
+                                       'undefined inventory'
+                                       .format(device_ip))
+
     def add_device_to_inventory(self, device_ip, parent_name, parent_key):
         ''' Add the device to the specified parent container.
 
