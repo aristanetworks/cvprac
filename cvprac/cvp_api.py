@@ -32,6 +32,7 @@
 ''' Class containing calls to CVP RESTful API.
 '''
 import os
+import time
 # This import is for proper file IO handling support for both Python 2 and 3
 # pylint: disable=redefined-builtin
 from io import open
@@ -360,6 +361,86 @@ class CvpApi(object):
                 else:
                     dev['containerName'] = ''
             return data
+
+    def add_devices_to_inventory(self, device_list):
+        ''' Add a list of devices to the specified parent container.
+
+            Args:
+                device_list (list): A list of devices to be added in the
+                    form of dictionaries. Each device dictionary should
+                    contain the following information:
+                    - device_ip (str): ip address of device we are adding
+                    - parent_name (str): Parent container name
+                    - parent_key (str): Parent container key
+
+                    Example:
+                    device_list = [
+                        {
+                            device_ip: '10.10.10.1',
+                            parent_name: 'Tenant',
+                            parent_key: 'root'
+                        },
+                        {
+                            device_ip: '10.10.10.2',
+                            parent_name: 'MyContainer',
+                            parent_key: 'container-id-1234'
+                        }
+                    ]
+        '''
+
+        self.log.debug('add_device_to_inventory: called')
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion == 'v1':
+            self.log.debug('v1 Inventory API Call')
+            data_list = []
+            for device in device_list:
+                dev_data = {
+                    'containerName': device['parent_name'],
+                    'containerId': device['parent_key'],
+                    'containerType': 'Existing',
+                    'ipAddress': device['device_ip'],
+                    'containerList': []
+                }
+                data_list.append(dev_data)
+            data = {'data': data_list}
+            self.clnt.post('/inventory/add/addToInventory.do?'
+                           'startIndex=0&endIndex=0', data=data,
+                           timeout=self.request_timeout)
+        else:
+            self.log.debug('v2 Inventory API Call')
+
+            # First add the devices to the inventory in a single call
+            data = {'hosts': [x['device_ip'] for x in device_list]}
+            self.clnt.post('/inventory/devices', data=data,
+                           timeout=self.request_timeout)
+
+            # With v2, the devices can take a few moments to appear
+            # We need them present before we can move them to a container
+            device_ips = [x['device_ip'] for x in device_list]
+            inv = self.get_inventory()
+            timeout = time.time() + 600
+            while device_ips and time.time() < timeout:
+                inv_devices = [x['ipAddress'] for x in inv]
+                device_ips = list(set(device_ips) - set(inv_devices))
+                if device_ips:
+                    time.sleep(2)
+                    inv = self.get_inventory()
+
+            if device_ips:
+                # If any devices did not appear, there is a problem
+                raise RuntimeError('Devices {} failed to appear in inventory'
+                                   .format(', '.join(device_ips)))
+
+            # Move the devices to their specified containers
+            for device in device_list:
+                devs = [x for x in inv if 'ipAddress' in x and
+                        device['device_ip'] in x['ipAddress']]
+                dev = devs[0]
+                container = {'key': device['parent_key'],
+                             'name': device['parent_name']}
+                self.move_device_to_container('add_device_to_inventory API v2',
+                                              dev, container, False)
 
     def add_device_to_inventory(self, device_ip, parent_name, parent_key):
         ''' Add the device to the specified parent container.
