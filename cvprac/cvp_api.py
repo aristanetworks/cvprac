@@ -362,7 +362,7 @@ class CvpApi(object):
                     dev['containerName'] = ''
             return data
 
-    def add_devices_to_inventory(self, device_list):
+    def add_devices_to_inventory(self, device_list, wait=False):
         ''' Add a list of devices to the specified parent container.
 
             Args:
@@ -372,20 +372,23 @@ class CvpApi(object):
                     - device_ip (str): ip address of device we are adding
                     - parent_name (str): Parent container name
                     - parent_key (str): Parent container key
+                wait (boolean): Specifies whether to allow a wait time for
+                    devices to appear in inventory before moving them to
+                    the specified container. Applies to v2 API only.
 
-                    Example:
-                    device_list = [
-                        {
-                            device_ip: '10.10.10.1',
-                            parent_name: 'Tenant',
-                            parent_key: 'root'
-                        },
-                        {
-                            device_ip: '10.10.10.2',
-                            parent_name: 'MyContainer',
-                            parent_key: 'container-id-1234'
-                        }
-                    ]
+            Example device list:
+                device_list = [
+                    {
+                        device_ip: '10.10.10.1',
+                        parent_name: 'Tenant',
+                        parent_key: 'root'
+                    },
+                    {
+                        device_ip: '10.10.10.2',
+                        parent_name: 'MyContainer',
+                        parent_key: 'container-id-1234'
+                    }
+                ]
         '''
 
         self.log.debug('add_device_to_inventory: called')
@@ -410,39 +413,47 @@ class CvpApi(object):
         else:
             self.log.debug('v2 Inventory API Call')
 
+            # Create a list of device IPs
+            device_ips = [dev['device_ip'] for dev in device_list]
+
             # First add the devices to the inventory in a single call
-            data = {'hosts': [x['device_ip'] for x in device_list]}
+            data = {'hosts': device_ips}
             self.clnt.post('/inventory/devices', data=data,
                            timeout=self.request_timeout)
 
-            # With v2, the devices can take a few moments to appear
-            # We need them present before we can move them to a container
-            device_ips = [x['device_ip'] for x in device_list]
+            # Get the inventory list
             inv = self.get_inventory()
-            timeout = time.time() + 600
-            while device_ips and time.time() < timeout:
-                inv_devices = [x['ipAddress'] for x in inv]
-                device_ips = list(set(device_ips) - set(inv_devices))
-                if device_ips:
-                    time.sleep(2)
-                    inv = self.get_inventory()
 
-            if device_ips:
-                # If any devices did not appear, there is a problem
-                raise RuntimeError('Devices {} failed to appear in inventory'
-                                   .format(', '.join(device_ips)))
+            if wait:
+                # With v2, the devices can take a few moments to appear
+                # We need them present before we can move them to a container
+                timeout = time.time() + 600
+                while device_ips and time.time() < timeout:
+                    inv_devices = [dev['ipAddress'] for dev in inv]
+                    device_ips = list(set(device_ips) - set(inv_devices))
+                    if device_ips:
+                        time.sleep(2)
+                        inv = self.get_inventory()
+
+                if device_ips:
+                    # If any devices did not appear, there is a problem
+                    # Join the missing IPs into a string for output
+                    missing_ips = ', '.join(device_ips)
+                    raise RuntimeError('Devices {} failed to appear '
+                                       'in inventory'.format(missing_ips))
 
             # Move the devices to their specified containers
             for device in device_list:
-                devs = [x for x in inv if 'ipAddress' in x and
-                        device['device_ip'] in x['ipAddress']]
+                devs = [dev for dev in inv if 'ipAddress' in dev and
+                        device['device_ip'] in dev['ipAddress']]
                 dev = devs[0]
                 container = {'key': device['parent_key'],
                              'name': device['parent_name']}
                 self.move_device_to_container('add_device_to_inventory API v2',
                                               dev, container, False)
 
-    def add_device_to_inventory(self, device_ip, parent_name, parent_key):
+    def add_device_to_inventory(self, device_ip, parent_name,
+                                parent_key, wait=False):
         ''' Add the device to the specified parent container.
 
             Args:
@@ -450,37 +461,13 @@ class CvpApi(object):
                 parent_name (str): Parent container name
                 parent_key (str): Parent container key
         '''
-        self.log.debug('add_device_to_inventory: called')
-        if self.clnt.apiversion is None:
-            self.get_cvp_info()
-        if self.clnt.apiversion == 'v1':
-            self.log.debug('v1 Inventory API Call')
-            data = {'data': [
-                {
-                    'containerName': parent_name,
-                    'containerId': parent_key,
-                    'containerType': 'Existing',
-                    'ipAddress': device_ip,
-                    'containerList': []
-                }]}
-            self.clnt.post('/inventory/add/addToInventory.do?'
-                           'startIndex=0&endIndex=0', data=data,
-                           timeout=self.request_timeout)
-        else:
-            self.log.debug('v2 Inventory API Call')
-            data = {'hosts': [device_ip]}
-            self.clnt.post('/inventory/devices', data=data,
-                           timeout=self.request_timeout)
-            dev = None
-            devices = self.get_inventory()
-            for device in devices:
-                if 'ipAddress' in device and device['ipAddress'] == device_ip:
-                    dev = device
-                    break
-            if dev is not None:
-                container = {'key': parent_key, 'name': parent_name}
-                self.move_device_to_container('add_device_to_inventory API v2',
-                                              dev, container, False)
+        # Put the parameters into a dictionary and call add_devices_to_inventory
+        device = {
+            'device_ip': device_ip,
+            'parent_name': parent_name,
+            'parent_key': parent_key
+        }
+        self.add_devices_to_inventory([device], wait=wait)
 
     def retry_add_to_inventory(self, device_mac, device_ip, username,
                                password):
