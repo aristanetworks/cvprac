@@ -1086,7 +1086,7 @@ class TestCvpClient(DutSystemTest):
         # add back to inventory
         self.api.add_device_to_inventory(device['ipAddress'],
                                          orig_cont['name'],
-                                         orig_cont['key'])
+                                         orig_cont['key'], True)
         # get non connected device count until it is back to equal or less
         # than the original non connected device count
         non_connect_count = self.api.get_non_connected_device_count()
