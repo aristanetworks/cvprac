@@ -654,7 +654,7 @@ class CvpApi(object):
                 full_cont_info = self.get_container_by_id(
                     container['Key'])
                 if (full_cont_info is not None and
-                        container['Name'] != 'Tenant'):
+                        container['Key'] != 'root'):
                     container['parentName'] = full_cont_info['parentName']
                     full_parent_info = self.get_container_by_name(
                         full_cont_info['parentName'])
