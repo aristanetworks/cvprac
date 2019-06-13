@@ -683,10 +683,11 @@ class TestCvpClient(DutSystemTest):
         self.assertEqual(len(result['containerList']), 0)
 
     def test_api_configlets_to_device(self):
-        ''' Verify apply_configlets_to_device and remove_configlets_from_device
+        ''' Verify apply_configlets_to_device and
+            remove_configlets_from_device
         '''
         # Create a new configlet
-        name = 'test_configlet'
+        name = 'test_device_configlet'
         config = 'alias srie show running-config interface ethernet 1'
 
         # Add the configlet
@@ -696,7 +697,7 @@ class TestCvpClient(DutSystemTest):
         task_id = self._get_next_task_id()
 
         # Apply the configlet to the device
-        label = 'cvprac test'
+        label = 'cvprac device configlet test'
         param = {'name': name, 'key': key}
         self.api.apply_configlets_to_device(label, self.device, [param])
 
@@ -734,6 +735,77 @@ class TestCvpClient(DutSystemTest):
         self.assertIsNotNone(result)
         self.assertEqual(result['workOrderId'], task_id)
         self.assertIn(label, result['description'])
+
+        # Execute Task
+        self._execute_task(task_id)
+
+        # Delete the configlet
+        self.api.delete_configlet(name, key)
+
+        # Check compliance
+        self.test_api_check_compliance()
+
+    def test_api_configlets_to_container(self):
+        ''' Verify apply_configlets_to_container and
+            remove_configlets_from_container
+        '''
+        # Create a new configlet
+        name = 'test_container_configlet'
+        config = 'alias srie show running-config interface ethernet 2'
+
+        # Add the configlet
+        key = self._create_configlet(name, config)
+
+        # Get the next task ID
+        task_id = self._get_next_task_id()
+
+        # Apply the configlet to the device
+        label = 'cvprac container configlet test'
+        param = {'name': name, 'key': key}
+        containers = self.api.get_containers()
+        root_container = None
+        for container in containers['data']:
+            if container['key'] == 'root':
+                root_container = container
+        # Validate we found root container
+        self.assertIsNotNone(root_container)
+
+        self.api.apply_configlets_to_container(label, root_container,
+                                               [param])
+
+        # Validate task was created to apply the configlet to device
+        # Wait 30 seconds for task to get created
+        cnt = 30
+        while cnt > 0:
+            time.sleep(1)
+            result = self.api.get_task_by_id(task_id)
+            if result is not None:
+                break
+            cnt -= 1
+        self.assertIsNotNone(result)
+        self.assertEqual(result['workOrderId'], task_id)
+
+        # Execute Task
+        self._execute_task(task_id)
+
+        # Get the next task ID
+        task_id = self._get_next_task_id()
+
+        # Remove configlet from device
+        self.api.remove_configlets_from_container(label, root_container,
+                                                  [param])
+
+        # Validate task was created to remove the configlet to device
+        # Wait 30 seconds for task to get created
+        cnt = 30
+        while cnt > 0:
+            time.sleep(1)
+            result = self.api.get_task_by_id(task_id)
+            if result is not None:
+                break
+            cnt -= 1
+        self.assertIsNotNone(result)
+        self.assertEqual(result['workOrderId'], task_id)
 
         # Execute Task
         self._execute_task(task_id)
