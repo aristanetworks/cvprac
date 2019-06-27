@@ -152,6 +152,15 @@ class TestCvpClient(DutSystemTest):
         dut = self.duts[0]
         self.clnt.connect([dut['node']], dut['username'], dut['password'])
 
+    def test_connect_set_request_timeout(self):
+        ''' Verify API request timeout is set when provided to
+            client connect method.
+        '''
+        dut = self.duts[0]
+        self.clnt.connect([dut['node']], dut['username'], dut['password'],
+                          request_timeout=34)
+        self.assertEqual(self.clnt.api.request_timeout, 34)
+
     def test_connect_username_bad(self):
         ''' Verify connect fails with bad username.
         '''
