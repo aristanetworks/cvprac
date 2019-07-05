@@ -214,7 +214,7 @@ class CvpClient(object):
             self.apiversion = 'v2'
 
     def connect(self, nodes, username, password, connect_timeout=10,
-                protocol='https', port=None, cert=False):
+                request_timeout=30, protocol='https', port=None, cert=False):
         ''' Login to CVP and get a session ID and cookie.  Currently
             certificates are not verified if the https protocol is specified. A
             warning may be printed out from the requests module for this case.
@@ -225,6 +225,8 @@ class CvpClient(object):
                 password (str): The CVP password
                 connect_timeout (int): The number of seconds to wait for a
                     connection.
+                request_timeout (int): The default number of seconds to allow
+                    api requests to complete before timing out.
                 protocol (str): The protocol to use to connect to CVP.
                     THIS PARAMETER IS NOT USED AND WILL BE DEPRECATED.
                     ONLY INCLUDED TO NOT BREAK EXISTING CODE THAT HAS PROTOCOL
@@ -257,6 +259,7 @@ class CvpClient(object):
         self.node_pool = cycle(nodes)
         self.authdata = {'userId': username, 'password': password}
         self.connect_timeout = connect_timeout
+        self.api.request_timeout = request_timeout
         # protocol is deprecated and not used.
         self.protocol = protocol
         self.port = port
