@@ -860,6 +860,38 @@ class TestCvpClient(DutSystemTest):
         # Check compliance
         self.test_api_check_compliance()
 
+    def test_api_validate_configlets_for_device(self):
+        ''' Verify validate_configlets_for_device
+        '''
+        # Create a new configlet
+        name = 'test_validate_configlet_for_dev'
+        config = 'alias srie7 show running-config interface ethernet 7'
+
+        # Add the configlet
+        new_conf_key = self._create_configlet(name, config)
+
+        # Get device current configlets
+        current_configlets = self.api.get_configlets_by_device_id(
+            self.device['key'])
+        compare_configlets = [new_conf_key]
+        for configlet in current_configlets:
+            compare_configlets.append(configlet['key'])
+
+        # Run validate and compare for existing device configlets plus new one.
+        # This should result in a reconciled config with 1 new line.
+        resp = self.api.validate_configlets_for_device(self.device['key'],
+                                                       compare_configlets,
+                                                       'viewConfig')
+        self.assertIn('reconciledConfig', resp)
+        self.assertIn('new', resp)
+        self.assertEqual(resp['new'], 1)
+
+        # Delete the configlet
+        self.api.delete_configlet(name, new_conf_key)
+
+        # Check compliance
+        self.test_api_check_compliance()
+
     def test_api_request_timeout(self):
         ''' Verify api timeout
         '''

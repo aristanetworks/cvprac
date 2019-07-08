@@ -1183,6 +1183,43 @@ class CvpApi(object):
         else:
             return data
 
+    def validate_configlets_for_device(self, mac, configlet_keys,
+                                       page_type='viewConfig'):
+        ''' Validate and compare configlets for device.
+
+            Args:
+                mac (str): MAC address of device to validate configlets for.
+                configlet_keys (list): List of configlet keys
+                page_type (list): Possible Values of pageType -
+                    'viewConfig', 'managementIPValidation', 'validate' etc..
+
+            Returns:
+                response (dict): A dict that contains ...
+
+                    Ex: {"reconciledConfig": {...},
+                         "reconcile": 0,
+                         "new": 0,
+                         "designedConfig": [{...}],
+                         "total": 0,
+                         "runningConfig": [{...}],
+                         "isReconcileInvoked": true,
+                         "mismatch": 0,
+                         "warnings": [""],
+                         "errors": [{"configletLineNo": 0,
+                                     "error": "string",
+                                     "configletId": "string"}, ...]
+                        }
+        '''
+        self.log.debug('validate_configlets_for_device: '
+                       'MAC: %s - conf keys: %s - page_type: %s' %
+                       (mac, configlet_keys, page_type))
+        data = {'configIdList': configlet_keys,
+                'netElementId': mac,
+                'pageType': page_type}
+        return self.clnt.post(
+            '/provisioning/v2/validateAndCompareConfiglets.do',
+            data=data, timeout=self.request_timeout)
+
     def get_applied_devices(self, configlet_name, start=0, end=0):
         ''' Returns a list of devices to which the named configlet is applied.
 
