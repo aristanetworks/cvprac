@@ -478,6 +478,57 @@ class TestCvpClient(DutSystemTest):
         result = self.api.get_device_by_name(self.device['fqdn'][1:])
         self.assertIsNotNone(result)
         self.assertEqual(result, {})
+    
+    def _create_configlet_builder(self, name, config, draft, form):
+        # Delete the configlet builder in case it was left by a previous test run
+        try:
+            result = self.api.get_confilget_by_name(name)
+            self.api.delete_configlet(name, result['key'])
+        except CvpApiError:
+            pass
+        
+        # Add the configlet builder
+        key = self.api.add_configlet_builder(name, config, draft, form)
+        self.assertIsNotNone(key)
+        return key
+    
+    def test_api_add_delete_configlet_builder(self):
+        ''' Verify add_configlet_builder and delete_configlet
+        '''
+        name = 'test_configlet_builder'
+        config = '''from cvplibrary import Form
+
+dev_host = Form.getFieldById( 'txt_hostname' ).getValue()
+
+print('hostname {0}'.format(dev_host)
+'''
+        draft = False
+        form = [{
+            'fieldId': 'txt_hostname',
+            'fieldLabel': 'Hostname',
+            'type': 'Text box',
+            'validation': {
+                'mandatory': 'false'
+            },
+            'helpText': 'Hostname for the device'
+        }]
+
+        # Add the configlet builder
+        key = self._create_configlet_builder(name, config, draft, form)
+
+        # Verify the configlet builder was added
+        result = self.api.get_configlet_by_name(name)
+        self.assertIsNotNone(result)
+        self.assertEqual(result['name'], name)
+        self.assertEqual(result['config'], config)
+        self.assertEquat(result['key'], key)
+
+        # Delete the configlet builder
+        self.api.delete_configlet(name, key)
+
+        # Verify the configlet builder was deleted
+        with self.assertRaises(CvpApiError):
+            self.api.get_configlet_by_name(name)
 
     def _create_configlet(self, name, config):
         # Delete the configlet in case it was left by previous test run
