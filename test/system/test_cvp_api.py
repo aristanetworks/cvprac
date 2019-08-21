@@ -494,8 +494,10 @@ class TestCvpClient(DutSystemTest):
     
     def test_api_add_delete_configlet_builder(self):
         ''' Verify add_configlet_builder and delete_configlet
+            Will test a configlet builder with form data and without
         '''
         name = 'test_configlet_builder'
+        name2 = 'test_configlet_builder_noform'
         config = '''from cvplibrary import Form
 
 dev_host = Form.getFieldById( 'txt_hostname' ).getValue()
@@ -515,20 +517,33 @@ print('hostname {0}'.format(dev_host)
 
         # Add the configlet builder
         key = self._create_configlet_builder(name, config, draft, form)
+        key2 = self._create_configlet_builder(name2, config, draft)
 
         # Verify the configlet builder was added
+        # Form data
         result = self.api.get_configlet_by_name(name)
         self.assertIsNotNone(result)
         self.assertEqual(result['name'], name)
         self.assertEqual(result['config'], config)
         self.assertEquat(result['key'], key)
 
+        # No Form data
+        result2 = self.api.get_configlet_by_name(name2)
+        self.assertIsNotNone(result)
+        self.assertEqual(result['name'], name2)
+        self.assertEqual(result['config'], config)
+        self.assertEquat(result['key'], key2)
+
         # Delete the configlet builder
         self.api.delete_configlet(name, key)
+        self.api.delete_configlet(name2, key2)
 
         # Verify the configlet builder was deleted
         with self.assertRaises(CvpApiError):
             self.api.get_configlet_by_name(name)
+            
+        with self.assertRaises(CvpApiError):
+            self.api.get_configlet_by_name(name2)
 
     def _create_configlet(self, name, config):
         # Delete the configlet in case it was left by previous test run
