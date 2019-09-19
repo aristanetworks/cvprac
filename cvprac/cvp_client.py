@@ -195,7 +195,7 @@ class CvpClient(object):
                 version (str): The CVP version in use.
         '''
         self.version = version
-        self.log.info('Version %s' % version)
+        self.log.info('Version %s', version)
 
         # Set apiversion to v2 for 2018.2 and beyond, set to v1 for
         # 2018.1 and previous
