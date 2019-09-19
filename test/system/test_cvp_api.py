@@ -312,6 +312,18 @@ class TestCvpClient(DutSystemTest):
         result = self.api.get_tasks_by_status('BOGUS')
         self.assertIsNotNone(result)
 
+    def test_api_search_configlets(self):
+        ''' Verify search_configlets
+        '''
+        result = self.api.search_configlets('TelemetryBuilder')
+
+        # Make sure at least 1 configlet has been returned as noted
+        # by the 'total' key, and that the data is a list.
+        self.assertIn('total', result)
+        self.assertGreater(result['total'], 0)
+        self.assertIn('data', result)
+        self.assertIsInstance(result['data'], list)
+
     def test_api_get_configlets(self):
         ''' Verify get_configlets
         '''

@@ -249,6 +249,22 @@ class CvpApi(object):
         return self.clnt.get('/configlet/getConfigletBuilder.do?id=%s'
                              % c_id, timeout=self.request_timeout)
 
+    def search_configlets(self, query, start=0, end=0):
+        ''' Returns a list of configlets that match a search query.
+
+            Args:
+                query (str): A simple string of text to be matched against
+                    the existing configlets. Not a regex.
+                start (int): Start index for the pagination. Default is 0.
+                end (int): End index for the pagination. If end index is 0
+                    then all the records will be returned. Default is 0.
+        '''
+        self.log.debug('search_configlets: query: %s' % query)
+        return self.clnt.get('/configlet/searchConfiglets.do?'
+                             'queryparam=%s&startIndex=%d&endIndex=%d' %
+                             (qplus(query), start, end),
+                             timeout=self.request_timeout)
+
     def get_configlet_by_name(self, name):
         ''' Returns the configlet with the specified name
 

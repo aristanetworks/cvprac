@@ -95,6 +95,7 @@ import json
 import logging
 from logging.handlers import SysLogHandler
 from itertools import cycle
+from pkg_resources import parse_version
 
 import requests
 from requests.exceptions import ConnectionError, HTTPError, Timeout, \
@@ -186,32 +187,24 @@ class CvpClient(object):
         self.log.setLevel(getattr(logging, log_level))
 
     def set_version(self, version):
-        '''
+        ''' Set the CVP API version to be used when making api calls.
 
-        :param version:
-        :return:
+            For CVP versions 2018.2 and later, use api version 2.
+
+            Args:
+                version (str): The CVP version in use.
         '''
         self.version = version
-        split_version = version.split('.')
-        self.log.info('Version %s', split_version)
-        # Expect version string to be at least two long
-        # Ex: 2018.2
-        # Ex: 2018.1.4
-        # Ex: 2017.2
-        if len(split_version) > 2:
-            # Set apiversion to v2 for 2018.2 and beyond.
-            if int(split_version[0]) > 2017 and int(split_version[1]) > 1:
-                self.log.info('Setting API version to v2')
-                self.apiversion = 'v2'
-            else:
-                self.log.info('Setting API version to v1')
-                self.apiversion = 'v1'
-        else:
-            # If version is shorter than 2 elements for some reason default
-            # to v2
-            self.log.info('Version has less than 2 elements.'
-                          ' Setting API version to v2')
+        self.log.info('Version %s' % version)
+
+        # Set apiversion to v2 for 2018.2 and beyond, set to v1 for
+        # 2018.1 and previous
+        if parse_version(version) > parse_version('2018.1'):
+            self.log.info('Setting API version to v2')
             self.apiversion = 'v2'
+        else:
+            self.log.info('Setting API version to v1')
+            self.apiversion = 'v1'
 
     def connect(self, nodes, username, password, connect_timeout=10,
                 request_timeout=30, protocol='https', port=None, cert=False):
