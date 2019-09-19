@@ -210,8 +210,8 @@ class CvpApi(object):
         '''
         self.log.debug('cancel_task: task_id: %s' % task_id)
         data = {'data': [task_id]}
-        self.clnt.post('/task/cancelTask.do', data=data,
-                       timeout=self.request_timeout)
+        return self.clnt.post('/task/cancelTask.do', data=data,
+                              timeout=self.request_timeout)
 
     def get_configlets(self, start=0, end=0):
         ''' Returns a list of all defined configlets.

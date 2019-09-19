@@ -1396,7 +1396,7 @@ class TestCvpClient(DutSystemTest):
         # Cancel previously created task
         cancel_task_resp = self.api.cancel_task(task_id)
         time.sleep(1)
-        self.assertIsNone(cancel_task_resp)
+        self.assertIsNotNone(cancel_task_resp)
 
     def test_api_filter_topology(self):
         ''' Verify filter_topology.
