@@ -2058,6 +2058,52 @@ class CvpApi(object):
             raise
         return resp
 
+    def reset_device(self, app_name, device, create_task=True):
+        ''' Reset device by moving it to the Undefined Container.
+
+            Args:
+                app_name (str): String to specify info/signifier of calling app
+                device (dict): Device info
+                container (dict): Container info
+                create_task (bool): Determines whether or not to execute a save
+                    and create the tasks (if any)
+
+            Returns:
+                response (dict): A dict that contains a status and a list of
+                    task ids created (if any).
+
+                    Ex: {u'data': {u'status': u'success', u'taskIds': []}}
+        '''
+        info = ('App %s reseting device %s and moving it to Undefined'
+                % (app_name, device['fqdn']))
+        self.log.debug(info)
+        if 'parentContainerId' in device:
+            from_id = device['parentContainerId']
+        else:
+            parent_cont = self.get_parent_container_for_device(device['key'])
+            from_id = parent_cont['key']
+        data = {'data': [{'info': info,
+                          'infoPreview': info,
+                          'action': 'reset',
+                          'nodeType': 'netelement',
+                          'nodeId': device['key'],
+                          'toId': 'undefined_container',
+                          'fromId': from_id,
+                          'nodeName': device['fqdn'],
+                          'toName': 'Undefined',
+                          'toIdType': 'container',
+                          'childTasks': [],
+                          'parentTask': ''}]}
+        try:
+            self._add_temp_action(data)
+        except CvpApiError as error:
+            if 'Data already exists' in str(error):
+                self.log.debug('Device %s already in container Undefined'
+                               % device['fqdn'])
+        if create_task:
+            resp = self._save_topology_v2([])
+            return resp
+
     def deploy_device(self, device, container, configlets=None, image=None,
                       create_task=True):
         ''' Move a device from the undefined container to a target container.

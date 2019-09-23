@@ -385,8 +385,7 @@ class TestCvpClient(DutSystemTest):
         ''' Verify get_configlets_by_container_id
         '''
         result = self.api.get_configlets_by_container_id(
-            self.container['key']
-        )
+            self.container['key'])
 
         # Verify the following keys and types are returned by the request
         exp_data = {
@@ -401,9 +400,7 @@ class TestCvpClient(DutSystemTest):
     def test_api_get_configlets_by_netelement_id(self):
         ''' Verify get_configlets_by_netelement_id
         '''
-        result = self.api.get_configlets_by_netelement_id(
-            self.device['key']
-        )
+        result = self.api.get_configlets_by_netelement_id(self.device['key'])
 
         # Verify the following keys and types are returned by the request
         exp_data = {
@@ -583,6 +580,29 @@ class TestCvpClient(DutSystemTest):
         err_msg = 'Execution for task id %s failed' % task_id
         self.assertNotEqual(status, 'Failed', msg=err_msg)
         err_msg = 'Timeout waiting for task id %s to execute' % task_id
+        self.assertGreater(cnt, 0, msg=err_msg)
+
+    def _execute_long_running_task(self, task_id):
+        ''' Execute a long running task and wait for it to complete.
+        '''
+        # Test add_note_to_task
+        self.api.add_note_to_task(task_id, 'Test Generated')
+
+        self.api.execute_task(task_id)
+
+        # Verify task executed within 10 minutes
+        cnt = 60
+        while cnt > 0:
+            time.sleep(10)
+            result = self.api.get_task_by_id(task_id)
+            status = result['workOrderUserDefinedStatus']
+            if status == 'Completed' or status == 'Failed':
+                break
+            cnt -= 1
+        err_msg = 'Execution for task id %s failed' % task_id
+        self.assertNotEqual(status, 'Failed', msg=err_msg)
+        err_msg = ('Timeout waiting for long running task id %s to execute'
+                   % task_id)
         self.assertGreater(cnt, 0, msg=err_msg)
 
     def test_api_execute_task(self):
@@ -1450,6 +1470,59 @@ class TestCvpClient(DutSystemTest):
             self.assertIn(key, known_dev_data)
             if self.clnt.apiversion == 'v1' or key not in diff_val_form_keys:
                 self.assertEqual(topo_dev_data[key], known_dev_data[key])
+
+#    def test_api_reset_device(self):
+#        ''' Verify reset_device
+#        '''
+#        device = self.api.get_inventory()[0]
+#        cur_confs = self.api.get_configlets_by_netelement_id(device['key'])
+#        device_configlet_keys = []
+#        device_configlet_names = []
+#        for map in cur_confs['configletMapper']:
+#            if cur_confs['configletMapper'][map]['type'] == 'netelement':
+#                device_configlet_keys.append(map)
+#
+#       for confkey in device_configlet_keys:
+#            for configlet in cur_confs['configletList']:
+#                if confkey == configlet['key']:
+#                    device_configlet_names.append(configlet['name'])
+#                    continue
+#        orig_cont = self.api.get_parent_container_for_device(device['key'])
+#        undefined_devs = self.api.get_devices_in_container('Undefined')
+#        task_id = self._get_next_task_id()
+#
+#        resp = self.api.reset_device('TESTAPP', device, create_task=True)
+#         print resp
+#         self._execute_long_running_task(task_id)
+#
+#         new_undefined_devs = self.api.get_devices_in_container('Undefined')
+#         self.assertEqual(len(undefined_devs) + 1, len(new_undefined_devs))
+#
+#         new_device_info = self.api.get_inventory()[0]
+#
+#         new_cont = self.api.get_parent_container_for_device(
+#             new_device_info['key'])
+#         self.assertEqual(new_cont['name'], 'Undefined')
+#
+#         task_id = self._get_next_task_id()
+#         resp = self.api.move_device_to_container('TESTAPP', new_device_info,
+#                                                  orig_cont,
+#                                                  create_task=False)
+#         print resp
+#         apply_confs_list = []
+#         for index, confkey in enumerate(device_configlet_keys):
+#             param = {'name': device_configlet_names[index], 'key': confkey}
+#             apply_confs_list.append(param)
+#         resp = self.api.apply_configlets_to_device('TESTAPP',
+#                                                    new_device_info,
+#                                                    apply_confs_list,
+#                                                    create_task=True)
+#         print resp
+#         self._execute_long_running_task(task_id)
+#
+#         final_undef_devs = self.api.get_devices_in_container('Undefined')
+#         self.assertEqual(len(undefined_devs), len(final_undef_devs))
+
 
 if __name__ == '__main__':
     unittest.main()
