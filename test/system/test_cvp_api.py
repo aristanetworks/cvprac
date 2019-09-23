@@ -491,6 +491,19 @@ class TestCvpClient(DutSystemTest):
         self.assertIsNotNone(result)
         self.assertEqual(result, {})
 
+    def test_api_get_device_image_info(self):
+        ''' Verify get_device_image_info
+        '''
+        result = self.api.get_device_image_info(self.device['key'])
+        self.assertIsNotNone(result)
+        self.assertIn('bundleName', result)
+
+    def test_api_get_device_image_info_no_device(self):
+        ''' Verify get_device_image_info returns none when no device with MAC
+        '''
+        result = self.api.get_device_image_info("NOPE")
+        self.assertIsNone(result)
+
     def _create_configlet(self, name, config):
         # Delete the configlet in case it was left by previous test run
         try:

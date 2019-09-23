@@ -641,6 +641,30 @@ class CvpApi(object):
             running_config = data['output']
         return running_config
 
+    def get_device_image_info(self, device_mac):
+        ''' Return a dict of info about a device in CVP.
+
+            Args:
+                device_mac (str): Mac address of the device to get the running
+                    configuration for.
+
+            Returns:
+                device_image_info (dict): Dict of image info for the device
+                    if found. Otherwise returns None.
+        '''
+        self.log.debug('Attempt to get net element data for %s' % device_mac)
+        try:
+            device_image_info = self.clnt.get(
+                '/provisioning/getNetElementInfoById.do?netElementId=%s'
+                % qplus(device_mac), timeout=self.request_timeout)
+        except CvpApiError as error:
+            # Catch error when device for provided MAC is not found
+            if 'Invalid Netelement id' in str(error):
+                self.log.debug('Device with MAC %s not found' % device_mac)
+                return None
+            raise error
+        return device_image_info
+
     def get_containers(self, start=0, end=0):
         ''' Returns a list of all the containers.
 
