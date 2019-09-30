@@ -56,14 +56,15 @@ import time
 import unittest
 from requests.exceptions import Timeout
 
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 from cvprac.cvp_client import CvpClient
 from cvprac.cvp_client_errors import CvpApiError
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../lib'))
 from systestlib import DutSystemTest
 
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class TestCvpClient(DutSystemTest):
     ''' Test cases for the CvpClient class.
@@ -1183,7 +1184,7 @@ class TestCvpClient(DutSystemTest):
         bundles = self.api.get_image_bundles()
         devices = self.api.get_inventory()
         # Verify at least one image bundle and device exist
-        if bundles['total'] > 0 and len(devices) > 0:
+        if bundles['total'] > 0 and devices:
             # Get device and image bundle
             b = self.api.get_image_bundle_by_name(bundles['data'][0]['name'])
             d = self.api.get_device_by_name(devices[0]['fqdn'])
@@ -1395,7 +1396,7 @@ class TestCvpClient(DutSystemTest):
 
         # Verify the cancelled change control information
         chg_ctrl_cancelled = self.api.get_change_control_info(cc_id)
-        self.assertEquals(chg_ctrl_cancelled['status'], 'Cancelled')
+        self.assertEqual(chg_ctrl_cancelled['status'], 'Cancelled')
 
     def test_api_delete_change_control(self):
         ''' Verify delete_change_control.

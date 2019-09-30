@@ -36,9 +36,9 @@
 import unittest
 from itertools import cycle
 from mock import Mock
+from requests.exceptions import HTTPError, ReadTimeout
 from cvprac.cvp_client import CvpClient
 from cvprac.cvp_client_errors import CvpApiError, CvpSessionLogOutError
-from requests.exceptions import HTTPError, ReadTimeout
 
 
 class TestClient(unittest.TestCase):
