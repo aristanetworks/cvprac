@@ -327,14 +327,21 @@ class CvpClient(object):
                     response from server indicates session was logged out.
         '''
         if not response.ok:
-            msg = '%s: Request Error: %s' % (prefix, response.reason)
-            self.log.error(msg)
             if 'Unauthorized' in response.reason:
-                # Check for Unauthorized User error because this is how
-                # CVP responds to a logged out users requests in 2018
-                # and beyond.
+                # Check for 'Unauthorized' User error because this is how
+                # CVP responds to a logged out users requests in 2018.x.
+                msg = '%s: Request Error: %s' % (prefix, response.reason)
+                self.log.error(msg)
+                raise CvpApiError(msg)
+            if 'User is unauthorized' in response.text:
+                # Check for 'User is unauthorized' response text because this is how
+                # CVP responds to a logged out users requests in 2019.x.
+                msg = '%s: Request Error: User is unauthorized' % prefix
+                self.log.error(msg)
                 raise CvpApiError(msg)
             else:
+                msg = '%s: Request Error: %s - %s' % (prefix, response.reason, response.text)
+                self.log.error(msg)
                 raise CvpRequestError(msg)
 
         if 'LOG OUT MESSAGE' in response.text:
@@ -470,7 +477,9 @@ class CvpClient(object):
                                               data, files)
             except CvpApiError as error:
                 # If this is not an Unauthorized CvpApiError raise the error
-                if 'Unauthorized' not in error.msg:
+                # 'Unauthorized' is for 2018.x
+                # 'User is unauthorized' is for 2019.x
+                if 'Unauthorized' not in error.msg and 'User is unauthorized' not in error.msg:
                     raise error
                 # If this is the final CVP node raise error
                 if node_num + 1 == self.node_cnt:
@@ -613,10 +622,12 @@ class CvpClient(object):
                     continue
             except CvpApiError as error:
                 self.log.debug(error)
-                if 'Unauthorized' in error.msg:
+                if 'Unauthorized' in error.msg or 'User is unauthorized' in error.msg:
                     # Retry the request to the same node if there was an
                     # Unauthorized User error because this is how CVP responds
-                    # to a logged out users requests in 2017.1 and beyond.
+                    # to a logged out users requests in 2017.1.
+                    # Check for 'User is unauthorized' in error because this is how CVP
+                    # responds to a logged out user requests in 2019.x.
                     # Reset the session which will login. If a valid
                     # session comes back then clear the error so this request
                     # will be retried on the same node.
