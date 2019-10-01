@@ -349,7 +349,15 @@ class TestCvpClient(DutSystemTest):
     def test_api_get_configlet_builder(self):
         ''' Verify get_configlet_builder
         '''
-        cfglt = self.api.get_configlet_by_name('SYS_TelemetryBuilderV2')
+        try:
+            # Configlet Builder for pre 2019.x
+            cfglt = self.api.get_configlet_by_name('SYS_TelemetryBuilderV2')
+        except CvpApiError as e:
+            if 'Entity does not exist' in e.msg:
+                # Configlet Builder for 2019.x
+                cfglt = self.api.get_configlet_by_name('SYS_TelemetryBuilderV3')
+            else:
+                raise
         result = self.api.get_configlet_builder(cfglt['key'])
 
         # Verify the following keys and types are
