@@ -355,7 +355,8 @@ class TestCvpClient(DutSystemTest):
         except CvpApiError as e:
             if 'Entity does not exist' in e.msg:
                 # Configlet Builder for 2019.x
-                cfglt = self.api.get_configlet_by_name('SYS_TelemetryBuilderV3')
+                cfglt = self.api.get_configlet_by_name(
+                    'SYS_TelemetryBuilderV3')
             else:
                 raise
         result = self.api.get_configlet_builder(cfglt['key'])
