@@ -1499,7 +1499,7 @@ class CvpApi(object):
                               timeout=self.request_timeout)
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion == 'v2':
+        if self.clnt.apiversion == 'v2' or self.clnt.apiversion == 'v3':
             if resp['complianceIndication'] == u'':
                 resp['complianceIndication'] = 'NONE'
         return resp
@@ -1847,9 +1847,18 @@ class CvpApi(object):
                 change controls (list): The list of change controls
         '''
         self.log.debug('get_change_controls: query: %s' % query)
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion == 'v3':
+            self.log.debug('v3 getChangeControls API Call')
+            self.log.warning(
+                'get_change_controls: change control APIs moved for v3')
+            return None
+
+        self.log.debug('v2 getChangeControls API Call')
         data = self.clnt.get(
-            '/changeControl/getChangeControls.do?searchText=%s&startIndex=%d'
-            '&endIndex=%d' % (qplus(query), start, end),
+            '/changeControl/getChangeControls.do?searchText=%s'
+            '&startIndex=%d&endIndex=%d' % (qplus(query), start, end),
             timeout=self.request_timeout)
         if 'data' not in data:
             return None
@@ -1868,9 +1877,18 @@ class CvpApi(object):
                 tasks (list): The list of available tasks
         '''
         self.log.debug('change_control_available_tasks: query: %s' % query)
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion == 'v3':
+            self.log.debug('v3 getTasksByStatus API Call')
+            self.log.warning('change_control_available_tasks:'
+                             ' change control APIs moved for v3')
+            return None
+
+        self.log.debug('v2 getTasksByStatus API Call')
         data = self.clnt.get(
-            '/changeControl/getTasksByStatus.do?searchText=%s&startIndex=%d'
-            '&endIndex=%d' % (qplus(query), start, end),
+            '/changeControl/getTasksByStatus.do?searchText=%s'
+            '&startIndex=%d&endIndex=%d' % (qplus(query), start, end),
             timeout=self.request_timeout)
         if 'data' not in data:
             return None
@@ -1929,10 +1947,19 @@ class CvpApi(object):
         #    }
         #  ]
         # }
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion == 'v3':
+            self.log.debug('v3 addOrUpdateChangeControl API Call')
+            self.log.warning('create_change_control:'
+                             ' change control APIs moved for v3')
+            return None
+
+        self.log.debug('v2 addOrUpdateChangeControl API Call')
         task_data_list = []
-        for taskinfo in change_control_tasks:
-            task_list_entry = {'taskId': taskinfo['taskId'],
-                               'taskOrder': taskinfo['taskOrder'],
+        for task_info in change_control_tasks:
+            task_list_entry = {'taskId': task_info['taskId'],
+                               'taskOrder': task_info['taskOrder'],
                                'snapshotTemplateKey': snapshot_template_key,
                                'clonedCcId': ''}
             task_data_list.append(task_list_entry)
@@ -1946,6 +1973,58 @@ class CvpApi(object):
                 'deletedTaskIds': [],
                 'changeControlTasks': task_data_list}
         return self.clnt.post('/changeControl/addOrUpdateChangeControl.do',
+                              data=data, timeout=self.request_timeout)
+
+    def create_change_control_v3(self, cc_id, name, tasks):
+        ''' Create change control with provided information and return
+            change control ID.
+
+            Args:
+                cc_id (string): The ID for the new change control.
+                name (string): The name for the new change control.
+                tasks (list): A list of Task IDs as strings
+                    Ex: ['10', '11', '12']
+
+            Returns:
+                response (dict): A dict that contains...
+
+                Ex: [{u'id': u'cc_id',
+                      u'update_timestamp': u'...'}]
+        '''
+        self.log.debug('create_change_control_v3')
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion != 'v3':
+            self.log.debug('Wrong method for API version %s.'
+                           ' Use create_change_control method',
+                           self.clnt.apiversion)
+            self.log.warning('create_change_control_v3:'
+                             ' Use old change control APIs for old versions')
+            return None
+
+        self.log.debug('v3 Update change control API Call')
+        stages = []
+        for index, task in enumerate(tasks):
+            stage_id = 'stage%d' % index
+            stage = {'stage': [{
+                'id': stage_id,
+                'action': {
+                    'name': 'task',
+                    'args': {
+                        'TaskID': task,
+                    }
+                }
+            }]}
+            stages.append(stage)
+        data = {'config': {
+            'id': cc_id,
+            'name': name,
+            'root_stage': {
+                'id': 'root',
+                'stage_row': stages,
+            }
+        }}
+        return self.clnt.post('/api/v3/services/ccapi.ChangeControl/Update',
                               data=data, timeout=self.request_timeout)
 
     def add_notes_to_change_control(self, cc_id, notes):
@@ -1962,6 +2041,15 @@ class CvpApi(object):
         '''
         self.log.debug('add_notes_to_change_control: cc_id %s, notes %s'
                        % (cc_id, notes))
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion == 'v3':
+            self.log.debug('v3 addNotesToChangeControl API Call deprecated')
+            self.log.warning('add_notes_to_change_control:'
+                             ' change control APIs not supported for v3')
+            return None
+
+        self.log.debug('v2 addNotesToChangeControl API Call')
         data = {'ccId': cc_id,
                 'notes': notes}
         return self.clnt.post('/changeControl/addNotesToChangeControl.do',
@@ -1973,10 +2061,68 @@ class CvpApi(object):
             Args:
                 cc_ids (list): A list of change control IDs to be executed.
         '''
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion == 'v3':
+            self.log.debug(
+                'v3 /api/v3/services/ccapi.ChangeControl/Start API Call')
+            for cc_id in cc_ids:
+                resp_list = []
+                data = {'cc_id': cc_id}
+                resp = self.clnt.post(
+                    '/api/v3/services/ccapi.ChangeControl/Start',
+                    data=data, timeout=self.request_timeout)
+                resp_list.append(resp)
+            return resp_list
+
+        self.log.debug('v2 executeCC API Call')
         cc_id_list = [{'ccId': x} for x in cc_ids]
         data = {'ccIds': cc_id_list}
-        self.clnt.post('/changeControl/executeCC.do', data=data,
-                       timeout=self.request_timeout)
+        return self.clnt.post('/changeControl/executeCC.do', data=data,
+                              timeout=self.request_timeout)
+
+    def approve_change_control(self, cc_id, timestamp):
+        ''' Cancel the provided change controls.
+
+            Args:
+                cc_id (string): The change control IDs to be approved.
+                timestamp(string): The change controls timestamp.
+        '''
+        self.log.debug('approve_change_control')
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion != 'v3':
+            self.log.debug('Approval methods not valid for API version %s.'
+                           ' Functionality did not exist',
+                           self.clnt.apiversion)
+            return None
+
+        self.log.debug('v3 Approve change control API Call')
+        data = {'cc_id': cc_id, 'cc_timestamp': timestamp}
+        return self.clnt.post(
+            '/api/v3/services/ccapi.ChangeControl/AddApproval',
+            data=data, timeout=self.request_timeout)
+
+    def delete_change_control_approval(self, cc_id):
+        ''' Cancel the provided change controls.
+
+            Args:
+                cc_id (string): The change control IDs to be approved.
+        '''
+        self.log.debug('delete_change_control_approval')
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion != 'v3':
+            self.log.debug('Approval methods not valid for API version %s.'
+                           ' Functionality did not exist',
+                           self.clnt.apiversion)
+            return None
+
+        self.log.debug('v3 Delete Approval for change control API Call')
+        data = {'cc_id': cc_id}
+        return self.clnt.post(
+            '/api/v3/services/ccapi.ChangeControl/DeleteApproval',
+            data=data, timeout=self.request_timeout)
 
     def cancel_change_controls(self, cc_ids):
         ''' Cancel the provided change controls.
@@ -1984,9 +2130,24 @@ class CvpApi(object):
             Args:
                 cc_ids (list): A list of change control IDs to be cancelled.
         '''
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion == 'v3':
+            self.log.debug(
+                'v3 /api/v3/services/ccapi.ChangeControl/Stop API Call')
+            resp_list = []
+            for cc_id in cc_ids:
+                data = {'cc_id': cc_id}
+                resp = self.clnt.post(
+                    '/api/v3/services/ccapi.ChangeControl/Stop',
+                    data=data, timeout=self.request_timeout)
+                resp_list.append(resp)
+            return resp_list
+
+        self.log.debug('v2 cancelChangeControl API Call')
         data = {'ccIds': cc_ids}
-        self.clnt.post('/changeControl/cancelChangeControl.do', data=data,
-                       timeout=self.request_timeout)
+        return self.clnt.post('/changeControl/cancelChangeControl.do',
+                              data=data, timeout=self.request_timeout)
 
     def delete_change_controls(self, cc_ids):
         ''' Delete the provided change controls.
@@ -1994,9 +2155,24 @@ class CvpApi(object):
             Args:
                 cc_ids (list): A list of change control IDs to be deleted.
         '''
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion == 'v3':
+            self.log.debug(
+                'v3 /api/v3/services/ccapi.ChangeControl/Delete API Call')
+            for cc_id in cc_ids:
+                resp_list = []
+                data = {'cc_id': cc_id}
+                resp = self.clnt.post(
+                    '/api/v3/services/ccapi.ChangeControl/Delete',
+                    data=data, timeout=self.request_timeout)
+                resp_list.append(resp)
+            return resp_list
+
+        self.log.debug('v2 deleteChangeControl API Call')
         data = {'ccIds': cc_ids}
-        self.clnt.post('/changeControl/deleteChangeControls.do', data=data,
-                       timeout=self.request_timeout)
+        return self.clnt.post('/changeControl/deleteChangeControls.do',
+                              data=data, timeout=self.request_timeout)
 
     def get_change_control_info(self, cc_id):
         ''' Get the detailed information for a single change control.
@@ -2042,6 +2218,17 @@ class CvpApi(object):
                      'timeZone': '',
                      'type': 'Custom'}
         '''
+        self.log.debug('get_change_control_info: %s', cc_id)
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion == 'v3':
+            self.log.debug('get_change_control_info method deprecated for v3.'
+                           ' Moved to get_change_control_status')
+            self.log.warning('get_change_control_info:'
+                             ' info change control API moved for v3 to status')
+            return None
+
+        self.log.debug('v2 getChangeControlInformation.do API Call')
         try:
             resp = self.clnt.get(
                 '/changeControl/getChangeControlInformation.do?'
@@ -2052,6 +2239,44 @@ class CvpApi(object):
                 return None
             raise
         return resp
+
+    def get_change_control_status(self, cc_id):
+        ''' Get the detailed information for a single change control.
+
+            Args:
+                cc_id (string): The id for the change control to be retrieved.
+
+            Returns:
+                response (dict): A dict that contains...
+
+                Ex:
+                [{u'status': {u'error': u'',
+                              u'id': u'cc_id',
+                              u'stages': {u' ': {
+                                              u'error': u'',
+                                              u'state': u'Completed'},
+                                          u'Task_0_1': {
+                                              u'error': u'',
+                                              u'state': u'Completed'}
+                                         },
+                              u'state': u'Completed'}}]
+        '''
+        self.log.debug('get_change_control_status: %s', cc_id)
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion != 'v3':
+            self.log.debug('get_change_control_status method not supported'
+                           ' for API version %s. Use old'
+                           ' get_change_control_info method'
+                           % self.clnt.apiversion)
+            return None
+
+        self.log.debug(
+            'v3 /api/v3/services/ccapi.ChangeControl/GetStatus API Call')
+        data = {'cc_id': cc_id}
+        return self.clnt.post(
+            '/api/v3/services/ccapi.ChangeControl/GetStatus',
+            data=data, timeout=self.request_timeout)
 
     def reset_device(self, app_name, device, create_task=True):
         ''' Reset device by moving it to the Undefined Container.

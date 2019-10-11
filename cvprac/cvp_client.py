@@ -141,6 +141,7 @@ class CvpClient(object):
         self.protocol = None
         self.session = None
         self.url_prefix = None
+        self.url_prefix_short = None
         self.version = None
         self._last_used_node = None
 
@@ -197,9 +198,13 @@ class CvpClient(object):
         self.version = version
         self.log.info('Version %s', version)
 
-        # Set apiversion to v2 for 2018.2 and beyond, set to v1 for
-        # 2018.1 and previous
-        if parse_version(version) > parse_version('2018.1'):
+        # Set apiversion to v3 for 2019 and beyond.
+        # Set apiversion to v2 for 2018.2 onwards until 2019
+        # Set apiversion to v1 for 2018.1 and previous
+        if parse_version(version) >= parse_version('2019.0'):
+            self.log.info('Setting API version to v3')
+            self.apiversion = 'v3'
+        elif parse_version(version) > parse_version('2018.1'):
             self.log.info('Setting API version to v2')
             self.apiversion = 'v2'
         else:
@@ -275,6 +280,8 @@ class CvpClient(object):
         for _ in range(0, num_nodes):
             host = next(self.node_pool)
             self.url_prefix = ('https://%s:%d/web' % (host, self.port or 443))
+            self.url_prefix_short = ('https://%s:%d'
+                                     % (host, self.port or 443))
             error = self._reset_session()
             if error and not self.cert:
                 self.log.warning('Failed to connect over https. Potentially'
@@ -285,6 +292,8 @@ class CvpClient(object):
                 # forces https.
                 self.url_prefix = ('http://%s:%d/web'
                                    % (host, self.port or 80))
+                self.url_prefix_short = ('http://%s:%d'
+                                         % (host, self.port or 80))
                 error = self._reset_session()
             if error is None:
                 break
@@ -472,7 +481,10 @@ class CvpClient(object):
         response = None
         for node_num in range(self.node_cnt):
             # Set full URL based on current node
-            full_url = self.url_prefix + url
+            if '/api/' in url:
+                full_url = self.url_prefix_short + url
+            else:
+                full_url = self.url_prefix + url
             try:
                 response = self._send_request(req_type, full_url, timeout,
                                               data, files)
