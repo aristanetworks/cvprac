@@ -1880,10 +1880,8 @@ class CvpApi(object):
         if self.clnt.apiversion is None:
             self.get_cvp_info()
         if self.clnt.apiversion == 'v3':
-            self.log.debug('v3 getTasksByStatus API Call')
-            self.log.warning('change_control_available_tasks:'
-                             ' change control APIs moved for v3')
-            return None
+            self.log.debug('v3 uses existing get_task_by_status API Call')
+            return self.get_tasks_by_status('PENDING')
 
         self.log.debug('v2 getTasksByStatus API Call')
         data = self.clnt.get(
