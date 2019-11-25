@@ -759,6 +759,57 @@ class CvpApi(object):
                              timeout=self.request_timeout)
         return data['configletList']
 
+    def add_configlet_builder(self, name, config, draft=False, form=[]):
+        ''' Add a confilget builder and return the key for the configlet builder.
+
+            Args:
+                name (str): Configlet builder name
+                config (str): Python configlet builder code
+                draft (bool): If builder is a draft
+                form (list): Array/list of form data
+                    Parameters:
+                        fieldId (str):
+                        fieldLabel (str):
+                        value (str):
+                        type (str): {
+                            'Text box',
+                            'Text area',
+                            'Drop down',
+                            'Check box',
+                            'Radio button',
+                            'IP address',
+                            'Password'
+                        }
+                        validation:
+                            mandatory (boolean):
+                        helpText (str)
+
+            Returns:
+                key (str): The key for the configlet
+        '''
+        # Convert draft to str
+        if draft:
+            draft = 'true'
+        else:
+            draft = 'false'
+
+        self.log.debug('add_configlet_builder: name: %s config: %s form: %s' % (name, config, form))
+        body = {
+            'name': name,
+            'data': {
+                'formList': form,
+                'main_script': {
+                    'data': config
+                }
+            }
+        }
+        # Create the configlet builder
+        self.clnt.post('/configlet/addConfigletBuilder.do?isDraft=' + draft, data=body, timeout=self.request_timeout)
+
+        # Get the key for the configlet
+        data = self.clnt.get('/configlet/getConfigletByName.do?name=%s' % qplus(name), timeout=self.request_timeout)
+        return data['key']
+
     def add_configlet(self, name, config):
         ''' Add a configlet and return the key for the configlet.
 
