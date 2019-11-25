@@ -497,39 +497,37 @@ class TestCvpClient(DutSystemTest):
         result = self.api.get_device_by_name(self.device['fqdn'][1:])
         self.assertIsNotNone(result)
         self.assertEqual(result, {})
-    
-    def _create_configlet_builder(self, name, config, draft, form):
-        # Delete the configlet builder in case it was left by a previous test run
+
+    def _create_configlet_builder(self, name, config, draft, form=None):
+        # Delete configlet builder in case it was left by a previous test run
         try:
-            result = self.api.get_confilget_by_name(name)
+            result = self.api.get_configlet_by_name(name)
             self.api.delete_configlet(name, result['key'])
         except CvpApiError:
             pass
-        
+
         # Add the configlet builder
         key = self.api.add_configlet_builder(name, config, draft, form)
         self.assertIsNotNone(key)
         return key
-    
+
     def test_api_add_delete_configlet_builder(self):
         ''' Verify add_configlet_builder and delete_configlet
             Will test a configlet builder with form data and without
         '''
         name = 'test_configlet_builder'
         name2 = 'test_configlet_builder_noform'
-        config = '''from cvplibrary import Form
+        config = ("from cvplibrary import Form\n\n" +
+                  "dev_host = Form.getFieldById('txt_hostname').getValue()" +
+                  "\n\nprint('hostname {0}'.format(dev_host))")
 
-dev_host = Form.getFieldById( 'txt_hostname' ).getValue()
-
-print('hostname {0}'.format(dev_host)
-'''
         draft = False
         form = [{
             'fieldId': 'txt_hostname',
             'fieldLabel': 'Hostname',
             'type': 'Text box',
             'validation': {
-                'mandatory': 'false'
+                'mandatory': False
             },
             'helpText': 'Hostname for the device'
         }]
@@ -543,15 +541,17 @@ print('hostname {0}'.format(dev_host)
         result = self.api.get_configlet_by_name(name)
         self.assertIsNotNone(result)
         self.assertEqual(result['name'], name)
-        self.assertEqual(result['config'], config)
-        self.assertEquat(result['key'], key)
+        # self.assertEqual(result['config'], config)
+        self.assertEqual(result['type'], 'Builder')
+        self.assertEqual(result['key'], key)
 
         # No Form data
         result2 = self.api.get_configlet_by_name(name2)
-        self.assertIsNotNone(result)
-        self.assertEqual(result['name'], name2)
-        self.assertEqual(result['config'], config)
-        self.assertEquat(result['key'], key2)
+        self.assertIsNotNone(result2)
+        self.assertEqual(result2['name'], name2)
+        # self.assertEqual(result2['config'], config)
+        self.assertEqual(result2['type'], 'Builder')
+        self.assertEqual(result2['key'], key2)
 
         # Delete the configlet builder
         self.api.delete_configlet(name, key)
@@ -560,7 +560,7 @@ print('hostname {0}'.format(dev_host)
         # Verify the configlet builder was deleted
         with self.assertRaises(CvpApiError):
             self.api.get_configlet_by_name(name)
-            
+
         with self.assertRaises(CvpApiError):
             self.api.get_configlet_by_name(name2)
 
