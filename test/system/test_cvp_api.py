@@ -1446,8 +1446,8 @@ class TestCvpClient(DutSystemTest):
             else:
                 time.sleep(2)
         else:
-            print self.clnt.apiversion
-            print 'SKIPPING TEST FOR GRANT'
+            print(self.clnt.apiversion)
+            print('SKIPPING TEST FOR GRANT')
             time.sleep(1)
 
     def test_api_cancel_change_control(self):
@@ -1480,8 +1480,8 @@ class TestCvpClient(DutSystemTest):
             chg_ctrl_cancelled = self.api.get_change_control_info(cc_id)
             self.assertEqual(chg_ctrl_cancelled['status'], 'Cancelled')
         else:
-            print self.clnt.apiversion
-            print 'SKIPPING TEST FOR GRANT'
+            print(self.clnt.apiversion)
+            print('SKIPPING TEST FOR GRANT')
             time.sleep(1)
 
     def test_api_delete_change_control(self):
@@ -1519,8 +1519,8 @@ class TestCvpClient(DutSystemTest):
             time.sleep(1)
             self.assertIsNotNone(cancel_task_resp)
         else:
-            print self.clnt.apiversion
-            print 'SKIPPING TEST FOR GRANT'
+            print(self.clnt.apiversion)
+            print('SKIPPING TEST FOR GRANT')
             time.sleep(1)
 
     def test_api_filter_topology(self):
@@ -1584,7 +1584,7 @@ class TestCvpClient(DutSystemTest):
 #        task_id = self._get_next_task_id()
 #
 #        resp = self.api.reset_device('TESTAPP', device, create_task=True)
-#         print resp
+#         print(resp)
 #         self._execute_long_running_task(task_id)
 #
 #         new_undefined_devs = self.api.get_devices_in_container('Undefined')
@@ -1600,7 +1600,7 @@ class TestCvpClient(DutSystemTest):
 #         resp = self.api.move_device_to_container('TESTAPP', new_device_info,
 #                                                  orig_cont,
 #                                                  create_task=False)
-#         print resp
+#         print(resp)
 #         apply_confs_list = []
 #         for index, confkey in enumerate(device_configlet_keys):
 #             param = {'name': device_configlet_names[index], 'key': confkey}
@@ -1609,7 +1609,7 @@ class TestCvpClient(DutSystemTest):
 #                                                    new_device_info,
 #                                                    apply_confs_list,
 #                                                    create_task=True)
-#         print resp
+#         print(resp)
 #         self._execute_long_running_task(task_id)
 #
 #         final_undef_devs = self.api.get_devices_in_container('Undefined')
