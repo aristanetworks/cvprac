@@ -56,14 +56,15 @@ import time
 import unittest
 from requests.exceptions import Timeout
 
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 from cvprac.cvp_client import CvpClient
 from cvprac.cvp_client_errors import CvpApiError
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../lib'))
 from systestlib import DutSystemTest
 
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class TestCvpClient(DutSystemTest):
     ''' Test cases for the CvpClient class.
@@ -312,6 +313,18 @@ class TestCvpClient(DutSystemTest):
         result = self.api.get_tasks_by_status('BOGUS')
         self.assertIsNotNone(result)
 
+    def test_api_search_configlets(self):
+        ''' Verify search_configlets
+        '''
+        result = self.api.search_configlets('TelemetryBuilder')
+
+        # Make sure at least 1 configlet has been returned as noted
+        # by the 'total' key, and that the data is a list.
+        self.assertIn('total', result)
+        self.assertGreater(result['total'], 0)
+        self.assertIn('data', result)
+        self.assertIsInstance(result['data'], list)
+
     def test_api_get_configlets(self):
         ''' Verify get_configlets
         '''
@@ -336,7 +349,16 @@ class TestCvpClient(DutSystemTest):
     def test_api_get_configlet_builder(self):
         ''' Verify get_configlet_builder
         '''
-        cfglt = self.api.get_configlet_by_name('SYS_TelemetryBuilderV2')
+        try:
+            # Configlet Builder for pre 2019.x
+            cfglt = self.api.get_configlet_by_name('SYS_TelemetryBuilderV2')
+        except CvpApiError as e:
+            if 'Entity does not exist' in e.msg:
+                # Configlet Builder for 2019.x
+                cfglt = self.api.get_configlet_by_name(
+                    'SYS_TelemetryBuilderV3')
+            else:
+                raise
         result = self.api.get_configlet_builder(cfglt['key'])
 
         # Verify the following keys and types are
@@ -373,8 +395,7 @@ class TestCvpClient(DutSystemTest):
         ''' Verify get_configlets_by_container_id
         '''
         result = self.api.get_configlets_by_container_id(
-            self.container['key']
-        )
+            self.container['key'])
 
         # Verify the following keys and types are returned by the request
         exp_data = {
@@ -389,9 +410,7 @@ class TestCvpClient(DutSystemTest):
     def test_api_get_configlets_by_netelement_id(self):
         ''' Verify get_configlets_by_netelement_id
         '''
-        result = self.api.get_configlets_by_netelement_id(
-            self.device['key']
-        )
+        result = self.api.get_configlets_by_netelement_id(self.device['key'])
 
         # Verify the following keys and types are returned by the request
         exp_data = {
@@ -479,6 +498,85 @@ class TestCvpClient(DutSystemTest):
         self.assertIsNotNone(result)
         self.assertEqual(result, {})
 
+    def _create_configlet_builder(self, name, config, draft, form=None):
+        # Delete configlet builder in case it was left by a previous test run
+        try:
+            result = self.api.get_configlet_by_name(name)
+            self.api.delete_configlet(name, result['key'])
+        except CvpApiError:
+            pass
+
+        # Add the configlet builder
+        key = self.api.add_configlet_builder(name, config, draft, form)
+        self.assertIsNotNone(key)
+        return key
+
+    def test_api_add_delete_configlet_builder(self):
+        ''' Verify add_configlet_builder and delete_configlet
+            Will test a configlet builder with form data and without
+        '''
+        name = 'test_configlet_builder'
+        name2 = 'test_configlet_builder_noform'
+        config = ("from cvplibrary import Form\n\n" +
+                  "dev_host = Form.getFieldById('txt_hostname').getValue()" +
+                  "\n\nprint('hostname {0}'.format(dev_host))")
+
+        draft = False
+        form = [{
+            'fieldId': 'txt_hostname',
+            'fieldLabel': 'Hostname',
+            'type': 'Text box',
+            'validation': {
+                'mandatory': False
+            },
+            'helpText': 'Hostname for the device'
+        }]
+
+        # Add the configlet builder
+        key = self._create_configlet_builder(name, config, draft, form)
+        key2 = self._create_configlet_builder(name2, config, draft)
+
+        # Verify the configlet builder was added
+        # Form data
+        result = self.api.get_configlet_by_name(name)
+        self.assertIsNotNone(result)
+        self.assertEqual(result['name'], name)
+        # self.assertEqual(result['config'], config)
+        self.assertEqual(result['type'], 'Builder')
+        self.assertEqual(result['key'], key)
+
+        # No Form data
+        result2 = self.api.get_configlet_by_name(name2)
+        self.assertIsNotNone(result2)
+        self.assertEqual(result2['name'], name2)
+        # self.assertEqual(result2['config'], config)
+        self.assertEqual(result2['type'], 'Builder')
+        self.assertEqual(result2['key'], key2)
+
+        # Delete the configlet builder
+        self.api.delete_configlet(name, key)
+        self.api.delete_configlet(name2, key2)
+
+        # Verify the configlet builder was deleted
+        with self.assertRaises(CvpApiError):
+            self.api.get_configlet_by_name(name)
+
+        with self.assertRaises(CvpApiError):
+            self.api.get_configlet_by_name(name2)
+
+    def test_api_get_device_image_info(self):
+        ''' Verify get_device_image_info
+        '''
+        result = self.api.get_device_image_info(self.device['key'])
+        self.assertIsNotNone(result)
+        self.assertIn('bundleName', result)
+
+    def test_api_get_device_image_info_no_device(self):
+        ''' Verify get_device_image_info returns none when no device with MAC
+        '''
+        result = self.api.get_device_image_info("NOPE")
+        self.assertIsNone(result)
+
     def _create_configlet(self, name, config):
         # Delete the configlet in case it was left by previous test run
         try:
@@ -558,6 +656,29 @@ class TestCvpClient(DutSystemTest):
         err_msg = 'Execution for task id %s failed' % task_id
         self.assertNotEqual(status, 'Failed', msg=err_msg)
         err_msg = 'Timeout waiting for task id %s to execute' % task_id
+        self.assertGreater(cnt, 0, msg=err_msg)
+
+    def _execute_long_running_task(self, task_id):
+        ''' Execute a long running task and wait for it to complete.
+        '''
+        # Test add_note_to_task
+        self.api.add_note_to_task(task_id, 'Test Generated')
+
+        self.api.execute_task(task_id)
+
+        # Verify task executed within 10 minutes
+        cnt = 60
+        while cnt > 0:
+            time.sleep(10)
+            result = self.api.get_task_by_id(task_id)
+            status = result['workOrderUserDefinedStatus']
+            if status == 'Completed' or status == 'Failed':
+                break
+            cnt -= 1
+        err_msg = 'Execution for task id %s failed' % task_id
+        self.assertNotEqual(status, 'Failed', msg=err_msg)
+        err_msg = ('Timeout waiting for long running task id %s to execute'
+                   % task_id)
         self.assertGreater(cnt, 0, msg=err_msg)
 
     def test_api_execute_task(self):
@@ -683,10 +804,11 @@ class TestCvpClient(DutSystemTest):
         self.assertEqual(len(result['containerList']), 0)
 
     def test_api_configlets_to_device(self):
-        ''' Verify apply_configlets_to_device and remove_configlets_from_device
+        ''' Verify apply_configlets_to_device and
+            remove_configlets_from_device
         '''
         # Create a new configlet
-        name = 'test_configlet'
+        name = 'test_device_configlet'
         config = 'alias srie show running-config interface ethernet 1'
 
         # Add the configlet
@@ -696,7 +818,7 @@ class TestCvpClient(DutSystemTest):
         task_id = self._get_next_task_id()
 
         # Apply the configlet to the device
-        label = 'cvprac test'
+        label = 'cvprac device configlet test'
         param = {'name': name, 'key': key}
         self.api.apply_configlets_to_device(label, self.device, [param])
 
@@ -740,6 +862,153 @@ class TestCvpClient(DutSystemTest):
 
         # Delete the configlet
         self.api.delete_configlet(name, key)
+
+        # Check compliance
+        self.test_api_check_compliance()
+
+    def test_api_configlets_to_container(self):
+        ''' Verify apply_configlets_to_container and
+            remove_configlets_from_container
+        '''
+        # pylint: disable=too-many-statements
+        # Create a new container to move our device to
+        # This is to make sure applying a new configlet to container only
+        # affects our one device
+        new_cont_name = 'CVPRAC_ConfCont_TEST'
+        # Verify create container
+        self.api.add_container(new_cont_name,
+                               self.container['name'],
+                               self.container['key'])
+        new_cont_info = self.api.get_container_by_name(new_cont_name)
+        self.assertIsNotNone(new_cont_info)
+        self.assertEqual(new_cont_info['name'], new_cont_name)
+        new_cont_key = new_cont_info['key']
+
+        dev_orig_cont = self.api.get_parent_container_for_device(
+            self.device['key'])
+        # Verify device is not currently in Undefined container
+        self.assertNotEqual(dev_orig_cont, 'undefined_container')
+        # Move device to new container
+        task_id = self.api.move_device_to_container(
+            'test', self.device, new_cont_info)['data']['taskIds'][0]
+        self.api.cancel_task(task_id)
+        # Verify device is in new container
+        dev_curr_cont = self.api.get_parent_container_for_device(
+            self.device['key'])
+        self.assertEqual(dev_curr_cont['key'], new_cont_key)
+        moved_dev_info = self.api.get_device_by_name(self.device['fqdn'])
+        if 'parentContainerId' in moved_dev_info:
+            self.assertEqual(moved_dev_info['parentContainerId'], new_cont_key)
+
+        # Create a new configlet
+        name = 'test_container_configlet'
+        config = 'alias srie show running-config interface ethernet 2'
+
+        # Add the configlet
+        key = self._create_configlet(name, config)
+
+        # Get the next task ID
+        task_id = self._get_next_task_id()
+
+        # Apply the configlet to the new container
+        label = 'cvprac container configlet test'
+        param = {'name': name, 'key': key}
+        # Apply the new configlet to the new container
+        self.api.apply_configlets_to_container(label, new_cont_info,
+                                               [param])
+
+        # Validate task was created to apply the configlet to container
+        # Wait 30 seconds for task to get created
+        result = None
+        cnt = 30
+        while cnt > 0:
+            time.sleep(1)
+            result = self.api.get_task_by_id(task_id)
+            if result is not None:
+                break
+            cnt -= 1
+        self.assertIsNotNone(result)
+        self.assertEqual(result['workOrderId'], task_id)
+
+        # Execute Task
+        self._execute_task(task_id)
+
+        # Get the next task ID
+        task_id = self._get_next_task_id()
+
+        # Remove configlet from container
+        self.api.remove_configlets_from_container(label, new_cont_info,
+                                                  [param])
+
+        # Validate task was created to remove the configlet from container
+        # Wait 30 seconds for task to get created
+        result = None
+        cnt = 30
+        while cnt > 0:
+            time.sleep(1)
+            result = self.api.get_task_by_id(task_id)
+            if result is not None:
+                break
+            cnt -= 1
+        self.assertIsNotNone(result)
+        self.assertEqual(result['workOrderId'], task_id)
+
+        # Execute Task
+        self._execute_task(task_id)
+
+        # Delete the configlet
+        self.api.delete_configlet(name, key)
+
+        # Move device back to original container
+        task_id = self.api.move_device_to_container(
+            'test', moved_dev_info, dev_orig_cont)['data']['taskIds'][0]
+        self.api.cancel_task(task_id)
+        dev_curr_cont = self.api.get_parent_container_for_device(
+            self.device['key'])
+        self.assertEqual(dev_curr_cont['key'], dev_orig_cont['key'])
+        moved_dev_info = self.api.get_device_by_name(self.device['fqdn'])
+        if 'parentContainerId' in moved_dev_info:
+            self.assertEqual(moved_dev_info['parentContainerId'],
+                             dev_orig_cont['key'])
+
+        # Verify delete container
+        self.api.delete_container(new_cont_name, new_cont_key,
+                                  self.container['name'],
+                                  self.container['key'])
+        result = self.api.search_topology(new_cont_name)
+        self.assertEqual(len(result['containerList']), 0)
+
+        # Check compliance
+        self.test_api_check_compliance()
+
+    def test_api_validate_configlets_for_device(self):
+        ''' Verify validate_configlets_for_device
+        '''
+        # Create a new configlet
+        name = 'test_validate_configlet_for_dev'
+        config = 'alias srie7 show running-config interface ethernet 7'
+
+        # Add the configlet
+        new_conf_key = self._create_configlet(name, config)
+
+        # Get device current configlets
+        current_configlets = self.api.get_configlets_by_device_id(
+            self.device['key'])
+        compare_configlets = [new_conf_key]
+        for configlet in current_configlets:
+            compare_configlets.append(configlet['key'])
+
+        # Run validate and compare for existing device configlets plus new one.
+        # This should result in a reconciled config with 1 new line.
+        resp = self.api.validate_configlets_for_device(self.device['key'],
+                                                       compare_configlets,
+                                                       'viewConfig')
+        self.assertIn('reconciledConfig', resp)
+        self.assertIn('new', resp)
+        self.assertEqual(resp['new'], 1)
+
+        # Delete the configlet
+        self.api.delete_configlet(name, new_conf_key)
 
         # Check compliance
         self.test_api_check_compliance()
@@ -990,7 +1259,7 @@ class TestCvpClient(DutSystemTest):
         bundles = self.api.get_image_bundles()
         devices = self.api.get_inventory()
         # Verify at least one image bundle and device exist
-        if bundles['total'] > 0 and len(devices) > 0:
+        if bundles['total'] > 0 and devices:
             # Get device and image bundle
             b = self.api.get_image_bundle_by_name(bundles['data'][0]['name'])
             d = self.api.get_device_by_name(devices[0]['fqdn'])
@@ -1086,7 +1355,7 @@ class TestCvpClient(DutSystemTest):
         # add back to inventory
         self.api.add_device_to_inventory(device['ipAddress'],
                                          orig_cont['name'],
-                                         orig_cont['key'])
+                                         orig_cont['key'], True)
         # get non connected device count until it is back to equal or less
         # than the original non connected device count
         non_connect_count = self.api.get_non_connected_device_count()
@@ -1139,39 +1408,120 @@ class TestCvpClient(DutSystemTest):
         # Set client apiversion if it is not already set
         if self.clnt.apiversion is None:
             self.api.get_cvp_info()
-        chg_ctrl_name = 'test_api_%d' % time.time()
-        (task_id, _) = self._create_task()
-        chg_ctrl_tasks = [{
-            'taskId': task_id,
-            'taskOrder': 1
-        }]
-        chg_ctrl = self.api.create_change_control(chg_ctrl_name,
-                                                  chg_ctrl_tasks,
-                                                  '', '', '')
-        cc_id = chg_ctrl['ccId']
+        if self.clnt.apiversion != 'v3':
+            chg_ctrl_name = 'test_api_%d' % time.time()
+            (task_id, _) = self._create_task()
+            chg_ctrl_tasks = [{
+                'taskId': task_id,
+                'taskOrder': 1
+            }]
+            chg_ctrl = self.api.create_change_control(chg_ctrl_name,
+                                                      chg_ctrl_tasks,
+                                                      '', '', '')
+            cc_id = chg_ctrl['ccId']
 
-        # Verify the pending change control information
-        chg_ctrl_pending = self.api.get_change_control_info(cc_id)
-        self.assertEqual(chg_ctrl_pending['status'], 'Pending')
+            # Verify the pending change control information
+            chg_ctrl_pending = self.api.get_change_control_info(cc_id)
+            self.assertEqual(chg_ctrl_pending['status'], 'Pending')
 
-        # Execute the change control
-        self.api.execute_change_controls([cc_id])
+            # Execute the change control
+            self.api.execute_change_controls([cc_id])
 
-        # Verify the in progress/completed change control information
-        chg_ctrl_executed = self.api.get_change_control_info(cc_id)
-        self.assertIn(chg_ctrl_executed['status'], ('Inprogress', 'Completed'))
-        # Wait until change control is completed before continuing
-        # to next test
-        for _ in range(3):
+            # Verify the in progress/completed change control information
             chg_ctrl_executed = self.api.get_change_control_info(cc_id)
-            if chg_ctrl_executed['status'] == 'Completed':
-                break
+            self.assertIn(chg_ctrl_executed['status'],
+                          ('Inprogress', 'Completed'))
+            # Wait until change control is completed before continuing
+            # to next test
+            for _ in range(3):
+                chg_ctrl_executed = self.api.get_change_control_info(cc_id)
+                if chg_ctrl_executed['status'] == 'Completed':
+                    break
+                else:
+                    time.sleep(2)
+            # For 2018.2 give a few extra seconds for device status to get
+            # back in compliance.
+            if self.clnt.apiversion == 'v2':
+                time.sleep(5)
             else:
                 time.sleep(2)
-        # For 2018.2 give a few extra seconds for device status to get
-        # back in compliance.
-        if self.clnt.apiversion == 'v2':
-            time.sleep(5)
+        else:
+            print(self.clnt.apiversion)
+            print('SKIPPING TEST FOR GRANT')
+            time.sleep(1)
+
+    def test_api_cancel_change_control(self):
+        ''' Verify cancel_change_control.
+        '''
+        # Set client apiversion if it is not already set
+        if self.clnt.apiversion is None:
+            self.api.get_cvp_info()
+        if self.clnt.apiversion != 'v3':
+            chg_ctrl_name = 'test_api_%d' % time.time()
+            (task_id, _) = self._create_task()
+            chg_ctrl_tasks = [{
+                'taskId': task_id,
+                'taskOrder': 1
+            }]
+            chg_ctrl = self.api.create_change_control(chg_ctrl_name,
+                                                      chg_ctrl_tasks,
+                                                      '', '', '')
+            cc_id = chg_ctrl['ccId']
+
+            # Verify the pending change control information
+            chg_ctrl_pending = self.api.get_change_control_info(cc_id)
+            self.assertEqual(chg_ctrl_pending['status'], 'Pending')
+
+            # Cancel the change control
+            self.api.cancel_change_controls([cc_id])
+            time.sleep(3)
+
+            # Verify the cancelled change control information
+            chg_ctrl_cancelled = self.api.get_change_control_info(cc_id)
+            self.assertEqual(chg_ctrl_cancelled['status'], 'Cancelled')
+        else:
+            print(self.clnt.apiversion)
+            print('SKIPPING TEST FOR GRANT')
+            time.sleep(1)
+
+    def test_api_delete_change_control(self):
+        ''' Verify delete_change_control.
+        '''
+        # Set client apiversion if it is not already set
+        if self.clnt.apiversion is None:
+            self.api.get_cvp_info()
+        if self.clnt.apiversion != 'v3':
+            chg_ctrl_name = 'test_api_%d' % time.time()
+            (task_id, _) = self._create_task()
+            chg_ctrl_tasks = [{
+                'taskId': task_id,
+                'taskOrder': 1
+            }]
+            chg_ctrl = self.api.create_change_control(chg_ctrl_name,
+                                                      chg_ctrl_tasks,
+                                                      '', '', '')
+            cc_id = chg_ctrl['ccId']
+
+            # Verify the pending change control information
+            chg_ctrl_pending = self.api.get_change_control_info(cc_id)
+            self.assertEqual(chg_ctrl_pending['status'], 'Pending')
+
+            # Delete the change control
+            self.api.delete_change_controls([cc_id])
+            time.sleep(3)
+
+            # Verify the deleted change control information no longer exists
+            chg_ctrl_cancelled = self.api.get_change_control_info(cc_id)
+            self.assertIsNone(chg_ctrl_cancelled)
+
+            # Cancel previously created task
+            cancel_task_resp = self.api.cancel_task(task_id)
+            time.sleep(1)
+            self.assertIsNotNone(cancel_task_resp)
+        else:
+            print(self.clnt.apiversion)
+            print('SKIPPING TEST FOR GRANT')
+            time.sleep(1)
 
     def test_api_filter_topology(self):
         ''' Verify filter_topology.
@@ -1212,6 +1562,59 @@ class TestCvpClient(DutSystemTest):
             self.assertIn(key, known_dev_data)
             if self.clnt.apiversion == 'v1' or key not in diff_val_form_keys:
                 self.assertEqual(topo_dev_data[key], known_dev_data[key])
+
+#    def test_api_reset_device(self):
+#        ''' Verify reset_device
+#        '''
+#        device = self.api.get_inventory()[0]
+#        cur_confs = self.api.get_configlets_by_netelement_id(device['key'])
+#        device_configlet_keys = []
+#        device_configlet_names = []
+#        for map in cur_confs['configletMapper']:
+#            if cur_confs['configletMapper'][map]['type'] == 'netelement':
+#                device_configlet_keys.append(map)
+#
+#       for confkey in device_configlet_keys:
+#            for configlet in cur_confs['configletList']:
+#                if confkey == configlet['key']:
+#                    device_configlet_names.append(configlet['name'])
+#                    continue
+#        orig_cont = self.api.get_parent_container_for_device(device['key'])
+#        undefined_devs = self.api.get_devices_in_container('Undefined')
+#        task_id = self._get_next_task_id()
+#
+#        resp = self.api.reset_device('TESTAPP', device, create_task=True)
+#         print(resp)
+#         self._execute_long_running_task(task_id)
+#
+#         new_undefined_devs = self.api.get_devices_in_container('Undefined')
+#         self.assertEqual(len(undefined_devs) + 1, len(new_undefined_devs))
+#
+#         new_device_info = self.api.get_inventory()[0]
+#
+#         new_cont = self.api.get_parent_container_for_device(
+#             new_device_info['key'])
+#         self.assertEqual(new_cont['name'], 'Undefined')
+#
+#         task_id = self._get_next_task_id()
+#         resp = self.api.move_device_to_container('TESTAPP', new_device_info,
+#                                                  orig_cont,
+#                                                  create_task=False)
+#         print(resp)
+#         apply_confs_list = []
+#         for index, confkey in enumerate(device_configlet_keys):
+#             param = {'name': device_configlet_names[index], 'key': confkey}
+#             apply_confs_list.append(param)
+#         resp = self.api.apply_configlets_to_device('TESTAPP',
+#                                                    new_device_info,
+#                                                    apply_confs_list,
+#                                                    create_task=True)
+#         print(resp)
+#         self._execute_long_running_task(task_id)
+#
+#         final_undef_devs = self.api.get_devices_in_container('Undefined')
+#         self.assertEqual(len(undefined_devs), len(final_undef_devs))
+
 
 if __name__ == '__main__':
     unittest.main()

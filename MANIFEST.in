@@ -4,6 +4,7 @@ include *.spec
 include *.txt
 include LICENSE
 include VERSION
+include .pylintrc
 recursive-include docs *.rst
 recursive-include test *.py
 recursive-include test *.yaml
