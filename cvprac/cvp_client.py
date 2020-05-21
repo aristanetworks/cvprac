@@ -201,10 +201,11 @@ class CvpClient(object):
         # Set apiversion to v3 for 2019 and beyond.
         # Set apiversion to v2 for 2018.2 onwards until 2019
         # Set apiversion to v1 for 2018.1 and previous
-        if parse_version(version) >= parse_version('2019.0'):
+        train = ".".join(version.split(".")[0:2])
+        if parse_version(train) >= parse_version('2019.0'):
             self.log.info('Setting API version to v3')
             self.apiversion = 'v3'
-        elif parse_version(version) > parse_version('2018.1'):
+        elif parse_version(train) > parse_version('2018.1'):
             self.log.info('Setting API version to v2')
             self.apiversion = 'v2'
         else:
