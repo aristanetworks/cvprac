@@ -54,6 +54,7 @@ import shutil
 import sys
 import time
 import unittest
+from pprint import pprint
 from requests.exceptions import Timeout
 
 import urllib3
@@ -1246,7 +1247,8 @@ class TestCvpClient(DutSystemTest):
             self.assertEqual(bundle['name'], bundle_name)
 
     def test_api_get_image_bundle_by_name_doesnt_exist(self):
-        ''' Verify get image bundle by name returns none if image bundle doesn't exist
+        ''' Verify get image bundle by name returns none if image bundle
+            doesn't exist
         '''
         result = self.api.get_image_bundle_by_name('nonexistantimagebundle')
         self.assertIsNone(result)
@@ -1446,8 +1448,8 @@ class TestCvpClient(DutSystemTest):
             else:
                 time.sleep(2)
         else:
-            print(self.clnt.apiversion)
-            print('SKIPPING TEST FOR GRANT')
+            pprint('SKIPPING TEST FOR GRANT - {0}'.format(
+                self.clnt.apiversion))
             time.sleep(1)
 
     def test_api_cancel_change_control(self):
@@ -1480,8 +1482,8 @@ class TestCvpClient(DutSystemTest):
             chg_ctrl_cancelled = self.api.get_change_control_info(cc_id)
             self.assertEqual(chg_ctrl_cancelled['status'], 'Cancelled')
         else:
-            print(self.clnt.apiversion)
-            print('SKIPPING TEST FOR GRANT')
+            pprint('SKIPPING TEST FOR GRANT - {0}'.format(
+                self.clnt.apiversion))
             time.sleep(1)
 
     def test_api_delete_change_control(self):
@@ -1519,8 +1521,8 @@ class TestCvpClient(DutSystemTest):
             time.sleep(1)
             self.assertIsNotNone(cancel_task_resp)
         else:
-            print(self.clnt.apiversion)
-            print('SKIPPING TEST FOR GRANT')
+            pprint('SKIPPING TEST FOR GRANT - {0}'.format(
+                self.clnt.apiversion))
             time.sleep(1)
 
     def test_api_filter_topology(self):
@@ -1584,7 +1586,7 @@ class TestCvpClient(DutSystemTest):
 #        task_id = self._get_next_task_id()
 #
 #        resp = self.api.reset_device('TESTAPP', device, create_task=True)
-#         print(resp)
+#         pprint(resp)
 #         self._execute_long_running_task(task_id)
 #
 #         new_undefined_devs = self.api.get_devices_in_container('Undefined')
@@ -1600,7 +1602,7 @@ class TestCvpClient(DutSystemTest):
 #         resp = self.api.move_device_to_container('TESTAPP', new_device_info,
 #                                                  orig_cont,
 #                                                  create_task=False)
-#         print(resp)
+#         pprint(resp)
 #         apply_confs_list = []
 #         for index, confkey in enumerate(device_configlet_keys):
 #             param = {'name': device_configlet_names[index], 'key': confkey}
@@ -1609,7 +1611,7 @@ class TestCvpClient(DutSystemTest):
 #                                                    new_device_info,
 #                                                    apply_confs_list,
 #                                                    create_task=True)
-#         print(resp)
+#         pprint(resp)
 #         self._execute_long_running_task(task_id)
 #
 #         final_undef_devs = self.api.get_devices_in_container('Undefined')
