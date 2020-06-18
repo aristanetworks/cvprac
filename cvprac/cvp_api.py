@@ -517,6 +517,9 @@ class CvpApi(object):
 
             Args:
                 device_mac (str): mac address of device we are deleting
+                                  For CVP 2020 this param is now required to
+                                  be the device serial number instead of mac
+                                  address.
             Returns:
                 data (dict): Contains success or failure message
         '''
@@ -529,13 +532,27 @@ class CvpApi(object):
             Args:
                 device_macs (list): list of mac address for
                                     devices we're deleting
+                                    For CVP 2020 this param is now required to
+                                    be a list of device serial numbers instead
+                                    of mac addresses.
             Returns:
                 data (dict): Contains success or failure message
         '''
         self.log.debug('delete_devices: called')
         data = {'data': device_macs}
-        return self.clnt.post('/inventory/deleteDevices.do?', data=data,
-                              timeout=self.request_timeout)
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion != 'v4':
+            resp = self.clnt.post('/inventory/deleteDevices.do?', data=data,
+                                  timeout=self.request_timeout)
+        else:
+            self.log.warning('NOTE: The Delete Devices API has updated for'
+                             ' CVP 2020.2 and it is not required to send the'
+                             ' device serial number instead of mac address'
+                             ' when deleting a device')
+            resp = self.clnt.delete('/inventory/devices', data=data,
+                                    timeout=self.request_timeout)
+        return resp
 
     def get_non_connected_device_count(self):
         '''Returns number of devices not accessible/connected in the temporary

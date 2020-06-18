@@ -1349,7 +1349,14 @@ class TestCvpClient(DutSystemTest):
         # Get devices current configlets
         orig_configlets = self.api.get_configlets_by_device_id(device['key'])
         # delete from inventory
-        self.api.delete_device(device['systemMacAddress'])
+        if self.clnt.apiversion is None:
+            self.api.get_cvp_info()
+        if self.clnt.apiversion != 'v4':
+            self.api.delete_device(device['systemMacAddress'])
+        else:
+            pprint('Running Delete Device for API - {0}'.format(
+                self.clnt.apiversion))
+            self.api.delete_device(device['serialNumber'])
         # sleep to allow delete to complete
         time.sleep(1)
         # verify not found in inventory
