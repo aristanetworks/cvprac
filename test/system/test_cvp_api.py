@@ -174,7 +174,8 @@ class TestCvpClient(DutSystemTest):
         cnt = 30
         if self.clnt.apiversion is None:
             self.api.get_cvp_info()
-        if self.clnt.apiversion == 'v2':
+        if (self.clnt.apiversion == 'v2' or self.clnt.apiversion == 'v3' or
+                self.clnt.apiversion == 'v4'):
             # Increase timeout by 30 sec for CVP 2018.2 and beyond
             cnt += 30
         while cnt > 0:
@@ -1410,7 +1411,7 @@ class TestCvpClient(DutSystemTest):
         # Set client apiversion if it is not already set
         if self.clnt.apiversion is None:
             self.api.get_cvp_info()
-        if self.clnt.apiversion != 'v3':
+        if self.clnt.apiversion != 'v3' and self.clnt.apiversion != 'v4':
             chg_ctrl_name = 'test_api_%d' % time.time()
             (task_id, _) = self._create_task()
             chg_ctrl_tasks = [{
@@ -1448,7 +1449,7 @@ class TestCvpClient(DutSystemTest):
             else:
                 time.sleep(2)
         else:
-            pprint('SKIPPING TEST FOR GRANT - {0}'.format(
+            pprint('SKIPPING TEST FOR API - {0}'.format(
                 self.clnt.apiversion))
             time.sleep(1)
 
@@ -1458,7 +1459,7 @@ class TestCvpClient(DutSystemTest):
         # Set client apiversion if it is not already set
         if self.clnt.apiversion is None:
             self.api.get_cvp_info()
-        if self.clnt.apiversion != 'v3':
+        if self.clnt.apiversion != 'v3' and self.clnt.apiversion != 'v4':
             chg_ctrl_name = 'test_api_%d' % time.time()
             (task_id, _) = self._create_task()
             chg_ctrl_tasks = [{
@@ -1482,7 +1483,7 @@ class TestCvpClient(DutSystemTest):
             chg_ctrl_cancelled = self.api.get_change_control_info(cc_id)
             self.assertEqual(chg_ctrl_cancelled['status'], 'Cancelled')
         else:
-            pprint('SKIPPING TEST FOR GRANT - {0}'.format(
+            pprint('SKIPPING TEST FOR API - {0}'.format(
                 self.clnt.apiversion))
             time.sleep(1)
 
@@ -1492,7 +1493,7 @@ class TestCvpClient(DutSystemTest):
         # Set client apiversion if it is not already set
         if self.clnt.apiversion is None:
             self.api.get_cvp_info()
-        if self.clnt.apiversion != 'v3':
+        if self.clnt.apiversion != 'v3' and self.clnt.apiversion != 'v4':
             chg_ctrl_name = 'test_api_%d' % time.time()
             (task_id, _) = self._create_task()
             chg_ctrl_tasks = [{
@@ -1521,7 +1522,7 @@ class TestCvpClient(DutSystemTest):
             time.sleep(1)
             self.assertIsNotNone(cancel_task_resp)
         else:
-            pprint('SKIPPING TEST FOR GRANT - {0}'.format(
+            pprint('SKIPPING TEST FOR API - {0}'.format(
                 self.clnt.apiversion))
             time.sleep(1)
 

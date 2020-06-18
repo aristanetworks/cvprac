@@ -190,26 +190,34 @@ class CvpClient(object):
     def set_version(self, version):
         ''' Set the CVP API version to be used when making api calls.
 
-            For CVP versions 2018.1 and prior, use api version 1 - v1.
-            For CVP versions 2018.2 and later, use api version 2 - v2.
-            For CVP versions 2019.0 and later, use api version 3 - v3.
-            For CVP versions 2020.2 and later, use api version 4 - v4.
+            For CVP versions 2018.1.X and prior, use api version 1 - v1.
+            For CVP versions 2018.2.X, use api version 2 - v2.
+            For CVP versions 2019.0.0 through 2020.1.0, use api version 3 - v3.
+            For CVP versions 2020.1.1 and later, use api version 4 - v4.
 
             Args:
                 version (str): The CVP version in use.
         '''
         self.version = version
         self.log.info('Version %s', version)
-
-        # Set apiversion to v4 for 2020.2 and beyond.
-        # Set apiversion to v3 for 2019 onwards until 2020.1
-        # Set apiversion to v2 for 2018.2 onwards until 2019
-        # Set apiversion to v1 for 2018.1 and previous
-        train = ".".join(version.split(".")[0:2])
-        if parse_version(train) >= parse_version('2019.0'):
+        # Set apiversion to v4 for 2020.1.1 and beyond.
+        # Set apiversion to v3 for 2019.0.0 through 2020.1.0
+        # Set apiversion to v2 for 2018.2.X
+        # Set apiversion to v1 for 2018.1.X and prior
+        version_components = version.split(".")
+        if len(version_components) < 3:
+            version_components.append("0")
+            self.log.info('Version found with less than 3 components.'
+                          ' Appending 0. Updated Version String - %s',
+                          ".".join(version_components))
+        full_version = ".".join(version_components)
+        if parse_version(full_version) >= parse_version('2020.1.1'):
+            self.log.info('Setting API version to v4')
+            self.apiversion = 'v4'
+        elif parse_version(full_version) >= parse_version('2019.0.0'):
             self.log.info('Setting API version to v3')
             self.apiversion = 'v3'
-        elif parse_version(train) > parse_version('2018.1'):
+        elif parse_version(full_version) >= parse_version('2018.2.0'):
             self.log.info('Setting API version to v2')
             self.apiversion = 'v2'
         else:

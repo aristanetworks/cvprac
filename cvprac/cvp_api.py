@@ -1545,7 +1545,8 @@ class CvpApi(object):
                               timeout=self.request_timeout)
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion == 'v2' or self.clnt.apiversion == 'v3':
+        if (self.clnt.apiversion == 'v2' or self.clnt.apiversion == 'v3' or
+                self.clnt.apiversion == 'v4'):
             if resp['complianceIndication'] == u'':
                 resp['complianceIndication'] = 'NONE'
         return resp
@@ -1895,10 +1896,10 @@ class CvpApi(object):
         self.log.debug('get_change_controls: query: %s' % query)
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion == 'v3':
-            self.log.debug('v3 getChangeControls API Call')
+        if self.clnt.apiversion == 'v3' or self.clnt.apiversion == 'v4':
+            self.log.debug('v3/v4 getChangeControls API Call')
             self.log.warning(
-                'get_change_controls: change control APIs moved for v3')
+                'get_change_controls: change control APIs moved for v3/v4')
             return None
 
         self.log.debug('v2 getChangeControls API Call')
@@ -1925,8 +1926,8 @@ class CvpApi(object):
         self.log.debug('change_control_available_tasks: query: %s' % query)
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion == 'v3':
-            self.log.debug('v3 uses existing get_task_by_status API Call')
+        if self.clnt.apiversion == 'v3' or self.clnt.apiversion == 'v4':
+            self.log.debug('v3/v4 uses existing get_task_by_status API Call')
             return self.get_tasks_by_status('PENDING')
 
         self.log.debug('v2 getTasksByStatus API Call')
@@ -1993,10 +1994,10 @@ class CvpApi(object):
         # }
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion == 'v3':
-            self.log.debug('v3 addOrUpdateChangeControl API Call')
+        if self.clnt.apiversion == 'v3' or self.clnt.apiversion == 'v4':
+            self.log.debug('v3/v4 addOrUpdateChangeControl API Call')
             self.log.warning('create_change_control:'
-                             ' change control APIs moved for v3')
+                             ' change control APIs moved for v3/v4')
             return None
 
         self.log.debug('v2 addOrUpdateChangeControl API Call')
@@ -2038,7 +2039,7 @@ class CvpApi(object):
         self.log.debug('create_change_control_v3')
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion != 'v3':
+        if self.clnt.apiversion != 'v3' and self.clnt.apiversion != 'v4':
             self.log.debug('Wrong method for API version %s.'
                            ' Use create_change_control method',
                            self.clnt.apiversion)
@@ -2087,10 +2088,10 @@ class CvpApi(object):
                        % (cc_id, notes))
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion == 'v3':
-            self.log.debug('v3 addNotesToChangeControl API Call deprecated')
+        if self.clnt.apiversion == 'v3' or self.clnt.apiversion == 'v4':
+            self.log.debug('v3/v4 addNotesToChangeControl API Call deprecated')
             self.log.warning('add_notes_to_change_control:'
-                             ' change control APIs not supported for v3')
+                             ' change control APIs not supported for v3/v4')
             return None
 
         self.log.debug('v2 addNotesToChangeControl API Call')
@@ -2107,9 +2108,9 @@ class CvpApi(object):
         '''
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion == 'v3':
+        if self.clnt.apiversion == 'v3' or self.clnt.apiversion == 'v4':
             self.log.debug(
-                'v3 /api/v3/services/ccapi.ChangeControl/Start API Call')
+                'v3/v4 /api/v3/services/ccapi.ChangeControl/Start API Call')
             for cc_id in cc_ids:
                 resp_list = []
                 data = {'cc_id': cc_id}
@@ -2135,7 +2136,7 @@ class CvpApi(object):
         self.log.debug('approve_change_control')
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion != 'v3':
+        if self.clnt.apiversion != 'v3' and self.clnt.apiversion != 'v4':
             self.log.debug('Approval methods not valid for API version %s.'
                            ' Functionality did not exist',
                            self.clnt.apiversion)
@@ -2156,7 +2157,7 @@ class CvpApi(object):
         self.log.debug('delete_change_control_approval')
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion != 'v3':
+        if self.clnt.apiversion != 'v3' and self.clnt.apiversion != 'v4':
             self.log.debug('Approval methods not valid for API version %s.'
                            ' Functionality did not exist',
                            self.clnt.apiversion)
@@ -2176,9 +2177,9 @@ class CvpApi(object):
         '''
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion == 'v3':
+        if self.clnt.apiversion == 'v3' or self.clnt.apiversion == 'v4':
             self.log.debug(
-                'v3 /api/v3/services/ccapi.ChangeControl/Stop API Call')
+                'v3/v4 /api/v3/services/ccapi.ChangeControl/Stop API Call')
             resp_list = []
             for cc_id in cc_ids:
                 data = {'cc_id': cc_id}
@@ -2201,9 +2202,9 @@ class CvpApi(object):
         '''
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion == 'v3':
+        if self.clnt.apiversion == 'v3' or self.clnt.apiversion == 'v4':
             self.log.debug(
-                'v3 /api/v3/services/ccapi.ChangeControl/Delete API Call')
+                'v3/v4 /api/v3/services/ccapi.ChangeControl/Delete API Call')
             for cc_id in cc_ids:
                 resp_list = []
                 data = {'cc_id': cc_id}
@@ -2265,11 +2266,12 @@ class CvpApi(object):
         self.log.debug('get_change_control_info: %s', cc_id)
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion == 'v3':
-            self.log.debug('get_change_control_info method deprecated for v3.'
-                           ' Moved to get_change_control_status')
+        if self.clnt.apiversion == 'v3' or self.clnt.apiversion == 'v4':
+            self.log.debug('get_change_control_info method deprecated for'
+                           ' v3/v4. Moved to get_change_control_status')
             self.log.warning('get_change_control_info:'
-                             ' info change control API moved for v3 to status')
+                             ' info change control API moved for v3/v4 to'
+                             ' status')
             return None
 
         self.log.debug('v2 getChangeControlInformation.do API Call')
@@ -2308,7 +2310,7 @@ class CvpApi(object):
         self.log.debug('get_change_control_status: %s', cc_id)
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion != 'v3':
+        if self.clnt.apiversion != 'v3' and self.clnt.apiversion != 'v4':
             self.log.debug('get_change_control_status method not supported'
                            ' for API version %s. Use old'
                            ' get_change_control_info method'

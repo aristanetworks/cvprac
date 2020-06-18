@@ -46,6 +46,7 @@ class TestClient(unittest.TestCase):
     """
     # pylint: disable=protected-access
     # pylint: disable=invalid-name
+    # pylint: disable=too-many-statements
 
     def setUp(self):
         """ Setup for CvpClient unittests
@@ -55,6 +56,116 @@ class TestClient(unittest.TestCase):
         self.clnt.nodes = nodes
         self.clnt.node_cnt = len(nodes)
         self.clnt.node_pool = cycle(nodes)
+
+    def test_set_version(self):
+        """ Test setting of client.apiversion parameter
+        """
+        self.assertEqual(self.clnt.apiversion, None)
+
+        test_version = '2018.0'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, "v1")
+        self.clnt.apiversion = None
+
+        test_version = '2018.1'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, "v1")
+        self.clnt.apiversion = None
+
+        test_version = '2018.1.0'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, "v1")
+        self.clnt.apiversion = None
+
+        test_version = '2018.1.3'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, "v1")
+        self.clnt.apiversion = None
+
+        test_version = '2018.2'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, "v2")
+        self.clnt.apiversion = None
+
+        test_version = '2018.2.0'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, "v2")
+        self.clnt.apiversion = None
+
+        test_version = '2018.2.5'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, "v2")
+        self.clnt.apiversion = None
+
+        test_version = '2019.0'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, "v3")
+        self.clnt.apiversion = None
+
+        test_version = '2019.1'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, "v3")
+        self.clnt.apiversion = None
+
+        test_version = '2019.1.0'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, "v3")
+        self.clnt.apiversion = None
+
+        test_version = '2019.1.1'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, "v3")
+        self.clnt.apiversion = None
+
+        test_version = '2019.1.4'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, "v3")
+        self.clnt.apiversion = None
+
+        test_version = '2020.0'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, "v3")
+        self.clnt.apiversion = None
+
+        test_version = '2020.0.0'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, "v3")
+        self.clnt.apiversion = None
+
+        test_version = '2020.1'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, "v3")
+        self.clnt.apiversion = None
+
+        test_version = '2020.1.0'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, "v3")
+        self.clnt.apiversion = None
+
+        test_version = '2020.1.0.1'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, "v3")
+        self.clnt.apiversion = None
+
+        test_version = '2020.1.1'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, "v4")
+        self.clnt.apiversion = None
+
+        test_version = '2020.1.1.1'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, "v4")
+        self.clnt.apiversion = None
+
+        test_version = '2020.2'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, "v4")
+        self.clnt.apiversion = None
+
+        test_version = '2020.2.0'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, "v4")
+        self.clnt.apiversion = None
 
     def test_create_session_default_https(self):
         """ Test connection to CVP nodes will default to https.
