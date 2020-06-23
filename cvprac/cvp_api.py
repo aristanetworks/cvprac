@@ -518,8 +518,10 @@ class CvpApi(object):
             Args:
                 device_mac (str): mac address of device we are deleting
                                   For CVP 2020 this param is now required to
-                                  be the device serial number instead of mac
-                                  address.
+                                  be the device serial number instead of MAC
+                                  address. This method will handle getting
+                                  the device serial number via the provided
+                                  MAC address.
             Returns:
                 data (dict): Contains success or failure message
         '''
@@ -534,24 +536,49 @@ class CvpApi(object):
                                     devices we're deleting
                                     For CVP 2020 this param is now required to
                                     be a list of device serial numbers instead
-                                    of mac addresses.
+                                    of MAC addresses. This method will handle
+                                    getting the device serial number via the
+                                    provided MAC address.
             Returns:
                 data (dict): Contains success or failure message
         '''
         self.log.debug('delete_devices: called')
-        data = {'data': device_macs}
+        resp = None
         if self.clnt.apiversion is None:
             self.get_cvp_info()
         if self.clnt.apiversion != 'v4':
+            data = {'data': device_macs}
             resp = self.clnt.post('/inventory/deleteDevices.do?', data=data,
                                   timeout=self.request_timeout)
         else:
             self.log.warning('NOTE: The Delete Devices API has updated for'
                              ' CVP 2020.2 and it is not required to send the'
                              ' device serial number instead of mac address'
-                             ' when deleting a device')
-            resp = self.clnt.delete('/inventory/devices', data=data,
-                                    timeout=self.request_timeout)
+                             ' when deleting a device. Looking up each devices'
+                             'serial num based on provided MAC addresses')
+            devices = []
+            for dev_mac in device_macs:
+                device_info = self.get_device_by_mac(dev_mac)
+                if device_info is not None and 'serialNumber' in device_info:
+                    devices.append(device_info)
+                resp = self.delete_devices_by_serial(devices)
+        return resp
+
+    def delete_devices_by_serial(self, devices):
+        '''Delete the device and its pending tasks from Cvp inventory
+
+            Args:
+                devices (list): list of device objects to be deleted
+
+            Returns:
+                data (dict): Contains success or failure message
+        '''
+        device_serials = []
+        for device in devices:
+            device_serials.append(device['serialNumber'])
+        data = {'data': device_serials}
+        resp = self.clnt.delete('/inventory/devices', data=data,
+                                timeout=self.request_timeout)
         return resp
 
     def get_non_connected_device_count(self):
@@ -627,6 +654,29 @@ class CvpApi(object):
         if data:
             for netelement in data:
                 if netelement['fqdn'] == fqdn:
+                    device = netelement
+                    break
+            else:
+                device = {}
+        else:
+            device = {}
+        return device
+
+    def get_device_by_mac(self, device_mac):
+        ''' Returns the net element device dict for the devices mac address.
+
+            Args:
+                device_mac (str): MAC Address of the device.
+
+            Returns:
+                device (dict): The net element device dict for the device if
+                    otherwise returns an empty hash.
+        '''
+        self.log.debug('get_device_by_mac: MAC address: %s' % device_mac)
+        data = self.get_inventory(start=0, end=0, query=device_mac)
+        if data:
+            for netelement in data:
+                if netelement['systemMacAddress'] == device_mac:
                     device = netelement
                     break
             else:

@@ -500,6 +500,21 @@ class TestCvpClient(DutSystemTest):
         self.assertIsNotNone(result)
         self.assertEqual(result, {})
 
+    def test_api_get_device_by_mac(self):
+        ''' Verify get_device_by_mac with partial fqdn returns nothing
+        '''
+        result = self.api.get_device_by_mac(self.device['systemMacAddress'])
+        self.assertIsNotNone(result)
+        self.assertEqual(result['systemMacAddress'],
+                         self.device['systemMacAddress'])
+
+    def test_api_get_device_by_mac_bad(self):
+        ''' Verify get_device_by_mac with bad mac
+        '''
+        result = self.api.get_device_by_mac('bogus_mac')
+        self.assertIsNotNone(result)
+        self.assertEqual(result, {})
+
     def _create_configlet_builder(self, name, config, draft, form=None):
         # Delete configlet builder in case it was left by a previous test run
         try:
@@ -1349,14 +1364,7 @@ class TestCvpClient(DutSystemTest):
         # Get devices current configlets
         orig_configlets = self.api.get_configlets_by_device_id(device['key'])
         # delete from inventory
-        if self.clnt.apiversion is None:
-            self.api.get_cvp_info()
-        if self.clnt.apiversion != 'v4':
-            self.api.delete_device(device['systemMacAddress'])
-        else:
-            pprint('Running Delete Device for API - {0}'.format(
-                self.clnt.apiversion))
-            self.api.delete_device(device['serialNumber'])
+        self.api.delete_device(device['systemMacAddress'])
         # sleep to allow delete to complete
         time.sleep(1)
         # verify not found in inventory
