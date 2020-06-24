@@ -697,9 +697,16 @@ class CvpApi(object):
                     otherwise returns an empty hash.
         '''
         self.log.debug('get_device_configuration: device_mac: %s' % device_mac)
-        data = self.clnt.get('/inventory/getInventoryConfiguration.do?'
-                             'netElementId=%s' % device_mac,
-                             timeout=self.request_timeout)
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion != 'v4':
+            data = self.clnt.get('/inventory/getInventoryConfiguration.do?'
+                                 'netElementId=%s' % device_mac,
+                                 timeout=self.request_timeout)
+        else:
+            data = self.clnt.get('/inventory/device/config?'
+                                 'netElementId=%s' % device_mac,
+                                 timeout=self.request_timeout)
         running_config = ''
         if 'output' in data:
             running_config = data['output']
