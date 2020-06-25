@@ -1868,12 +1868,27 @@ class CvpApi(object):
         self.log.debug('Attempt to apply %s to %s %s' % (image['name'],
                                                          id_type, name))
         info = 'Apply image: %s to %s %s' % (image['name'], id_type, name)
+        node_id = ''
+        if 'imageBundleKeys' in image:
+            if image['imageBundleKeys']:
+                node_id = image['imageBundleKeys'][0]
+            self.log.info('Provided image is an image object.'
+                          ' Using first value from imageBundleKeys - %s'
+                          % node_id)
+        if 'id' in image:
+            node_id = image['id']
+            self.log.info('Provided image is an image bundle object.'
+                          ' Found v1 API id field - %s' % node_id)
+        elif 'key' in image:
+            node_id = image['key']
+            self.log.info('Provided image is an image bundle object.'
+                          ' Found v2 API key field - %s' % node_id)
         data = {'data': [{'info': info,
                           'infoPreview': info,
                           'note': '',
                           'action': 'associate',
                           'nodeType': 'imagebundle',
-                          'nodeId': image['id'],
+                          'nodeId': node_id,
                           'toId': element['key'],
                           'toIdType': id_type,
                           'fromId': '',
@@ -1936,6 +1951,21 @@ class CvpApi(object):
         '''
         self.log.debug('Attempt to remove %s from %s' % (image['name'], name))
         info = 'Remove image: %s from %s' % (image['name'], name)
+        node_id = ''
+        if 'imageBundleKeys' in image:
+            if image['imageBundleKeys']:
+                node_id = image['imageBundleKeys'][0]
+            self.log.info('Provided image is an image object.'
+                          ' Using first value from imageBundleKeys - %s'
+                          % node_id)
+        if 'id' in image:
+            node_id = image['id']
+            self.log.info('Provided image is an image bundle object.'
+                          ' Found v1 API id field - %s' % node_id)
+        elif 'key' in image:
+            node_id = image['key']
+            self.log.info('Provided image is an image bundle object.'
+                          ' Found v2 API key field - %s' % node_id)
         data = {'data': [{'info': info,
                           'infoPreview': info,
                           'note': '',
@@ -1948,7 +1978,7 @@ class CvpApi(object):
                           'nodeName': '',
                           'fromName': '',
                           'toName': name,
-                          'ignoreNodeId': image['id'],
+                          'ignoreNodeId': node_id,
                           'ignoreNodeName': image['name'],
                           'childTasks': [],
                           'parentTask': ''}]}
