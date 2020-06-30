@@ -174,8 +174,7 @@ class TestCvpClient(DutSystemTest):
         cnt = 30
         if self.clnt.apiversion is None:
             self.api.get_cvp_info()
-        if (self.clnt.apiversion == 'v2' or self.clnt.apiversion == 'v3' or
-                self.clnt.apiversion == 'v4'):
+        if self.clnt.apiversion >= 2.0:
             # Increase timeout by 30 sec for CVP 2018.2 and beyond
             cnt += 30
         while cnt > 0:
@@ -1384,7 +1383,7 @@ class TestCvpClient(DutSystemTest):
             non_connect_count = self.api.get_non_connected_device_count()
         results = self.api.save_inventory()
         # Save Inventory is deprecated for 2018.2 and beyond
-        if self.clnt.apiversion == 'v1':
+        if self.clnt.apiversion == 1.0:
             self.assertEqual(results['data'], 1)
         else:
             save_msg = 'Save Inventory not implemented/necessary for' +\
@@ -1426,7 +1425,7 @@ class TestCvpClient(DutSystemTest):
         # Set client apiversion if it is not already set
         if self.clnt.apiversion is None:
             self.api.get_cvp_info()
-        if self.clnt.apiversion != 'v3' and self.clnt.apiversion != 'v4':
+        if self.clnt.apiversion < 3.0:
             chg_ctrl_name = 'test_api_%d' % time.time()
             (task_id, _) = self._create_task()
             chg_ctrl_tasks = [{
@@ -1459,7 +1458,7 @@ class TestCvpClient(DutSystemTest):
                     time.sleep(2)
             # For 2018.2 give a few extra seconds for device status to get
             # back in compliance.
-            if self.clnt.apiversion == 'v2':
+            if self.clnt.apiversion >= 2.0:
                 time.sleep(5)
             else:
                 time.sleep(2)
@@ -1474,7 +1473,7 @@ class TestCvpClient(DutSystemTest):
         # Set client apiversion if it is not already set
         if self.clnt.apiversion is None:
             self.api.get_cvp_info()
-        if self.clnt.apiversion != 'v3' and self.clnt.apiversion != 'v4':
+        if self.clnt.apiversion < 3.0:
             chg_ctrl_name = 'test_api_%d' % time.time()
             (task_id, _) = self._create_task()
             chg_ctrl_tasks = [{
@@ -1508,7 +1507,7 @@ class TestCvpClient(DutSystemTest):
         # Set client apiversion if it is not already set
         if self.clnt.apiversion is None:
             self.api.get_cvp_info()
-        if self.clnt.apiversion != 'v3' and self.clnt.apiversion != 'v4':
+        if self.clnt.apiversion < 3.0:
             chg_ctrl_name = 'test_api_%d' % time.time()
             (task_id, _) = self._create_task()
             chg_ctrl_tasks = [{
@@ -1578,7 +1577,7 @@ class TestCvpClient(DutSystemTest):
                               'deviceInfo', 'ztpMode', 'isMLAGEnabled']
         for key in topo_dev_data:
             self.assertIn(key, known_dev_data)
-            if self.clnt.apiversion == 'v1' or key not in diff_val_form_keys:
+            if self.clnt.apiversion == 1.0 or key not in diff_val_form_keys:
                 self.assertEqual(topo_dev_data[key], known_dev_data[key])
 
 #    def test_api_reset_device(self):

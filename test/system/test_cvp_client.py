@@ -261,7 +261,7 @@ class TestCvpClient(DutSystemTest):
         self.clnt.connect([dut['node']], dut['username'], dut['password'])
         if self.clnt.apiversion is None:
             self.clnt.api.get_cvp_info()
-        if self.clnt.apiversion == 'v1':
+        if self.clnt.apiversion == 1.0:
             with self.assertRaises(CvpRequestError):
                 self.clnt.get('/aaa/getServerById.do')
         else:
@@ -368,7 +368,7 @@ class TestCvpClient(DutSystemTest):
         self.clnt.connect([dut['node']], dut['username'], dut['password'])
         if self.clnt.apiversion is None:
             self.clnt.api.get_cvp_info()
-        if self.clnt.apiversion == 'v1':
+        if self.clnt.apiversion == 1.0:
             with self.assertRaises(CvpApiError):
                 self.clnt.post('/aaa/saveAAADetails.do', None)
         else:

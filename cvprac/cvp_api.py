@@ -226,7 +226,7 @@ class CvpApi(object):
         configlets = self.clnt.get('/configlet/getConfiglets.do?'
                                    'startIndex=%d&endIndex=%d' % (start, end),
                                    timeout=self.request_timeout)
-        if self.clnt.apiversion == 'v1':
+        if self.clnt.apiversion == 1.0:
             self.log.debug('v1 Inventory API Call')
             return configlets
         else:
@@ -340,7 +340,7 @@ class CvpApi(object):
         self.log.debug('get_inventory: called')
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion == 'v1':
+        if self.clnt.apiversion == 1.0:
             self.log.debug('v1 Inventory API Call')
             data = self.clnt.get('/inventory/getInventory.do?'
                                  'queryparam=%s&startIndex=%d&endIndex=%d' %
@@ -409,7 +409,7 @@ class CvpApi(object):
         self.log.debug('add_device_to_inventory: called')
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion == 'v1':
+        if self.clnt.apiversion == 1.0:
             self.log.debug('v1 Inventory API Call')
             data_list = []
             for device in device_list:
@@ -497,7 +497,7 @@ class CvpApi(object):
         self.log.debug('retry_add_to_inventory: called')
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion == 'v1':
+        if self.clnt.apiversion == 1.0:
             self.log.debug('v1 Inventory API Call')
             data = {"key": device_mac,
                     "ipAddress": device_ip,
@@ -546,7 +546,7 @@ class CvpApi(object):
         resp = None
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion != 'v4':
+        if self.clnt.apiversion < 4.0:
             data = {'data': device_macs}
             resp = self.clnt.post('/inventory/deleteDevices.do?', data=data,
                                   timeout=self.request_timeout)
@@ -592,7 +592,7 @@ class CvpApi(object):
         self.log.debug('get_non_connected_device_count: called')
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion == 'v1':
+        if self.clnt.apiversion == 1.0:
             self.log.debug('v1 Inventory API Call')
             data = self.clnt.get(
                 '/inventory/add/getNonConnectedDeviceCount.do',
@@ -613,7 +613,7 @@ class CvpApi(object):
         self.log.debug('save_inventory: called')
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion == 'v1':
+        if self.clnt.apiversion == 1.0:
             self.log.debug('v1 Inventory API Call')
             return self.clnt.post('/inventory/add/saveInventory.do',
                                   timeout=self.request_timeout)
@@ -699,7 +699,7 @@ class CvpApi(object):
         self.log.debug('get_device_configuration: device_mac: %s' % device_mac)
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion != 'v4':
+        if self.clnt.apiversion < 4.0:
             data = self.clnt.get('/inventory/getInventoryConfiguration.do?'
                                  'netElementId=%s' % device_mac,
                                  timeout=self.request_timeout)
@@ -752,7 +752,7 @@ class CvpApi(object):
         self.log.debug('Get list of containers')
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion == 'v1':
+        if self.clnt.apiversion == 1.0:
             self.log.debug('v1 Inventory API Call')
             return self.clnt.get('/inventory/add/searchContainers.do?'
                                  'startIndex=%d&endIndex=%d' % (start, end))
@@ -1619,8 +1619,7 @@ class CvpApi(object):
                               timeout=self.request_timeout)
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if (self.clnt.apiversion == 'v2' or self.clnt.apiversion == 'v3' or
-                self.clnt.apiversion == 'v4'):
+        if self.clnt.apiversion >= 2.0:
             if resp['complianceIndication'] == u'':
                 resp['complianceIndication'] = 'NONE'
         return resp
@@ -1640,7 +1639,7 @@ class CvpApi(object):
         '''
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion == 'v1':
+        if self.clnt.apiversion == 1.0:
             self.log.debug('v1 Inventory API Call')
             url = ('/snapshot/getDefaultSnapshotTemplate.do?'
                    'startIndex=0&endIndex=0')
@@ -1662,7 +1661,7 @@ class CvpApi(object):
         '''
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion == 'v1':
+        if self.clnt.apiversion == 1.0:
             self.log.debug('v1 Inventory API Call')
             data = {
                 'templateId': template_key,
@@ -2000,7 +1999,7 @@ class CvpApi(object):
         self.log.debug('get_change_controls: query: %s' % query)
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion == 'v3' or self.clnt.apiversion == 'v4':
+        if self.clnt.apiversion >= 3.0:
             self.log.debug('v3/v4 getChangeControls API Call')
             self.log.warning(
                 'get_change_controls: change control APIs moved for v3/v4')
@@ -2030,7 +2029,7 @@ class CvpApi(object):
         self.log.debug('change_control_available_tasks: query: %s' % query)
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion == 'v3' or self.clnt.apiversion == 'v4':
+        if self.clnt.apiversion >= 3.0:
             self.log.debug('v3/v4 uses existing get_task_by_status API Call')
             return self.get_tasks_by_status('PENDING')
 
@@ -2098,7 +2097,7 @@ class CvpApi(object):
         # }
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion == 'v3' or self.clnt.apiversion == 'v4':
+        if self.clnt.apiversion >= 3.0:
             self.log.debug('v3/v4 addOrUpdateChangeControl API Call')
             self.log.warning('create_change_control:'
                              ' change control APIs moved for v3/v4')
@@ -2143,7 +2142,7 @@ class CvpApi(object):
         self.log.debug('create_change_control_v3')
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion != 'v3' and self.clnt.apiversion != 'v4':
+        if self.clnt.apiversion < 3.0:
             self.log.debug('Wrong method for API version %s.'
                            ' Use create_change_control method',
                            self.clnt.apiversion)
@@ -2192,7 +2191,7 @@ class CvpApi(object):
                        % (cc_id, notes))
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion == 'v3' or self.clnt.apiversion == 'v4':
+        if self.clnt.apiversion >= 3.0:
             self.log.debug('v3/v4 addNotesToChangeControl API Call deprecated')
             self.log.warning('add_notes_to_change_control:'
                              ' change control APIs not supported for v3/v4')
@@ -2212,7 +2211,7 @@ class CvpApi(object):
         '''
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion == 'v3' or self.clnt.apiversion == 'v4':
+        if self.clnt.apiversion >= 3.0:
             self.log.debug(
                 'v3/v4 /api/v3/services/ccapi.ChangeControl/Start API Call')
             for cc_id in cc_ids:
@@ -2240,7 +2239,7 @@ class CvpApi(object):
         self.log.debug('approve_change_control')
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion != 'v3' and self.clnt.apiversion != 'v4':
+        if self.clnt.apiversion < 3.0:
             self.log.debug('Approval methods not valid for API version %s.'
                            ' Functionality did not exist',
                            self.clnt.apiversion)
@@ -2261,7 +2260,7 @@ class CvpApi(object):
         self.log.debug('delete_change_control_approval')
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion != 'v3' and self.clnt.apiversion != 'v4':
+        if self.clnt.apiversion < 3.0:
             self.log.debug('Approval methods not valid for API version %s.'
                            ' Functionality did not exist',
                            self.clnt.apiversion)
@@ -2281,7 +2280,7 @@ class CvpApi(object):
         '''
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion == 'v3' or self.clnt.apiversion == 'v4':
+        if self.clnt.apiversion >= 3.0:
             self.log.debug(
                 'v3/v4 /api/v3/services/ccapi.ChangeControl/Stop API Call')
             resp_list = []
@@ -2306,7 +2305,7 @@ class CvpApi(object):
         '''
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion == 'v3' or self.clnt.apiversion == 'v4':
+        if self.clnt.apiversion >= 3.0:
             self.log.debug(
                 'v3/v4 /api/v3/services/ccapi.ChangeControl/Delete API Call')
             for cc_id in cc_ids:
@@ -2370,7 +2369,7 @@ class CvpApi(object):
         self.log.debug('get_change_control_info: %s', cc_id)
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion == 'v3' or self.clnt.apiversion == 'v4':
+        if self.clnt.apiversion >= 3.0:
             self.log.debug('get_change_control_info method deprecated for'
                            ' v3/v4. Moved to get_change_control_status')
             self.log.warning('get_change_control_info:'
@@ -2414,7 +2413,7 @@ class CvpApi(object):
         self.log.debug('get_change_control_status: %s', cc_id)
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion != 'v3' and self.clnt.apiversion != 'v4':
+        if self.clnt.apiversion < 3.0:
             self.log.debug('get_change_control_status method not supported'
                            ' for API version %s. Use old'
                            ' get_change_control_info method'

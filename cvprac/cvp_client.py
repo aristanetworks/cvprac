@@ -190,20 +190,20 @@ class CvpClient(object):
     def set_version(self, version):
         ''' Set the CVP API version to be used when making api calls.
 
-            For CVP versions 2018.1.X and prior, use api version 1 - v1.
-            For CVP versions 2018.2.X, use api version 2 - v2.
-            For CVP versions 2019.0.0 through 2020.1.0, use api version 3 - v3.
-            For CVP versions 2020.1.1 and later, use api version 4 - v4.
+            For CVP versions 2018.1.X and prior, use api version 1.0
+            For CVP versions 2018.2.X, use api version 2.0
+            For CVP versions 2019.0.0 through 2020.1.0, use api version 3.0
+            For CVP versions 2020.1.1 and later, use api version 4.0
 
             Args:
                 version (str): The CVP version in use.
         '''
         self.version = version
         self.log.info('Version %s', version)
-        # Set apiversion to v4 for 2020.1.1 and beyond.
-        # Set apiversion to v3 for 2019.0.0 through 2020.1.0
-        # Set apiversion to v2 for 2018.2.X
-        # Set apiversion to v1 for 2018.1.X and prior
+        # Set apiversion to 4.0 for 2020.1.1 and beyond.
+        # Set apiversion to 3.0 for 2019.0.0 through 2020.1.0
+        # Set apiversion to 2.0 for 2018.2.X
+        # Set apiversion to 1.0 for 2018.1.X and prior
         version_components = version.split(".")
         if len(version_components) < 3:
             version_components.append("0")
@@ -213,16 +213,16 @@ class CvpClient(object):
         full_version = ".".join(version_components)
         if parse_version(full_version) >= parse_version('2020.1.1'):
             self.log.info('Setting API version to v4')
-            self.apiversion = 'v4'
+            self.apiversion = 4.0
         elif parse_version(full_version) >= parse_version('2019.0.0'):
             self.log.info('Setting API version to v3')
-            self.apiversion = 'v3'
+            self.apiversion = 3.0
         elif parse_version(full_version) >= parse_version('2018.2.0'):
             self.log.info('Setting API version to v2')
-            self.apiversion = 'v2'
+            self.apiversion = 2.0
         else:
             self.log.info('Setting API version to v1')
-            self.apiversion = 'v1'
+            self.apiversion = 1.0
 
     def connect(self, nodes, username, password, connect_timeout=10,
                 request_timeout=30, protocol='https', port=None, cert=False):
