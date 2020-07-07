@@ -561,7 +561,7 @@ class CvpApi(object):
                 device_info = self.get_device_by_mac(dev_mac)
                 if device_info is not None and 'serialNumber' in device_info:
                     devices.append(device_info)
-                resp = self.delete_devices_by_serial(devices)
+            resp = self.delete_devices_by_serial(devices)
         return resp
 
     def delete_devices_by_serial(self, devices):
