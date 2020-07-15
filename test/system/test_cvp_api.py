@@ -347,6 +347,24 @@ class TestCvpClient(DutSystemTest):
             self.assertDictEqual(dev_cfglts[cfglt_name],
                                  rslt_cfglts[cfglt_name])
 
+    def test_api_get_configlets_and_mappers(self):
+        ''' Verify get_configlets_and_mappers
+        '''
+        result = self.api.get_configlets_and_mappers()
+        self.assertIsNotNone(result)
+        self.assertIn('data', result)
+        data = result['data']
+        self.assertIn('configlets', data)
+        self.assertIn('configletBuilders', data)
+        self.assertIn('generatedConfigletMappers', data)
+        self.assertIn('configletMappers', data)
+        configlets = data['configlets']
+        self.assertIsNotNone(configlets)
+        self.assertGreater(configlets, 0)
+        configlet_mappers = data['configletMappers']
+        self.assertIsNotNone(configlet_mappers)
+        self.assertGreater(configlet_mappers, 0)
+
     def test_api_get_configlet_builder(self):
         ''' Verify get_configlet_builder
         '''

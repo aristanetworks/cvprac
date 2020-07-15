@@ -240,6 +240,12 @@ class CvpApi(object):
                     configlet['config'] = full_cfglt_data['config']
             return configlets
 
+    def get_configlets_and_mappers(self):
+        ''' Returns a list of all defined configlets and associated mappers
+        '''
+        self.log.debug('get_configlets_and_mappers: getConfigletsAndAssociatedMappers')
+        return self.clnt.get('/configlet/getConfigletsAndAssociatedMappers.do')
+
     def get_configlet_builder(self, c_id):
         ''' Returns the configlet builder data for the given configlet ID.
 
