@@ -1207,6 +1207,15 @@ class TestCvpClient(DutSystemTest):
         self.assertIsNotNone(result)
         self.assertEqual(result['total'], len(result['data']))
 
+    def test_api_get_image_bundle_by_container_id(self):
+        ''' Verify get image bundle by container id
+        '''
+        # Test that an invalid scope defaults to false
+        result = self.api.get_image_bundle_by_container_id('root', 0, 0,
+                                                           'invalid')
+        self.assertIsNotNone(result)
+        self.assertEqual(result['total'], 0)
+
     def test_api_save_update_delete_image_bundle(self):
         ''' Verify save_image_bundle and update_image_bundle
         '''

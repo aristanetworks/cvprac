@@ -243,7 +243,8 @@ class CvpApi(object):
     def get_configlets_and_mappers(self):
         ''' Returns a list of all defined configlets and associated mappers
         '''
-        self.log.debug('get_configlets_and_mappers: getConfigletsAndAssociatedMappers')
+        self.log.debug(
+            'get_configlets_and_mappers: getConfigletsAndAssociatedMappers')
         return self.clnt.get('/configlet/getConfigletsAndAssociatedMappers.do')
 
     def get_configlet_builder(self, c_id):
@@ -310,6 +311,27 @@ class CvpApi(object):
         return self.clnt.get('/provisioning/getConfigletsByNetElementId.do?'
                              'netElementId=%s&startIndex=%d&endIndex=%d'
                              % (d_id, start, end),
+                             timeout=self.request_timeout)
+
+    def get_image_bundle_by_container_id(self, container_id, start=0, end=0,
+                                         scope='false'):
+        ''' Returns a list of ImageBundles applied to the given container.
+            Args:
+                container_id (str): The container ID (key) to query.
+                start (int): Start index for the pagination. Default is 0.
+                end (int): End index for the pagination. If end index is 0
+                    then all the records will be returned. Default is 0.
+                scope (string) the session scope (true or false).
+        '''
+        if scope != 'true' and scope != 'false':
+            self.log.error('scope value must be true or false.'
+                           ' %s is an invalid value.'
+                           ' Defaulting back to false' % scope)
+            scope = 'false'
+        return self.clnt.get('/provisioning/getImageBundleByContainerId.do?'
+                             'containerId=%s&startIndex=%d&endIndex=%d'
+                             '&sessionScope=%s'
+                             % (container_id, start, end, scope),
                              timeout=self.request_timeout)
 
     def get_configlet_history(self, key, start=0, end=0):
