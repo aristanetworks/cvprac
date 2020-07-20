@@ -96,6 +96,26 @@ class CvpApi(object):
             self.clnt.set_version(data['version'])
         return data
 
+    def update_username(self, username, password, role):
+        ''' Updates username information, like 
+            changing password, disable/enable the username
+            
+            Args:
+                username (str): local username on CVP
+                password (str): password of the user
+                role (str): role of the user
+        '''
+        data = {
+                "user": {
+                    "userId": username,
+                    "userType": "Local",
+                    "userStatus": "Enabled",
+                    "password": password
+                    },
+                "roles": [ role ]
+               }
+        self.clnt.post('/user/updateUser.do?userId={}'.format(username),data=data, timeout=self.request_timeout)
+
     def get_task_by_id(self, task_id):
         ''' Returns the current CVP Task status for the task with the specified
             TaskId.
