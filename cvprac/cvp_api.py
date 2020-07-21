@@ -1,4 +1,4 @@
-#
+#F
 # Copyright (c) 2017, Arista Networks, Inc.
 # All rights reserved.
 #
@@ -94,6 +94,66 @@ class CvpApi(object):
                              timeout=self.request_timeout)
         if 'version' in data and self.clnt.apiversion is None:
             self.clnt.set_version(data['version'])
+        return data
+
+    def add_user(self, username, password, role, status, firstName, lastName, email):
+        '''
+           Add new local user to the CVP UI.
+
+           Args:
+                username (str): local username on CVP
+                password (str): password of the user
+                role (str): role of the user
+                status (str): state of the user (Enabled/Disabled)
+                firstName (str): first name of the user
+                lastName (str): last name of the user
+                email (str): email address of the user
+        '''
+        data = {
+                 "roles": [
+                   role
+                 ],
+                 "user": {
+                   "contactNumber": "",
+                   "email": email,
+                   "firstName": firstName,
+                   "lastName": lastName,
+                   "password": password,
+                   "userId": username,
+                   "userStatus": status
+                 }
+               }
+        self.clnt.post('/user/addUser.do', data=data, timeout=self.request_timeout)
+
+    def update_user(self, username, password, status, role):
+        ''' Updates username information, like
+            changing password, disable/enable the username
+            and user role.
+
+            Args:
+                username (str): local username on CVP
+                password (str): password of the user
+                role (str): role of the user
+        '''
+        data = {
+                "user": {
+                    "userId": username,
+                    "userType": "Local",
+                    "userStatus": status,
+                    "password": password
+                    },
+                "roles": [ role ]
+               }
+        self.clnt.post('/user/updateUser.do?userId={}'.format(username),data=data, timeout=self.request_timeout)
+
+    def get_user(self, username):
+        ''' Returns specified user information
+
+            Args:
+                username (str): username on CVP
+        '''
+        data = self.clnt.get('/user/getUser.do?userId={}'.format(username),
+                      timeout=self.request_timeout)
         return data
 
     def get_task_by_id(self, task_id):
