@@ -199,6 +199,34 @@ class TestCvpClient(DutSystemTest):
         self.assertEqual(self.clnt.version, result['version'])
         self.assertIsNotNone(self.clnt.apiversion)
 
+    def test_api_get_user(self):
+        ''' Verify get_user
+        '''
+        result = self.api.get_user(username)
+        self.assertIn('userId', result['user'])
+        self.assertIn('userStatus', result['user'])
+        self.assertIsNotNone(result['roles'])
+
+    def test_api_add_user(self):
+        ''' Verify add_user
+        '''
+        new_user = self.api.add_user(username, password, role, status, firstName, lastName, email)
+        result = self.api.get_user(username)
+        self.assertEqual(role, result['roles'][0])
+        self.assertEqual(status, result['user']['userStatus'])
+        self.assertEqual(firstName, result['user']['firstName'])
+        self.assertEqual(lasttName, result['user']['lastName'])
+        self.assertEqual(email, result['user']['email'])
+
+
+    def test_api_update_user(self):
+        ''' Verify role and status change for update_user
+        '''
+        updated = self.api.update_user(username, password, status, role)
+        result = self.api.get_user(username)
+        self.assertEqual(role, result['roles'][0])
+        self.assertEqual(status, result['user']['userStatus'])
+
     def test_api_check_compliance(self):
         ''' Verify check_compliance
         '''
