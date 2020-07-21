@@ -199,33 +199,83 @@ class TestCvpClient(DutSystemTest):
         self.assertEqual(self.clnt.version, result['version'])
         self.assertIsNotNone(self.clnt.apiversion)
 
-    def test_api_get_user(self):
-        ''' Verify get_user
+    def test_api_user_operations(self):
+        ''' Verify get_user, add_user and update_user
         '''
-        result = self.api.get_user(username)
+        # pylint: disable=too-many-statements
+        dut = self.duts[0]
+        # Test Get User
+        result = self.api.get_user(dut['username'])
+        self.assertIsNotNone(result)
+        self.assertIn('user', result)
         self.assertIn('userId', result['user'])
+        self.assertEqual(result['user']['userId'], 'cvpadmin')
         self.assertIn('userStatus', result['user'])
         self.assertIsNotNone(result['roles'])
 
-    def test_api_add_user(self):
-        ''' Verify add_user
-        '''
-        new_user = self.api.add_user(username, password, role, status, firstName, lastName, email)
-        result = self.api.get_user(username)
-        self.assertEqual(role, result['roles'][0])
-        self.assertEqual(status, result['user']['userStatus'])
-        self.assertEqual(firstName, result['user']['firstName'])
-        self.assertEqual(lasttName, result['user']['lastName'])
-        self.assertEqual(email, result['user']['email'])
+        # Check if test user exists
+        try:
+            result = self.api.get_user('test_cvp_user')
+            self.assertIsNotNone(result)
+            self.assertIn('user', result)
+            self.assertIn('userId', result['user'])
+            self.assertEqual(result['user']['userId'], 'test_cvp_user')
+            initial_user_status = result['user']['userStatus']
+            initial_user_role = result['roles'][0]
+        except CvpApiError:
+            # Test Create User
+            result = self.api.add_user('test_cvp_user', 'test_cvp_pass',
+                                       'network-admin', 'Enabled', 'Net',
+                                       'Op', 'test_cvp_pass@email.com')
+            self.assertIsNotNone(result)
+            self.assertIn('data', result)
+            self.assertIn('userId', result['data'])
+            self.assertEqual(result['data']['userId'], 'test_cvp_user')
+            self.assertIn('userStatus', result['data'])
+            self.assertEqual(result['data']['userStatus'], 'Enabled')
 
+            # Check created user
+            result = self.api.get_user('test_cvp_user')
+            self.assertIsNotNone(result)
+            self.assertIn('user', result)
+            self.assertIn('userId', result['user'])
+            self.assertEqual(result['user']['userId'], 'test_cvp_user')
+            self.assertIn('userStatus', result['user'])
+            self.assertEqual(result['user']['userStatus'], 'Enabled')
+            self.assertIsNotNone(result['roles'])
+            self.assertEqual(result['roles'], ['network-admin'])
+            initial_user_status = result['user']['userStatus']
+            initial_user_role = result['roles'][0]
 
-    def test_api_update_user(self):
-        ''' Verify role and status change for update_user
-        '''
-        updated = self.api.update_user(username, password, status, role)
-        result = self.api.get_user(username)
-        self.assertEqual(role, result['roles'][0])
-        self.assertEqual(status, result['user']['userStatus'])
+        if initial_user_status == 'Enabled':
+            update_user_status = 'Disabled'
+        else:
+            update_user_status = 'Enabled'
+
+        if initial_user_role == 'network-admin':
+            update_user_role = 'network-operator'
+        else:
+            update_user_role = 'network-admin'
+
+        # Test Update User
+        result = self.api.update_user('test_cvp_user', 'password',
+                                      update_user_status, update_user_role)
+        self.assertIsNotNone(result)
+        self.assertIn('data', result)
+        self.assertEqual(result['data'], 'success')
+        result = self.api.get_user('test_cvp_user')
+        self.assertIsNotNone(result)
+        self.assertIn('user', result)
+        self.assertIn('userId', result['user'])
+        self.assertEqual(result['user']['userId'], 'test_cvp_user')
+        self.assertIn('userStatus', result['user'])
+        self.assertEqual(result['user']['userStatus'], update_user_status)
+        self.assertIsNotNone(result['roles'])
+        self.assertEqual(result['roles'], [update_user_role])
+
+        # Verify the user doesn't exist
+        with self.assertRaises(CvpApiError):
+            self.api.get_user('doesnotexist')
 
     def test_api_check_compliance(self):
         ''' Verify check_compliance
