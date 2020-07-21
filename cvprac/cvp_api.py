@@ -1,4 +1,4 @@
-#
+#F
 # Copyright (c) 2017, Arista Networks, Inc.
 # All rights reserved.
 #
@@ -96,9 +96,10 @@ class CvpApi(object):
             self.clnt.set_version(data['version'])
         return data
 
-    def update_username(self, username, password, role):
+    def update_user(self, username, password, role):
         ''' Updates username information, like 
             changing password, disable/enable the username
+            and user role.
             
             Args:
                 username (str): local username on CVP
