@@ -2574,8 +2574,9 @@ class CvpApi(object):
             return self._save_topology_v2([])
         return None
 
-    def deploy_device(self, device, container, configlets=None, image=None,
-                      create_task=True):
+    def deploy_device(self, device, container, configlets=None,
+                      image_bundle=None, create_task=True,
+                      app_name='Deploy_device'):
         ''' Move a device from the undefined container to a target container.
             Optionally apply device-specific configlets and an image.
 
@@ -2583,9 +2584,10 @@ class CvpApi(object):
                 device (dict): unique key for the device
                 container (str): name of container to move device to
                 configlets (list): list of dicts with configlet key/name pairs
-                image (str): name of image to apply to device
+                image_bundle (str): name of image bundle to apply to device
                 create_task (boolean): Create task for this deploy device
                     sequence.
+                app_name (str): calling application name for logging purposes
 
             Returns:
                 response (dict): A dict that contains a status and a list of
@@ -2597,8 +2599,9 @@ class CvpApi(object):
         self.log.debug(info)
         container_info = self.get_container_by_name(container)
         # Add action for moving device to specified container
-        self.move_device_to_container('Deploy device', device, container_info,
+        self.move_device_to_container(app_name, device, container_info,
                                       create_task=False)
+
         # Get proposed configlets device will inherit from container it is
         # being moved to.
         prop_conf = self.clnt.get('/provisioning/getTempConfigsByNetElementId.'
@@ -2609,9 +2612,10 @@ class CvpApi(object):
         self.apply_configlets_to_device('deploy_device', device,
                                         new_configlets, create_task=False)
         # Apply image to the device
-        if image:
-            image_info = self.get_image_bundle_by_name(image)
-            self.apply_image_to_device(image_info, device, create_task=False)
+        if image_bundle:
+            image_bundle_info = self.get_image_bundle_by_name(image_bundle)
+            self.apply_image_to_device(image_bundle_info, device,
+                                       create_task=False)
         if create_task:
             return self._save_topology_v2([])
         return None
