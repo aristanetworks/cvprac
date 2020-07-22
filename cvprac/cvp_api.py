@@ -159,6 +159,16 @@ class CvpApi(object):
         return self.clnt.get('/user/getUser.do?userId={}'.format(username),
                              timeout=self.request_timeout)
 
+    def delete_user(self, username):
+        ''' Remove specified user from CVP
+
+            Args:
+                username (str): username on CVP
+        '''
+        data = [username]
+        return self.clnt.post('/user/deleteUsers.do', data=data,
+                              timeout=self.request_timeout)
+
     def get_task_by_id(self, task_id):
         ''' Returns the current CVP Task status for the task with the specified
             TaskId.

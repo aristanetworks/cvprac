@@ -273,9 +273,15 @@ class TestCvpClient(DutSystemTest):
         self.assertIsNotNone(result['roles'])
         self.assertEqual(result['roles'], [update_user_role])
 
-        # Verify the user doesn't exist
+        # Test Delete User
+        result = self.api.delete_user('test_cvp_user')
+        self.assertIsNotNone(result)
+        self.assertIn('data', result)
+        self.assertEqual(result['data'], 'success')
+
+        # Verify the user successfully deleted and doesn't exist
         with self.assertRaises(CvpApiError):
-            self.api.get_user('doesnotexist')
+            self.api.get_user('test_cvp_user')
 
     def test_api_check_compliance(self):
         ''' Verify check_compliance
