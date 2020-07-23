@@ -142,6 +142,8 @@ class CvpClient(object):
         self.session = None
         self.url_prefix = None
         self.url_prefix_short = None
+        self.is_cvaas = False
+        self.tenant = None
         self.version = None
         self._last_used_node = None
 
@@ -225,7 +227,8 @@ class CvpClient(object):
             self.apiversion = 1.0
 
     def connect(self, nodes, username, password, connect_timeout=10,
-                request_timeout=30, protocol='https', port=None, cert=False):
+                request_timeout=30, protocol='https', port=None, cert=False,
+                is_cvaas=False, tenant=None):
         ''' Login to CVP and get a session ID and cookie.  Currently
             certificates are not verified if the https protocol is specified. A
             warning may be printed out from the requests module for this case.
@@ -251,6 +254,9 @@ class CvpClient(object):
                     provided then the connection will not attempt to fallback
                     to http. The False default sets the request to not verify
                     the servers TLS certificate.
+                is_cvaas (boolean): Flag for enabling connection to CVaaS.
+                tenant: (string): Tenant/Org within CVaaS to connect to.
+                    Required if is_cvaas is enabled.
 
             Raises:
                 CvpLoginError: A CvpLoginError is raised if a connection
@@ -274,6 +280,8 @@ class CvpClient(object):
         # protocol is deprecated and not used.
         self.protocol = protocol
         self.port = port
+        self.is_cvaas = is_cvaas
+        self.tenant = tenant
         self._create_session(all_nodes=True)
         # Verify that we can connect to at least one node
         if not self.session:
@@ -389,6 +397,22 @@ class CvpClient(object):
             self.log.error(msg)
             raise CvpApiError(msg)
 
+    def _check_response_status(self, response, prefix):
+        ''' Check for status OK in a response from a GET or POST request.
+            The response argument contains a response object from a GET or POST
+            request.  The prefix argument contains the prefix to put into the
+            error message.
+
+            Raises:
+                CvpRequestError: A CvpRequestError is raised if request
+                response status is not OK.
+        '''
+        if not response.ok:
+            msg = '%s: Request Error: %s - %s' % (prefix, response.reason,
+                                                  response.text)
+            self.log.error(msg)
+            raise CvpRequestError(msg)
+
     def _login(self):
         ''' Make a POST request to CVP login authentication.
             An error can be raised from the post method call or the
@@ -402,7 +426,37 @@ class CvpClient(object):
                 CvpRequestError: A CvpRequestError is raised if the request
                     is not properly constructed.
                 CvpSessionLogOutError: A CvpSessionLogOutError is raised if
-                    reponse from server indicates session was logged out.
+                    response from server indicates session was logged out.
+                HTTPError: A HTTPError is raised if there was an invalid HTTP
+                    response.
+                ReadTimeout: A ReadTimeout is raised if there was a request
+                    timeout when reading from the connection.
+                Timeout: A Timeout is raised if there was a request timeout.
+                TooManyRedirects: A TooManyRedirects is raised if the request
+                    exceeds the configured number of maximum redirections
+                ValueError: A ValueError is raised when there is no valid
+                    CVP session.  This occurs because the previous get or post
+                    request failed and no session could be established to a
+                    CVP node.  Destroy the class and re-instantiate.
+        '''
+        if self.is_cvaas:
+            return self._login_cvaas()
+        return self._login_on_prem()
+
+    def _login_on_prem(self):
+        ''' Make a POST request to CVP login authentication.
+            An error can be raised from the post method call or the
+            _is_good_response method call.  Any errors raised would be a good
+            reason not to use this host.
+
+            Raises:
+                ConnectionError: A ConnectionError is raised if there was a
+                    network problem (e.g. DNS failure, refused connection, etc)
+                CvpApiError: A CvpApiError is raised if there was a JSON error.
+                CvpRequestError: A CvpRequestError is raised if the request
+                    is not properly constructed.
+                CvpSessionLogOutError: A CvpSessionLogOutError is raised if
+                    response from server indicates session was logged out.
                 HTTPError: A HTTPError is raised if there was an invalid HTTP
                     response.
                 ReadTimeout: A ReadTimeout is raised if there was a request
@@ -424,6 +478,48 @@ class CvpClient(object):
                                      timeout=self.connect_timeout,
                                      verify=self.cert)
         self._is_good_response(response, 'Authenticate: %s' % url)
+
+        self.cookies = response.cookies
+        self.headers['APP_SESSION_ID'] = response.json()['sessionId']
+
+    def _login_cvaas(self):
+        ''' Make a POST request to CVaaS login authentication.
+            An error can be raised from the post method call or the
+            _check_response_status method call.  Any errors raised would be
+            a good reason not to use this host.
+
+            Raises:
+                ConnectionError: A ConnectionError is raised if there was a
+                    network problem (e.g. DNS failure, refused connection, etc)
+                CvpApiError: A CvpApiError is raised if there was a JSON error.
+                CvpRequestError: A CvpRequestError is raised if the request
+                    is not properly constructed.
+                CvpSessionLogOutError: A CvpSessionLogOutError is raised if
+                    response from server indicates session was logged out.
+                HTTPError: A HTTPError is raised if there was an invalid HTTP
+                    response.
+                ReadTimeout: A ReadTimeout is raised if there was a request
+                    timeout when reading from the connection.
+                Timeout: A Timeout is raised if there was a request timeout.
+                TooManyRedirects: A TooManyRedirects is raised if the request
+                    exceeds the configured number of maximum redirections
+                ValueError: A ValueError is raised when there is no valid
+                    CVP session.  This occurs because the previous get or post
+                    request failed and no session could be established to a
+                    CVP node.  Destroy the class and re-instantiate.
+        '''
+        # Remove any previous session id from the headers
+        self.headers.pop('APP_SESSION_ID', None)
+        url = self.url_prefix_short + '/api/v1/oauth?provider=local&next=false'
+        cvaas_auth = {"org": self.tenant,
+                      "name": self.authdata['userId'],
+                      "password": self.authdata['password']}
+        response = self.session.post(url,
+                                     data=json.dumps(cvaas_auth),
+                                     headers=self.headers,
+                                     timeout=self.connect_timeout,
+                                     verify=self.cert)
+        self._check_response_status(response, 'Authenticate: %s' % url)
 
         self.cookies = response.cookies
         self.headers['APP_SESSION_ID'] = response.json()['sessionId']
@@ -495,7 +591,7 @@ class CvpClient(object):
         response = None
         for node_num in range(self.node_cnt):
             # Set full URL based on current node
-            if '/api/' in url:
+            if '/api/' in url or '/cvpservice/' in url:
                 full_url = self.url_prefix_short + url
             else:
                 full_url = self.url_prefix + url
