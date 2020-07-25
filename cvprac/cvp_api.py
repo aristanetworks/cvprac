@@ -2619,3 +2619,43 @@ class CvpApi(object):
         if create_task:
             return self._save_topology_v2([])
         return None
+
+    # pylint: disable=invalid-name
+    # Must be discussed with issue aristanetworks/cvprac #94
+    def get_net_element_info_by_device_id(self, device_id):
+        ''' Return a dict of info about a device in CVP.
+
+            Args:
+                device_id (str): Device Id Key / System MAC.
+
+            Returns:
+                net element data (dict): Dict of info specific to the device
+                    requested or None if the name requested doesn't exist.
+        '''
+        self.log.debug('Attempt to get net element data for %s' % device_id)
+        try:
+            element_info = self.clnt.get('/provisioning/getNetElementInfoById.do?netElementId=%s'
+                                         % qplus(device_id), timeout=self.request_timeout)
+        except CvpApiError as e:
+            # Catch an invalid task_id error and return None
+            if 'errorMessage' in str(e):
+                self.log.debug('Device with id %s could not be found' % device_id)
+                return None
+                # pylint: disable=unreachable
+                raise CvpApiError("get_net_element_info_by_device_id:%s" % e)
+        return element_info
+
+    def get_devices_by_container_id(self, key):
+        ''' Returns a dict of the devices under the named container.
+
+            Args:
+                key (str): The containerId of the container to get devices from
+        '''
+        self.log.debug('get_devices_in_container: by Id')
+        devices = []
+        all_elements = self.clnt.get('/provisioning/getNetElementList.do?'
+                                     'nodeId=%s&startIndex=0&endIndex=0&ignoreAdd=false'
+                                     % key, timeout=self.request_timeout)
+        for device in all_elements["netElementList"]:
+            devices.append(device)
+        return devices
