@@ -350,5 +350,33 @@ class TestClient(unittest.TestCase):
             self.clnt._make_request('GET', 'url', 2, {'data': 'data'})
         self.assertEqual(self.clnt.last_used_node, '1.1.1.1')
 
+    def test_finditem(self):
+        """ Test _finditem
+        """
+        testobj = {'key1': 'value1',
+                   'key2': {'nestkey1': 'nestval1'},
+                   'key3': ['nestlist1', 'nestlist2'],
+                   'key4': [{'nestobjkey1': 'nestobjval1'},
+                            {'nestobjkey2': 'nestobjval2'},
+                            ['nestlist1', 'nestlist2'], 'neststring']}
+        value = self.clnt._finditem(testobj, 'key5')
+        self.assertIsNone(value)
+
+        value = self.clnt._finditem(testobj, 'key1')
+        self.assertEqual(value, 'value1')
+
+        value = self.clnt._finditem(testobj, 'nestkey1')
+        self.assertEqual(value, 'nestval1')
+
+        value = self.clnt._finditem(testobj, 'key2')
+        self.assertEqual(value, {'nestkey1': 'nestval1'})
+
+        value = self.clnt._finditem(testobj, 'key3')
+        self.assertEqual(value, ['nestlist1', 'nestlist2'])
+
+        value = self.clnt._finditem(testobj, 'nestobjkey2')
+        self.assertEqual(value, 'nestobjval2')
+
+
 if __name__ == '__main__':
     unittest.main()
