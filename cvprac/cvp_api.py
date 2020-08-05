@@ -451,6 +451,7 @@ class CvpApi(object):
         self.log.debug('v2 Inventory API Call')
         data = self.clnt.get('/inventory/devices?provisioned=true',
                              timeout=self.request_timeout)
+        containers = self.get_containers()
         for dev in data:
             dev['key'] = dev['systemMacAddress']
             dev['deviceInfo'] = dev['deviceStatus'] = dev['status']
@@ -470,11 +471,12 @@ class CvpApi(object):
             dev['lastSyncUp'] = 0
             dev['type'] = 'netelement'
             dev['dcaKey'] = None
-            parent_container = self.get_container_by_id(
-                dev['parentContainerKey'])
-            if parent_container is not None:
-                dev['containerName'] = parent_container['name']
-            else:
+            container_found = False
+            for container in containers['data']:
+                if dev['parentContainerKey'] == container['key']:
+                    dev['containerName'] = container['name']
+                    container_found = True
+            if not container_found:
                 dev['containerName'] = ''
         return data
 
