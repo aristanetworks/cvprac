@@ -853,6 +853,19 @@ class TestCvpClient(DutSystemTest):
         result = self.api.get_devices_in_container(container_name)
         self.assertEqual(result, devices_in_container)
 
+    def test_api_search_topology(self):
+        ''' Verify search_topology return data
+        '''
+        full_inv = self.api.get_inventory()
+        device = full_inv[0]
+        result = self.api.search_topology(device['fqdn'])
+        self.assertIsNotNone(result)
+        self.assertIn('containerList', result)
+        self.assertIn('keywordList', result)
+        self.assertIn('total', result)
+        self.assertIn('netElementList', result)
+        self.assertIn('netElementContainerList', result)
+
     def test_api_containers(self):
         ''' Verify add_container, get_container_by_name and delete_container
         '''
