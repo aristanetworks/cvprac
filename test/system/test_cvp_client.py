@@ -422,5 +422,6 @@ class TestCvpClient(DutSystemTest):
         self._change_passwd(nodes, dut['username'], self.NEW_PASSWORD,
                             dut['password'])
 
+
 if __name__ == '__main__':
     unittest.main()
