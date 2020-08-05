@@ -379,8 +379,9 @@ class CvpClient(object):
             msg = ('%s: Request Error: session logged out' % prefix)
             raise CvpSessionLogOutError(msg)
 
-        if 'errorCode' in response.text:
-            joutput = response.json()
+        joutput = response.json()
+        err_code_val = self._finditem(joutput, 'errorCode')
+        if err_code_val:
             if 'errorMessage' in joutput:
                 err_msg = joutput['errorMessage']
             else:
@@ -889,3 +890,31 @@ class CvpClient(object):
                     re-instantiate.
         '''
         return self._make_request('DELETE', url, timeout, data=data)
+
+    def _finditem(self, obj, key):
+        """ Find a key in a a nested list/dict.
+
+            Args:
+                obj (dict): Object to iterate to return value for provided key
+                key (str): The key to locate in dict and return the value for
+
+            Returns:
+                Value of found key or None if not found.
+        """
+        item = None
+        if isinstance(obj, dict):
+            if key in obj:
+                item = obj[key]
+            else:
+                for _, value in obj.items():
+                    if isinstance(value, (dict, list)):
+                        item = self._finditem(value, key)
+                        if item is not None:
+                            break
+        elif isinstance(obj, list):
+            for i in obj:
+                if isinstance(i, (dict, list)):
+                    item = self._finditem(i, key)
+                    if item is not None:
+                        break
+        return item
