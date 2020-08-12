@@ -113,6 +113,7 @@ class CvpClient(object):
     # Maximum number of times to retry a get or post to the same
     # CVP node.
     NUM_RETRY_REQUESTS = 3
+    LATEST_API_VERSION = 4.0
 
     def __init__(self, logger='cvprac', syslog=False, filename=None,
                  log_level='INFO'):
@@ -144,6 +145,7 @@ class CvpClient(object):
         self.url_prefix_short = None
         self.is_cvaas = False
         self.tenant = None
+        self.cvaas_token = None
         self.version = None
         self._last_used_node = None
 
@@ -202,33 +204,39 @@ class CvpClient(object):
         '''
         self.version = version
         self.log.info('Version %s', version)
+        # Set apiversion to latest available API version for CVaaS
         # Set apiversion to 4.0 for 2020.1.1 and beyond.
         # Set apiversion to 3.0 for 2019.0.0 through 2020.1.0
         # Set apiversion to 2.0 for 2018.2.X
         # Set apiversion to 1.0 for 2018.1.X and prior
-        version_components = version.split(".")
-        if len(version_components) < 3:
-            version_components.append("0")
-            self.log.info('Version found with less than 3 components.'
-                          ' Appending 0. Updated Version String - %s',
-                          ".".join(version_components))
-        full_version = ".".join(version_components)
-        if parse_version(full_version) >= parse_version('2020.1.1'):
-            self.log.info('Setting API version to v4')
-            self.apiversion = 4.0
-        elif parse_version(full_version) >= parse_version('2019.0.0'):
-            self.log.info('Setting API version to v3')
-            self.apiversion = 3.0
-        elif parse_version(full_version) >= parse_version('2018.2.0'):
-            self.log.info('Setting API version to v2')
-            self.apiversion = 2.0
+        if self.is_cvaas:
+            self.log.info('Setting API version to %d for CVaaS',
+                          self.LATEST_API_VERSION)
+            self.apiversion = self.LATEST_API_VERSION
         else:
-            self.log.info('Setting API version to v1')
-            self.apiversion = 1.0
+            version_components = version.split(".")
+            if len(version_components) < 3:
+                version_components.append("0")
+                self.log.info('Version found with less than 3 components.'
+                              ' Appending 0. Updated Version String - %s',
+                              ".".join(version_components))
+            full_version = ".".join(version_components)
+            if parse_version(full_version) >= parse_version('2020.1.1'):
+                self.log.info('Setting API version to v4')
+                self.apiversion = 4.0
+            elif parse_version(full_version) >= parse_version('2019.0.0'):
+                self.log.info('Setting API version to v3')
+                self.apiversion = 3.0
+            elif parse_version(full_version) >= parse_version('2018.2.0'):
+                self.log.info('Setting API version to v2')
+                self.apiversion = 2.0
+            else:
+                self.log.info('Setting API version to v1')
+                self.apiversion = 1.0
 
     def connect(self, nodes, username, password, connect_timeout=10,
                 request_timeout=30, protocol='https', port=None, cert=False,
-                is_cvaas=False, tenant=None):
+                is_cvaas=False, tenant=None, cvaas_token=None):
         ''' Login to CVP and get a session ID and cookie.  Currently
             certificates are not verified if the https protocol is specified. A
             warning may be printed out from the requests module for this case.
@@ -257,6 +265,8 @@ class CvpClient(object):
                 is_cvaas (boolean): Flag for enabling connection to CVaaS.
                 tenant: (string): Tenant/Org within CVaaS to connect to.
                     Required if is_cvaas is enabled.
+                cvaas_token (string): API Token to use in place of UN/PW login
+                    for CVaaS.
 
             Raises:
                 CvpLoginError: A CvpLoginError is raised if a connection
@@ -282,6 +292,7 @@ class CvpClient(object):
         self.port = port
         self.is_cvaas = is_cvaas
         self.tenant = tenant
+        self.cvaas_token = cvaas_token
         self._create_session(all_nodes=True)
         # Verify that we can connect to at least one node
         if not self.session:
@@ -511,19 +522,29 @@ class CvpClient(object):
         '''
         # Remove any previous session id from the headers
         self.headers.pop('APP_SESSION_ID', None)
-        url = self.url_prefix_short + '/api/v1/oauth?provider=local&next=false'
-        cvaas_auth = {"org": self.tenant,
-                      "name": self.authdata['userId'],
-                      "password": self.authdata['password']}
-        response = self.session.post(url,
-                                     data=json.dumps(cvaas_auth),
-                                     headers=self.headers,
-                                     timeout=self.connect_timeout,
-                                     verify=self.cert)
-        self._check_response_status(response, 'Authenticate: %s' % url)
-
-        self.cookies = response.cookies
-        self.headers['APP_SESSION_ID'] = response.json()['sessionId']
+        if not self.cvaas_token:
+            # For local CVaaS users no token is needed and the local username
+            # and password can be used with the below Login API.
+            url = (self.url_prefix_short +
+                   '/api/v1/oauth?provider=local&next=false')
+            cvaas_auth = {"org": self.tenant,
+                          "name": self.authdata['userId'],
+                          "password": self.authdata['password']}
+            response = self.session.post(url,
+                                         data=json.dumps(cvaas_auth),
+                                         headers=self.headers,
+                                         timeout=self.connect_timeout,
+                                         verify=self.cert)
+            self._check_response_status(response, 'Authenticate: %s' % url)
+            self.cookies = response.cookies
+            # self.headers['APP_SESSION_ID'] = response.json()['sessionId']
+        else:
+            # If using CVaaS token there is no need to run a Login API.
+            # Simply add the token into the headers or cookies
+            self.headers['Authorization'] = 'Bearer %s' % self.cvaas_token
+            # Alternative to adding token to headers it can be added to
+            # cookies as shown below.
+            # self.cookies = {'access_token': self.cvaas_token}
 
     def logout(self):
         '''
@@ -594,6 +615,9 @@ class CvpClient(object):
             # Set full URL based on current node
             if '/api/' in url or '/cvpservice/' in url:
                 full_url = self.url_prefix_short + url
+            elif self.is_cvaas:
+                # For CVaaS use cvpservice instead of web or api
+                full_url = self.url_prefix_short + '/cvpservice' + url
             else:
                 full_url = self.url_prefix + url
             try:
@@ -711,6 +735,9 @@ class CvpClient(object):
                         fhs = dict()
                         fhs['Accept'] = self.headers['Accept']
                         fhs['APP_SESSION_ID'] = self.headers['APP_SESSION_ID']
+                        if 'Authorization' in self.headers:
+                            fhs['Authorization'] = self.headers[
+                                'Authorization']
                         response = self.session.post(full_url,
                                                      cookies=self.cookies,
                                                      headers=fhs,

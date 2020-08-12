@@ -90,8 +90,13 @@ class CvpApi(object):
             Returns:
                 cvp_info (dict): CVP Information
         '''
-        data = self.clnt.get('/cvpInfo/getCvpInfo.do',
-                             timeout=self.request_timeout)
+        if not self.clnt.is_cvaas:
+            data = self.clnt.get('/cvpInfo/getCvpInfo.do',
+                                 timeout=self.request_timeout)
+        else:
+            # For CVaaS do not run the getCvpInfo REST API and assume the
+            # latest version of the API
+            data = {'version': 'cvaas'}
         if 'version' in data and self.clnt.apiversion is None:
             self.clnt.set_version(data['version'])
         return data
@@ -777,15 +782,12 @@ class CvpApi(object):
         '''
         self.log.debug('get_device_by_mac: MAC address: %s' % device_mac)
         data = self.get_inventory(start=0, end=0, query=device_mac)
+        device = {}
         if data:
             for netelement in data:
                 if netelement['systemMacAddress'] == device_mac:
                     device = netelement
                     break
-            else:
-                device = {}
-        else:
-            device = {}
         return device
 
     def get_device_configuration(self, device_mac):
@@ -869,11 +871,14 @@ class CvpApi(object):
             if (full_cont_info is not None and
                     container['Key'] != 'root'):
                 container['parentName'] = full_cont_info['parentName']
-                full_parent_info = self.get_container_by_name(
-                    full_cont_info['parentName'])
-                if full_parent_info is not None:
-                    container['parentId'] = full_parent_info['key']
+                for cont in containers:
+                    if cont['Name'] == full_cont_info['parentName']:
+                        container['parentId'] = cont['Key']
+                        break
                 else:
+                    self.log.debug(
+                        'No container parentId found for parentName %s',
+                        full_cont_info['parentName'])
                     container['parentId'] = None
             else:
                 container['parentName'] = None
