@@ -248,8 +248,7 @@ Same example as above but connecting to CVaaS with a local CVP username/password
     >>>
 
 Same example as above but connecting to CVaaS with a token:
-** Note that the username and password parameters are required by the connect()
-** function but will be ignored when using cvaas_token
+** Note that the username and password parameters are required by the connect() function but will be ignored when using cvaas_token
 
 ::
 
