@@ -16,8 +16,8 @@ Table of Contents
 #. `Getting Started`_
 
    -  `Connecting`_
-      -  `CVP On Premises`_
-      -  `CVaaS`_
+      ^  `CVP On Premises`_
+      ^  `CVaaS`_
    -  `CVP Version Handling`_
    -  `Examples`_
 
