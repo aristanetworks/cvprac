@@ -444,10 +444,10 @@ class TestCvpClient(DutSystemTest):
         self.assertIn('configletMappers', data)
         configlets = data['configlets']
         self.assertIsNotNone(configlets)
-        self.assertGreater(configlets, 0)
+        self.assertGreater(len(configlets), 0)
         configlet_mappers = data['configletMappers']
         self.assertIsNotNone(configlet_mappers)
-        self.assertGreater(configlet_mappers, 0)
+        self.assertGreater(len(configlet_mappers), 0)
 
     def test_api_get_configlet_builder(self):
         ''' Verify get_configlet_builder
