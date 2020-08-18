@@ -201,12 +201,12 @@ additional API calls so there are cases where this comes with the cost of a slig
 to access the clients get(), post() and delete() methods and make API calls directly if they want to avoid the
 potential time delay of some API functions. The current API version information handled by cvprac is shown below.
 
-* Current latest API version is 4.0
-* API version is set to latest available version for CVaaS
-* API version is set to 4.0 for 2020.1.1 and beyond.
-* API version is set to 3.0 for 2019.0.0 through 2020.1.0
-* API version is set to 2.0 for 2018.2.X
-* API version is set to 1.0 for 2018.1.X and prior
+  Current latest API version is 4.0
+  API version is set to latest available version for CVaaS
+  API version is set to 4.0 for 2020.1.1 and beyond.
+  API version is set to 3.0 for 2019.0.0 through 2020.1.0
+  API version is set to 2.0 for 2018.2.X
+  API version is set to 1.0 for 2018.1.X and prior
 
 Examples
 --------
@@ -247,7 +247,8 @@ Same example as above but connecting to CVaaS with a local CVP username/password
     {u'version': u'cvaas'}
     >>>
 
-Same example as above but connecting to CVaaS with a token (*Note that the username and password parameters are required by the connect() function but will be ignored when using cvaas_token):
+Same example as above but connecting to CVaaS with a token:
+Note that the username and password parameters are required by the connect function but will be ignored when using cvaas_token:
 
 ::
 
