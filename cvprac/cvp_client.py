@@ -113,6 +113,7 @@ class CvpClient(object):
     # Maximum number of times to retry a get or post to the same
     # CVP node.
     NUM_RETRY_REQUESTS = 3
+    LATEST_API_VERSION = 4.0
 
     def __init__(self, logger='cvprac', syslog=False, filename=None,
                  log_level='INFO'):
@@ -142,6 +143,9 @@ class CvpClient(object):
         self.session = None
         self.url_prefix = None
         self.url_prefix_short = None
+        self.is_cvaas = False
+        self.tenant = None
+        self.cvaas_token = None
         self.version = None
         self._last_used_node = None
 
@@ -190,30 +194,49 @@ class CvpClient(object):
     def set_version(self, version):
         ''' Set the CVP API version to be used when making api calls.
 
-            For CVP versions 2018.2 and later, use api version 2.
+            For CVP versions 2018.1.X and prior, use api version 1.0
+            For CVP versions 2018.2.X, use api version 2.0
+            For CVP versions 2019.0.0 through 2020.1.0, use api version 3.0
+            For CVP versions 2020.1.1 and later, use api version 4.0
 
             Args:
                 version (str): The CVP version in use.
         '''
         self.version = version
         self.log.info('Version %s', version)
-
-        # Set apiversion to v3 for 2019 and beyond.
-        # Set apiversion to v2 for 2018.2 onwards until 2019
-        # Set apiversion to v1 for 2018.1 and previous
-        train = ".".join(version.split(".")[0:2])
-        if parse_version(train) >= parse_version('2019.0'):
-            self.log.info('Setting API version to v3')
-            self.apiversion = 'v3'
-        elif parse_version(train) > parse_version('2018.1'):
-            self.log.info('Setting API version to v2')
-            self.apiversion = 'v2'
+        # Set apiversion to latest available API version for CVaaS
+        # Set apiversion to 4.0 for 2020.1.1 and beyond.
+        # Set apiversion to 3.0 for 2019.0.0 through 2020.1.0
+        # Set apiversion to 2.0 for 2018.2.X
+        # Set apiversion to 1.0 for 2018.1.X and prior
+        if self.is_cvaas:
+            self.log.info('Setting API version to %d for CVaaS',
+                          self.LATEST_API_VERSION)
+            self.apiversion = self.LATEST_API_VERSION
         else:
-            self.log.info('Setting API version to v1')
-            self.apiversion = 'v1'
+            version_components = version.split(".")
+            if len(version_components) < 3:
+                version_components.append("0")
+                self.log.info('Version found with less than 3 components.'
+                              ' Appending 0. Updated Version String - %s',
+                              ".".join(version_components))
+            full_version = ".".join(version_components)
+            if parse_version(full_version) >= parse_version('2020.1.1'):
+                self.log.info('Setting API version to v4')
+                self.apiversion = 4.0
+            elif parse_version(full_version) >= parse_version('2019.0.0'):
+                self.log.info('Setting API version to v3')
+                self.apiversion = 3.0
+            elif parse_version(full_version) >= parse_version('2018.2.0'):
+                self.log.info('Setting API version to v2')
+                self.apiversion = 2.0
+            else:
+                self.log.info('Setting API version to v1')
+                self.apiversion = 1.0
 
     def connect(self, nodes, username, password, connect_timeout=10,
-                request_timeout=30, protocol='https', port=None, cert=False):
+                request_timeout=30, protocol='https', port=None, cert=False,
+                is_cvaas=False, tenant=None, cvaas_token=None):
         ''' Login to CVP and get a session ID and cookie.  Currently
             certificates are not verified if the https protocol is specified. A
             warning may be printed out from the requests module for this case.
@@ -239,6 +262,11 @@ class CvpClient(object):
                     provided then the connection will not attempt to fallback
                     to http. The False default sets the request to not verify
                     the servers TLS certificate.
+                is_cvaas (boolean): Flag for enabling connection to CVaaS.
+                tenant: (string): Tenant/Org within CVaaS to connect to.
+                    Required if is_cvaas is enabled.
+                cvaas_token (string): API Token to use in place of UN/PW login
+                    for CVaaS.
 
             Raises:
                 CvpLoginError: A CvpLoginError is raised if a connection
@@ -262,6 +290,9 @@ class CvpClient(object):
         # protocol is deprecated and not used.
         self.protocol = protocol
         self.port = port
+        self.is_cvaas = is_cvaas
+        self.tenant = tenant
+        self.cvaas_token = cvaas_token
         self._create_session(all_nodes=True)
         # Verify that we can connect to at least one node
         if not self.session:
@@ -359,8 +390,9 @@ class CvpClient(object):
             msg = ('%s: Request Error: session logged out' % prefix)
             raise CvpSessionLogOutError(msg)
 
-        if 'errorCode' in response.text:
-            joutput = response.json()
+        joutput = response.json()
+        err_code_val = self._finditem(joutput, 'errorCode')
+        if err_code_val:
             if 'errorMessage' in joutput:
                 err_msg = joutput['errorMessage']
             else:
@@ -377,6 +409,22 @@ class CvpClient(object):
             self.log.error(msg)
             raise CvpApiError(msg)
 
+    def _check_response_status(self, response, prefix):
+        ''' Check for status OK in a response from a GET or POST request.
+            The response argument contains a response object from a GET or POST
+            request.  The prefix argument contains the prefix to put into the
+            error message.
+
+            Raises:
+                CvpRequestError: A CvpRequestError is raised if request
+                response status is not OK.
+        '''
+        if not response.ok:
+            msg = '%s: Request Error: %s - %s' % (prefix, response.reason,
+                                                  response.text)
+            self.log.error(msg)
+            raise CvpRequestError(msg)
+
     def _login(self):
         ''' Make a POST request to CVP login authentication.
             An error can be raised from the post method call or the
@@ -390,7 +438,37 @@ class CvpClient(object):
                 CvpRequestError: A CvpRequestError is raised if the request
                     is not properly constructed.
                 CvpSessionLogOutError: A CvpSessionLogOutError is raised if
-                    reponse from server indicates session was logged out.
+                    response from server indicates session was logged out.
+                HTTPError: A HTTPError is raised if there was an invalid HTTP
+                    response.
+                ReadTimeout: A ReadTimeout is raised if there was a request
+                    timeout when reading from the connection.
+                Timeout: A Timeout is raised if there was a request timeout.
+                TooManyRedirects: A TooManyRedirects is raised if the request
+                    exceeds the configured number of maximum redirections
+                ValueError: A ValueError is raised when there is no valid
+                    CVP session.  This occurs because the previous get or post
+                    request failed and no session could be established to a
+                    CVP node.  Destroy the class and re-instantiate.
+        '''
+        if self.is_cvaas:
+            return self._login_cvaas()
+        return self._login_on_prem()
+
+    def _login_on_prem(self):
+        ''' Make a POST request to CVP login authentication.
+            An error can be raised from the post method call or the
+            _is_good_response method call.  Any errors raised would be a good
+            reason not to use this host.
+
+            Raises:
+                ConnectionError: A ConnectionError is raised if there was a
+                    network problem (e.g. DNS failure, refused connection, etc)
+                CvpApiError: A CvpApiError is raised if there was a JSON error.
+                CvpRequestError: A CvpRequestError is raised if the request
+                    is not properly constructed.
+                CvpSessionLogOutError: A CvpSessionLogOutError is raised if
+                    response from server indicates session was logged out.
                 HTTPError: A HTTPError is raised if there was an invalid HTTP
                     response.
                 ReadTimeout: A ReadTimeout is raised if there was a request
@@ -416,6 +494,58 @@ class CvpClient(object):
         self.cookies = response.cookies
         self.headers['APP_SESSION_ID'] = response.json()['sessionId']
 
+    def _login_cvaas(self):
+        ''' Make a POST request to CVaaS login authentication.
+            An error can be raised from the post method call or the
+            _check_response_status method call.  Any errors raised would be
+            a good reason not to use this host.
+
+            Raises:
+                ConnectionError: A ConnectionError is raised if there was a
+                    network problem (e.g. DNS failure, refused connection, etc)
+                CvpApiError: A CvpApiError is raised if there was a JSON error.
+                CvpRequestError: A CvpRequestError is raised if the request
+                    is not properly constructed.
+                CvpSessionLogOutError: A CvpSessionLogOutError is raised if
+                    response from server indicates session was logged out.
+                HTTPError: A HTTPError is raised if there was an invalid HTTP
+                    response.
+                ReadTimeout: A ReadTimeout is raised if there was a request
+                    timeout when reading from the connection.
+                Timeout: A Timeout is raised if there was a request timeout.
+                TooManyRedirects: A TooManyRedirects is raised if the request
+                    exceeds the configured number of maximum redirections
+                ValueError: A ValueError is raised when there is no valid
+                    CVP session.  This occurs because the previous get or post
+                    request failed and no session could be established to a
+                    CVP node.  Destroy the class and re-instantiate.
+        '''
+        # Remove any previous session id from the headers
+        self.headers.pop('APP_SESSION_ID', None)
+        if not self.cvaas_token:
+            # For local CVaaS users no token is needed and the local username
+            # and password can be used with the below Login API.
+            url = (self.url_prefix_short +
+                   '/api/v1/oauth?provider=local&next=false')
+            cvaas_auth = {"org": self.tenant,
+                          "name": self.authdata['userId'],
+                          "password": self.authdata['password']}
+            response = self.session.post(url,
+                                         data=json.dumps(cvaas_auth),
+                                         headers=self.headers,
+                                         timeout=self.connect_timeout,
+                                         verify=self.cert)
+            self._check_response_status(response, 'Authenticate: %s' % url)
+            self.cookies = response.cookies
+            # self.headers['APP_SESSION_ID'] = response.json()['sessionId']
+        else:
+            # If using CVaaS token there is no need to run a Login API.
+            # Simply add the token into the headers or cookies
+            self.headers['Authorization'] = 'Bearer %s' % self.cvaas_token
+            # Alternative to adding token to headers it can be added to
+            # cookies as shown below.
+            # self.cookies = {'access_token': self.cvaas_token}
+
     def logout(self):
         '''
 
@@ -431,13 +561,13 @@ class CvpClient(object):
 
     def _make_request(self, req_type, url, timeout, data=None,
                       files=None):
-        ''' Make a GET or POST request to CVP.  If the request call raises a
+        ''' Make a GET, POST or DELETE request to CVP.  If the request call raises a
             timeout or CvpSessionLogOutError then the request will be retried
             on the same CVP node.  Otherwise the request will be tried on the
             next CVP node.
 
             Args:
-                req_type (str): Either 'GET' or 'POST'.
+                req_type (str): Either 'GET', 'POST' or 'DELETE'.
                 url (str): Portion of request URL that comes after the host.
                 timeout (int): Number of seconds the client will wait between
                     bytes sent from the server.
@@ -456,18 +586,19 @@ class CvpClient(object):
                 CvpRequestError: A CvpRequestError is raised if the request
                     is not properly constructed.
                 CvpSessionLogOutError: A CvpSessionLogOutError is raised if
-                    reponse from server indicates session was logged out.
+                    response from server indicates session was logged out.
                 HTTPError: A HTTPError is raised if there was an invalid HTTP
                     response.
                 ReadTimeout: A ReadTimeout is raised if there was a request
                     timeout when reading from the connection.
                 Timeout: A Timeout is raised if there was a request timeout.
                 TooManyRedirects: A TooManyRedirects is raised if the request
-                    exceeds the configured number of maximum redirections
+                    exceeds the configured number of maximum re-directions
                 ValueError: A ValueError is raised when there is no valid
-                    CVP session.  This occurs because the previous get or post
-                    request failed and no session could be established to a
-                    CVP node.  Destroy the class and re-instantiate.
+                    CVP session.  This occurs because the previous get, post
+                    or delete request failed and no session could be
+                    established to a CVP node.  Destroy the class and
+                    re-instantiate.
         '''
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-statements
@@ -482,8 +613,11 @@ class CvpClient(object):
         response = None
         for node_num in range(self.node_cnt):
             # Set full URL based on current node
-            if '/api/' in url:
+            if '/api/' in url or '/cvpservice/' in url:
                 full_url = self.url_prefix_short + url
+            elif self.is_cvaas:
+                # For CVaaS use cvpservice instead of web or api
+                full_url = self.url_prefix_short + '/cvpservice' + url
             else:
                 full_url = self.url_prefix + url
             try:
@@ -535,13 +669,13 @@ class CvpClient(object):
 
     def _send_request(self, req_type, full_url, timeout, data=None,
                       files=None):
-        ''' Make a GET or POST request to CVP.  If the request call raises a
-            timeout or CvpSessionLogOutError then the request will be retried
-            on the same CVP node.  Otherwise the request will be tried on the
-            next CVP node.
+        ''' Make a GET, POST or DELETE request to CVP.  If the request call
+            raises a timeout or CvpSessionLogOutError then the request will be
+            retried on the same CVP node.  Otherwise the request will be tried
+            on the next CVP node.
 
             Args:
-                req_type (str): Either 'GET' or 'POST'.
+                req_type (str): Either 'GET', 'POST' or 'DELETE'.
                 full_url (str): Portion of request URL that comes after the
                     host.
                 timeout (int): Number of seconds the client will wait between
@@ -561,18 +695,19 @@ class CvpClient(object):
                 CvpRequestError: A CvpRequestError is raised if the request
                     is not properly constructed.
                 CvpSessionLogOutError: A CvpSessionLogOutError is raised if
-                    reponse from server indicates session was logged out.
+                    response from server indicates session was logged out.
                 HTTPError: A HTTPError is raised if there was an invalid HTTP
                     response.
                 ReadTimeout: A ReadTimeout is raised if there was a request
                     timeout when reading from the connection.
                 Timeout: A Timeout is raised if there was a request timeout.
                 TooManyRedirects: A TooManyRedirects is raised if the request
-                    exceeds the configured number of maximum redirections
+                    exceeds the configured number of maximum re-directions
                 ValueError: A ValueError is raised when there is no valid
-                    CVP session.  This occurs because the previous get or post
-                    request failed and no session could be established to a
-                    CVP node.  Destroy the class and re-instantiate.
+                    CVP session.  This occurs because the previous get, post
+                    or delete request failed and no session could be
+                    established to a CVP node.  Destroy the class and
+                    re-instantiate.
         '''
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-statements
@@ -588,7 +723,7 @@ class CvpClient(object):
                                                 headers=self.headers,
                                                 timeout=timeout,
                                                 verify=self.cert)
-                else:
+                elif req_type == 'POST':
                     if files is None:
                         response = self.session.post(full_url,
                                                      cookies=self.cookies,
@@ -600,12 +735,22 @@ class CvpClient(object):
                         fhs = dict()
                         fhs['Accept'] = self.headers['Accept']
                         fhs['APP_SESSION_ID'] = self.headers['APP_SESSION_ID']
+                        if 'Authorization' in self.headers:
+                            fhs['Authorization'] = self.headers[
+                                'Authorization']
                         response = self.session.post(full_url,
                                                      cookies=self.cookies,
                                                      headers=fhs,
                                                      timeout=timeout,
                                                      verify=self.cert,
                                                      files=files)
+                elif req_type == 'DELETE':
+                    response = self.session.delete(full_url,
+                                                   cookies=self.cookies,
+                                                   data=json.dumps(data),
+                                                   headers=self.headers,
+                                                   timeout=timeout,
+                                                   verify=self.cert)
             except (ConnectionError, HTTPError, TooManyRedirects) as error:
                 # Any of these errors is a good reason to try another CVP node
                 self.log.error(error)
@@ -679,18 +824,19 @@ class CvpClient(object):
                 CvpRequestError: A CvpRequestError is raised if the request
                     is not properly constructed.
                 CvpSessionLogOutError: A CvpSessionLogOutError is raised if
-                    reponse from server indicates session was logged out.
+                    response from server indicates session was logged out.
                 HTTPError: A HTTPError is raised if there was an invalid HTTP
                     response.
                 ReadTimeout: A ReadTimeout is raised if there was a request
                     timeout when reading from the connection.
                 Timeout: A Timeout is raised if there was a request timeout.
                 TooManyRedirects: A TooManyRedirects is raised if the request
-                    exceeds the configured number of maximum redirections
+                    exceeds the configured number of maximum re-directions
                 ValueError: A ValueError is raised when there is no valid
-                    CVP session.  This occurs because the previous get or post
-                    request failed and no session could be established to a
-                    CVP node.  Destroy the class and re-instantiate.
+                    CVP session.  This occurs because the previous get, post
+                    or delete request failed and no session could be
+                    established to a CVP node.  Destroy the class and
+                    re-instantiate.
         '''
         return self._make_request('GET', url, timeout)
 
@@ -718,17 +864,84 @@ class CvpClient(object):
                 CvpRequestError: A CvpRequestError is raised if the request
                     is not properly constructed.
                 CvpSessionLogOutError: A CvpSessionLogOutError is raised if
-                    reponse from server indicates session was logged out.
+                    response from server indicates session was logged out.
                 HTTPError: A HTTPError is raised if there was an invalid HTTP
                     response.
                 ReadTimeout: A ReadTimeout is raised if there was a request
                     timeout when reading from the connection.
                 Timeout: A Timeout is raised if there was a request timeout.
                 TooManyRedirects: A TooManyRedirects is raised if the request
-                    exceeds the configured number of maximum redirections
+                    exceeds the configured number of maximum re-directions
                 ValueError: A ValueError is raised when there is no valid
-                    CVP session.  This occurs because the previous get or post
-                    request failed and no session could be established to a
-                    CVP node.  Destroy the class and re-instantiate.
+                    CVP session.  This occurs because the previous get, post
+                    or delete request failed and no session could be
+                    established to a CVP node.  Destroy the class and
+                    re-instantiate.
         '''
         return self._make_request('POST', url, timeout, data=data, files=files)
+
+    def delete(self, url, data=None, timeout=30):
+        ''' Make a DELETE request to CVP.  If the request call raises an error
+            or if the JSON response contains a CVP session related error then
+            retry the request on another CVP node.
+
+            Args:
+                url (str): Portion of request URL that comes after the host.
+                data (dict): Dict of key/value pairs to pass as parameters into
+                    the request. Default is None.
+                timeout (int): Number of seconds the client will wait between
+                    bytes sent from the server.  Default value is 30 seconds.
+
+            Returns:
+                The JSON response.
+
+            Raises:
+                ConnectionError: A ConnectionError is raised if there was a
+                    network problem (e.g. DNS failure, refused connection, etc)
+                CvpApiError: A CvpApiError is raised if there was a JSON error.
+                CvpRequestError: A CvpRequestError is raised if the request
+                    is not properly constructed.
+                CvpSessionLogOutError: A CvpSessionLogOutError is raised if
+                    response from server indicates session was logged out.
+                HTTPError: A HTTPError is raised if there was an invalid HTTP
+                    response.
+                ReadTimeout: A ReadTimeout is raised if there was a request
+                    timeout when reading from the connection.
+                Timeout: A Timeout is raised if there was a request timeout.
+                TooManyRedirects: A TooManyRedirects is raised if the request
+                    exceeds the configured number of maximum re-directions
+                ValueError: A ValueError is raised when there is no valid
+                    CVP session.  This occurs because the previous get, post
+                    or delete request failed and no session could be
+                    established to a CVP node.  Destroy the class and
+                    re-instantiate.
+        '''
+        return self._make_request('DELETE', url, timeout, data=data)
+
+    def _finditem(self, obj, key):
+        """ Find a key in a a nested list/dict.
+
+            Args:
+                obj (dict): Object to iterate to return value for provided key
+                key (str): The key to locate in dict and return the value for
+
+            Returns:
+                Value of found key or None if not found.
+        """
+        item = None
+        if isinstance(obj, dict):
+            if key in obj:
+                item = obj[key]
+            else:
+                for _, value in obj.items():
+                    if isinstance(value, (dict, list)):
+                        item = self._finditem(value, key)
+                        if item is not None:
+                            break
+        elif isinstance(obj, list):
+            for i in obj:
+                if isinstance(i, (dict, list)):
+                    item = self._finditem(i, key)
+                    if item is not None:
+                        break
+        return item

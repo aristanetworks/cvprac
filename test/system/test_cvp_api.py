@@ -54,6 +54,7 @@ import shutil
 import sys
 import time
 import unittest
+from pprint import pprint
 from requests.exceptions import Timeout
 
 import urllib3
@@ -173,7 +174,7 @@ class TestCvpClient(DutSystemTest):
         cnt = 30
         if self.clnt.apiversion is None:
             self.api.get_cvp_info()
-        if self.clnt.apiversion == 'v2':
+        if self.clnt.apiversion >= 2.0:
             # Increase timeout by 30 sec for CVP 2018.2 and beyond
             cnt += 30
         while cnt > 0:
@@ -197,6 +198,90 @@ class TestCvpClient(DutSystemTest):
         self.assertIn(self.clnt.last_used_node, self.clnt.url_prefix)
         self.assertEqual(self.clnt.version, result['version'])
         self.assertIsNotNone(self.clnt.apiversion)
+
+    def test_api_user_operations(self):
+        ''' Verify get_user, add_user and update_user
+        '''
+        # pylint: disable=too-many-statements
+        dut = self.duts[0]
+        # Test Get User
+        result = self.api.get_user(dut['username'])
+        self.assertIsNotNone(result)
+        self.assertIn('user', result)
+        self.assertIn('userId', result['user'])
+        self.assertEqual(result['user']['userId'], 'cvpadmin')
+        self.assertIn('userStatus', result['user'])
+        self.assertIsNotNone(result['roles'])
+
+        # Check if test user exists
+        try:
+            result = self.api.get_user('test_cvp_user')
+            self.assertIsNotNone(result)
+            self.assertIn('user', result)
+            self.assertIn('userId', result['user'])
+            self.assertEqual(result['user']['userId'], 'test_cvp_user')
+            initial_user_status = result['user']['userStatus']
+            initial_user_role = result['roles'][0]
+        except CvpApiError:
+            # Test Create User
+            result = self.api.add_user('test_cvp_user', 'test_cvp_pass',
+                                       'network-admin', 'Enabled', 'Net',
+                                       'Op', 'test_cvp_pass@email.com')
+            self.assertIsNotNone(result)
+            self.assertIn('data', result)
+            self.assertIn('userId', result['data'])
+            self.assertEqual(result['data']['userId'], 'test_cvp_user')
+            self.assertIn('userStatus', result['data'])
+            self.assertEqual(result['data']['userStatus'], 'Enabled')
+
+            # Check created user
+            result = self.api.get_user('test_cvp_user')
+            self.assertIsNotNone(result)
+            self.assertIn('user', result)
+            self.assertIn('userId', result['user'])
+            self.assertEqual(result['user']['userId'], 'test_cvp_user')
+            self.assertIn('userStatus', result['user'])
+            self.assertEqual(result['user']['userStatus'], 'Enabled')
+            self.assertIsNotNone(result['roles'])
+            self.assertEqual(result['roles'], ['network-admin'])
+            initial_user_status = result['user']['userStatus']
+            initial_user_role = result['roles'][0]
+
+        if initial_user_status == 'Enabled':
+            update_user_status = 'Disabled'
+        else:
+            update_user_status = 'Enabled'
+
+        if initial_user_role == 'network-admin':
+            update_user_role = 'network-operator'
+        else:
+            update_user_role = 'network-admin'
+
+        # Test Update User
+        result = self.api.update_user('test_cvp_user', 'password',
+                                      update_user_status, update_user_role)
+        self.assertIsNotNone(result)
+        self.assertIn('data', result)
+        self.assertEqual(result['data'], 'success')
+        result = self.api.get_user('test_cvp_user')
+        self.assertIsNotNone(result)
+        self.assertIn('user', result)
+        self.assertIn('userId', result['user'])
+        self.assertEqual(result['user']['userId'], 'test_cvp_user')
+        self.assertIn('userStatus', result['user'])
+        self.assertEqual(result['user']['userStatus'], update_user_status)
+        self.assertIsNotNone(result['roles'])
+        self.assertEqual(result['roles'], [update_user_role])
+
+        # Test Delete User
+        result = self.api.delete_user('test_cvp_user')
+        self.assertIsNotNone(result)
+        self.assertIn('data', result)
+        self.assertEqual(result['data'], 'success')
+
+        # Verify the user successfully deleted and doesn't exist
+        with self.assertRaises(CvpApiError):
+            self.api.get_user('test_cvp_user')
 
     def test_api_check_compliance(self):
         ''' Verify check_compliance
@@ -345,6 +430,24 @@ class TestCvpClient(DutSystemTest):
             self.assertIn(cfglt_name, rslt_cfglts)
             self.assertDictEqual(dev_cfglts[cfglt_name],
                                  rslt_cfglts[cfglt_name])
+
+    def test_api_get_configlets_and_mappers(self):
+        ''' Verify get_configlets_and_mappers
+        '''
+        result = self.api.get_configlets_and_mappers()
+        self.assertIsNotNone(result)
+        self.assertIn('data', result)
+        data = result['data']
+        self.assertIn('configlets', data)
+        self.assertIn('configletBuilders', data)
+        self.assertIn('generatedConfigletMappers', data)
+        self.assertIn('configletMappers', data)
+        configlets = data['configlets']
+        self.assertIsNotNone(configlets)
+        self.assertGreater(len(configlets), 0)
+        configlet_mappers = data['configletMappers']
+        self.assertIsNotNone(configlet_mappers)
+        self.assertGreater(len(configlet_mappers), 0)
 
     def test_api_get_configlet_builder(self):
         ''' Verify get_configlet_builder
@@ -495,6 +598,21 @@ class TestCvpClient(DutSystemTest):
         ''' Verify get_device_by_name with partial fqdn returns nothing
         '''
         result = self.api.get_device_by_name(self.device['fqdn'][1:])
+        self.assertIsNotNone(result)
+        self.assertEqual(result, {})
+
+    def test_api_get_device_by_mac(self):
+        ''' Verify get_device_by_mac with partial fqdn returns nothing
+        '''
+        result = self.api.get_device_by_mac(self.device['systemMacAddress'])
+        self.assertIsNotNone(result)
+        self.assertEqual(result['systemMacAddress'],
+                         self.device['systemMacAddress'])
+
+    def test_api_get_device_by_mac_bad(self):
+        ''' Verify get_device_by_mac with bad mac
+        '''
+        result = self.api.get_device_by_mac('bogus_mac')
         self.assertIsNotNone(result)
         self.assertEqual(result, {})
 
@@ -734,6 +852,19 @@ class TestCvpClient(DutSystemTest):
 
         result = self.api.get_devices_in_container(container_name)
         self.assertEqual(result, devices_in_container)
+
+    def test_api_search_topology(self):
+        ''' Verify search_topology return data
+        '''
+        full_inv = self.api.get_inventory()
+        device = full_inv[0]
+        result = self.api.search_topology(device['fqdn'])
+        self.assertIsNotNone(result)
+        self.assertIn('containerList', result)
+        self.assertIn('keywordList', result)
+        self.assertIn('total', result)
+        self.assertIn('netElementList', result)
+        self.assertIn('netElementContainerList', result)
 
     def test_api_containers(self):
         ''' Verify add_container, get_container_by_name and delete_container
@@ -1173,6 +1304,15 @@ class TestCvpClient(DutSystemTest):
         self.assertIsNotNone(result)
         self.assertEqual(result['total'], len(result['data']))
 
+    def test_api_get_image_bundle_by_container_id(self):
+        ''' Verify get image bundle by container id
+        '''
+        # Test that an invalid scope defaults to false
+        result = self.api.get_image_bundle_by_container_id('root', 0, 0,
+                                                           'invalid')
+        self.assertIsNotNone(result)
+        self.assertEqual(result['total'], 0)
+
     def test_api_save_update_delete_image_bundle(self):
         ''' Verify save_image_bundle and update_image_bundle
         '''
@@ -1246,7 +1386,8 @@ class TestCvpClient(DutSystemTest):
             self.assertEqual(bundle['name'], bundle_name)
 
     def test_api_get_image_bundle_by_name_doesnt_exist(self):
-        ''' Verify get image bundle by name returns none if image bundle doesn't exist
+        ''' Verify get image bundle by name returns none if image bundle
+            doesn't exist
         '''
         result = self.api.get_image_bundle_by_name('nonexistantimagebundle')
         self.assertIsNone(result)
@@ -1366,7 +1507,7 @@ class TestCvpClient(DutSystemTest):
             non_connect_count = self.api.get_non_connected_device_count()
         results = self.api.save_inventory()
         # Save Inventory is deprecated for 2018.2 and beyond
-        if self.clnt.apiversion == 'v1':
+        if self.clnt.apiversion == 1.0:
             self.assertEqual(results['data'], 1)
         else:
             save_msg = 'Save Inventory not implemented/necessary for' +\
@@ -1408,7 +1549,7 @@ class TestCvpClient(DutSystemTest):
         # Set client apiversion if it is not already set
         if self.clnt.apiversion is None:
             self.api.get_cvp_info()
-        if self.clnt.apiversion != 'v3':
+        if self.clnt.apiversion < 3.0:
             chg_ctrl_name = 'test_api_%d' % time.time()
             (task_id, _) = self._create_task()
             chg_ctrl_tasks = [{
@@ -1441,13 +1582,13 @@ class TestCvpClient(DutSystemTest):
                     time.sleep(2)
             # For 2018.2 give a few extra seconds for device status to get
             # back in compliance.
-            if self.clnt.apiversion == 'v2':
+            if self.clnt.apiversion >= 2.0:
                 time.sleep(5)
             else:
                 time.sleep(2)
         else:
-            print(self.clnt.apiversion)
-            print('SKIPPING TEST FOR GRANT')
+            pprint('SKIPPING TEST FOR API - {0}'.format(
+                self.clnt.apiversion))
             time.sleep(1)
 
     def test_api_cancel_change_control(self):
@@ -1456,7 +1597,7 @@ class TestCvpClient(DutSystemTest):
         # Set client apiversion if it is not already set
         if self.clnt.apiversion is None:
             self.api.get_cvp_info()
-        if self.clnt.apiversion != 'v3':
+        if self.clnt.apiversion < 3.0:
             chg_ctrl_name = 'test_api_%d' % time.time()
             (task_id, _) = self._create_task()
             chg_ctrl_tasks = [{
@@ -1480,8 +1621,8 @@ class TestCvpClient(DutSystemTest):
             chg_ctrl_cancelled = self.api.get_change_control_info(cc_id)
             self.assertEqual(chg_ctrl_cancelled['status'], 'Cancelled')
         else:
-            print(self.clnt.apiversion)
-            print('SKIPPING TEST FOR GRANT')
+            pprint('SKIPPING TEST FOR API - {0}'.format(
+                self.clnt.apiversion))
             time.sleep(1)
 
     def test_api_delete_change_control(self):
@@ -1490,7 +1631,7 @@ class TestCvpClient(DutSystemTest):
         # Set client apiversion if it is not already set
         if self.clnt.apiversion is None:
             self.api.get_cvp_info()
-        if self.clnt.apiversion != 'v3':
+        if self.clnt.apiversion < 3.0:
             chg_ctrl_name = 'test_api_%d' % time.time()
             (task_id, _) = self._create_task()
             chg_ctrl_tasks = [{
@@ -1519,8 +1660,8 @@ class TestCvpClient(DutSystemTest):
             time.sleep(1)
             self.assertIsNotNone(cancel_task_resp)
         else:
-            print(self.clnt.apiversion)
-            print('SKIPPING TEST FOR GRANT')
+            pprint('SKIPPING TEST FOR API - {0}'.format(
+                self.clnt.apiversion))
             time.sleep(1)
 
     def test_api_filter_topology(self):
@@ -1560,60 +1701,116 @@ class TestCvpClient(DutSystemTest):
                               'deviceInfo', 'ztpMode', 'isMLAGEnabled']
         for key in topo_dev_data:
             self.assertIn(key, known_dev_data)
-            if self.clnt.apiversion == 'v1' or key not in diff_val_form_keys:
+            if self.clnt.apiversion == 1.0 or key not in diff_val_form_keys:
                 self.assertEqual(topo_dev_data[key], known_dev_data[key])
 
-#    def test_api_reset_device(self):
-#        ''' Verify reset_device
-#        '''
-#        device = self.api.get_inventory()[0]
-#        cur_confs = self.api.get_configlets_by_netelement_id(device['key'])
-#        device_configlet_keys = []
-#        device_configlet_names = []
-#        for map in cur_confs['configletMapper']:
-#            if cur_confs['configletMapper'][map]['type'] == 'netelement':
-#                device_configlet_keys.append(map)
-#
-#       for confkey in device_configlet_keys:
-#            for configlet in cur_confs['configletList']:
-#                if confkey == configlet['key']:
-#                    device_configlet_names.append(configlet['name'])
-#                    continue
-#        orig_cont = self.api.get_parent_container_for_device(device['key'])
-#        undefined_devs = self.api.get_devices_in_container('Undefined')
-#        task_id = self._get_next_task_id()
-#
-#        resp = self.api.reset_device('TESTAPP', device, create_task=True)
-#         print(resp)
-#         self._execute_long_running_task(task_id)
-#
-#         new_undefined_devs = self.api.get_devices_in_container('Undefined')
-#         self.assertEqual(len(undefined_devs) + 1, len(new_undefined_devs))
-#
-#         new_device_info = self.api.get_inventory()[0]
-#
-#         new_cont = self.api.get_parent_container_for_device(
-#             new_device_info['key'])
-#         self.assertEqual(new_cont['name'], 'Undefined')
-#
-#         task_id = self._get_next_task_id()
-#         resp = self.api.move_device_to_container('TESTAPP', new_device_info,
-#                                                  orig_cont,
-#                                                  create_task=False)
-#         print(resp)
-#         apply_confs_list = []
-#         for index, confkey in enumerate(device_configlet_keys):
-#             param = {'name': device_configlet_names[index], 'key': confkey}
-#             apply_confs_list.append(param)
-#         resp = self.api.apply_configlets_to_device('TESTAPP',
-#                                                    new_device_info,
-#                                                    apply_confs_list,
-#                                                    create_task=True)
-#         print(resp)
-#         self._execute_long_running_task(task_id)
-#
-#         final_undef_devs = self.api.get_devices_in_container('Undefined')
-#         self.assertEqual(len(undefined_devs), len(final_undef_devs))
+    # def test_api_deploy_device(self):
+    #     ''' Verify deploy_device
+    #     '''
+    #     device = self.api.get_inventory()[0]
+    #     cur_confs = self.api.get_configlets_by_netelement_id(device['key'])
+    #     device_configlet_keys = []
+    #     device_configlet_names = []
+    #     for confmap in cur_confs['configletMapper']:
+    #         if cur_confs['configletMapper'][confmap]['type'] == 'netelement':
+    #             device_configlet_keys.append(confmap)
+    #
+    #     for confkey in device_configlet_keys:
+    #         for configlet in cur_confs['configletList']:
+    #             if confkey == configlet['key']:
+    #                 device_configlet_names.append(configlet['name'])
+    #                 continue
+    #     device_configlet_objects = []
+    #     for devconfname in device_configlet_names:
+    #         result = self.api.get_configlet_by_name(devconfname)
+    #         if result['name'] == devconfname:
+    #             device_configlet_objects.append(result)
+    #     orig_cont = self.api.get_parent_container_for_device(device['key'])
+    #     undefined_devs = self.api.get_devices_in_container('Undefined')
+    #
+    #     task_id = self._get_next_task_id()
+    #     pprint('NEXT TASK ID - %s\n' % task_id)
+    #     pprint('PRE RESET')
+    #     resp = self.api.reset_device('TESTAPP', device, create_task=True)
+    #     pprint('POST RESET')
+    #     pprint(resp)
+    #     pprint('PRE RESET TASK')
+    #     self._execute_long_running_task(task_id)
+    #     pprint('POST RESET TASK')
+    #
+    #     new_undefined_devs = self.api.get_devices_in_container('Undefined')
+    #     self.assertEqual(len(undefined_devs) + 1, len(new_undefined_devs))
+    #     new_device_info = self.api.get_inventory()[0]
+    #     new_cont = self.api.get_parent_container_for_device(
+    #         new_device_info['key'])
+    #     self.assertEqual(new_cont['name'], 'Undefined')
+    #
+    #     task_id = self._get_next_task_id()
+    #     pprint('NEXT TASK ID - %s\n' % task_id)
+    #     pprint('PRE DEPLOY')
+    #     resp = self.api.deploy_device(new_device_info, orig_cont['name'],
+    #                                   device_configlet_objects,
+    #                                   image_bundle=None, create_task=True)
+    #     pprint('POST DEPLOY')
+    #     pprint(resp)
+    #     pprint('PRE EXECTURE DEPLOY TASK')
+    #     self._execute_long_running_task(task_id)
+    #     pprint('POST EXECTURE DEPLOY TASK')
+    #
+    #     final_undef_devs = self.api.get_devices_in_container('Undefined')
+    #     self.assertEqual(len(undefined_devs), len(final_undef_devs))
+    #
+    # def test_api_reset_device(self):
+    #     ''' Verify reset_device
+    #     '''
+    #     device = self.api.get_inventory()[0]
+    #     cur_confs = self.api.get_configlets_by_netelement_id(device['key'])
+    #     device_configlet_keys = []
+    #     device_configlet_names = []
+    #     for confmap in cur_confs['configletMapper']:
+    #         if cur_confs['configletMapper'][confmap]['type'] == 'netelement':
+    #             device_configlet_keys.append(confmap)
+    #
+    #     for confkey in device_configlet_keys:
+    #         for configlet in cur_confs['configletList']:
+    #             if confkey == configlet['key']:
+    #                 device_configlet_names.append(configlet['name'])
+    #                 continue
+    #     orig_cont = self.api.get_parent_container_for_device(device['key'])
+    #     undefined_devs = self.api.get_devices_in_container('Undefined')
+    #     task_id = self._get_next_task_id()
+    #
+    #     resp = self.api.reset_device('TESTAPP', device, create_task=True)
+    #     pprint(resp)
+    #     self._execute_long_running_task(task_id)
+    #
+    #     new_undefined_devs = self.api.get_devices_in_container('Undefined')
+    #     self.assertEqual(len(undefined_devs) + 1, len(new_undefined_devs))
+    #
+    #     new_device_info = self.api.get_inventory()[0]
+    #
+    #     new_cont = self.api.get_parent_container_for_device(
+    #         new_device_info['key'])
+    #     self.assertEqual(new_cont['name'], 'Undefined')
+    #
+    #     task_id = self._get_next_task_id()
+    #     resp = self.api.move_device_to_container('TESTAPP', new_device_info,
+    #                                              orig_cont,
+    #                                              create_task=False)
+    #     pprint(resp)
+    #     apply_confs_list = []
+    #     for index, confkey in enumerate(device_configlet_keys):
+    #         param = {'name': device_configlet_names[index], 'key': confkey}
+    #         apply_confs_list.append(param)
+    #     resp = self.api.apply_configlets_to_device('TESTAPP',
+    #                                                new_device_info,
+    #                                                apply_confs_list,
+    #                                                create_task=True)
+    #     pprint(resp)
+    #     self._execute_long_running_task(task_id)
+    #
+    #     final_undef_devs = self.api.get_devices_in_container('Undefined')
+    #     self.assertEqual(len(undefined_devs), len(final_undef_devs))
 
 
 if __name__ == '__main__':
