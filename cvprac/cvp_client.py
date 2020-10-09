@@ -315,18 +315,6 @@ class CvpClient(object):
             self.url_prefix_short = ('https://%s:%d'
                                      % (host, self.port or 443))
             error = self._reset_session()
-            if error and not self.cert:
-                self.log.warning('Failed to connect over https. Potentially'
-                                 ' due to an old version of CVP. Attempting'
-                                 ' fallback to http. Error: %s', error)
-                # Attempt http fallback if no cert file is provided. The
-                # intention here is that a user providing a cert file
-                # forces https.
-                self.url_prefix = ('http://%s:%d/web'
-                                   % (host, self.port or 80))
-                self.url_prefix_short = ('http://%s:%d'
-                                         % (host, self.port or 80))
-                error = self._reset_session()
             if error is None:
                 break
             self.error_msg += '%s: %s\n' % (host, error)
