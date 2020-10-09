@@ -199,7 +199,6 @@ class TestClient(unittest.TestCase):
         self.assertEqual(self.clnt.url_prefix, url)
         self.assertEqual(self.clnt.error_msg, error)
 
-
     def test_make_request_good(self):
         """ Test request does not raise exception and returns json.
         """

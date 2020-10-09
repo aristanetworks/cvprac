@@ -366,6 +366,48 @@ class TestCvpClient(DutSystemTest):
         # Check compliance
         self.test_api_check_compliance()
 
+    def test_api_get_logs(self):
+        ''' Verify get_logs_by_id and get_audit_logs_by_id
+        '''
+        # pylint: disable=too-many-branches
+        if not self.clnt.apiversion:
+            self.api.get_cvp_info()
+        if self.clnt.apiversion < 5.0:
+            tasks = self.api.get_tasks()
+            for task in tasks['data']:
+                if 'workOrderId' in task:
+                    result = self.api.get_logs_by_id(task['workOrderId'])
+                    self.assertIsNotNone(result)
+                    if 'data' in result:
+                        self.assertIsNotNone(result['data'])
+                    break
+        else:
+            tasks = self.api.get_tasks()
+            task_cc = None
+            task_no_cc = None
+            for task in tasks['data']:
+                if 'ccIdV2' in task:
+                    if task['ccIdV2'] == '':
+                        task_no_cc = task
+                    else:
+                        task_cc = task
+            if task_cc:
+                result = self.api.get_logs_by_id(task_cc['workOrderId'])
+                self.assertIsNotNone(result)
+                if 'data' in result:
+                    self.assertIsNotNone(result['data'])
+            if task_no_cc:
+                result = self.api.get_logs_by_id(task_cc['workOrderId'])
+                self.assertIsNotNone(result)
+                if 'data' in result:
+                    self.assertIsNotNone(result['data'])
+                result = self.api.get_audit_logs_by_id(task_cc['ccIdV2'],
+                                                       task_cc['stageId'],
+                                                       75)
+                self.assertIsNotNone(result)
+                if 'data' in result:
+                    self.assertIsNotNone(result['data'])
+
     def test_api_validate_config(self):
         ''' Verify valid config returns True
         '''
@@ -804,7 +846,7 @@ class TestCvpClient(DutSystemTest):
         '''
         # Create task and execute it
         (task_id, _) = self._create_task()
-        self._execute_task(task_id)
+        self._execute_long_running_task(task_id)
 
         # Check compliance
         self.test_api_check_compliance()
@@ -967,7 +1009,7 @@ class TestCvpClient(DutSystemTest):
         self.assertIn(label, result['description'])
 
         # Execute Task
-        self._execute_task(task_id)
+        self._execute_long_running_task(task_id)
 
         # Get the next task ID
         task_id = self._get_next_task_id()
@@ -989,7 +1031,7 @@ class TestCvpClient(DutSystemTest):
         self.assertIn(label, result['description'])
 
         # Execute Task
-        self._execute_task(task_id)
+        self._execute_long_running_task(task_id)
 
         # Delete the configlet
         self.api.delete_configlet(name, key)
@@ -1062,7 +1104,7 @@ class TestCvpClient(DutSystemTest):
         self.assertEqual(result['workOrderId'], task_id)
 
         # Execute Task
-        self._execute_task(task_id)
+        self._execute_long_running_task(task_id)
 
         # Get the next task ID
         task_id = self._get_next_task_id()
@@ -1085,7 +1127,7 @@ class TestCvpClient(DutSystemTest):
         self.assertEqual(result['workOrderId'], task_id)
 
         # Execute Task
-        self._execute_task(task_id)
+        self._execute_long_running_task(task_id)
 
         # Delete the configlet
         self.api.delete_configlet(name, key)
@@ -1133,7 +1175,7 @@ class TestCvpClient(DutSystemTest):
         # This should result in a reconciled config with 1 new line.
         resp = self.api.validate_configlets_for_device(self.device['key'],
                                                        compare_configlets,
-                                                       'viewConfig')
+                                                       'validateConfig')
         self.assertIn('reconciledConfig', resp)
         self.assertIn('new', resp)
         self.assertEqual(resp['new'], 1)
@@ -1753,9 +1795,9 @@ class TestCvpClient(DutSystemTest):
     #                                   image_bundle=None, create_task=True)
     #     pprint('POST DEPLOY')
     #     pprint(resp)
-    #     pprint('PRE EXECTURE DEPLOY TASK')
+    #     pprint('PRE EXECUTE DEPLOY TASK')
     #     self._execute_long_running_task(task_id)
-    #     pprint('POST EXECTURE DEPLOY TASK')
+    #     pprint('POST EXECUTE DEPLOY TASK')
     #
     #     final_undef_devs = self.api.get_devices_in_container('Undefined')
     #     self.assertEqual(len(undefined_devs), len(final_undef_devs))
