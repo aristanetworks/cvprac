@@ -1764,8 +1764,10 @@ class CvpApi(object):
             applied to the device match the devices running configuration.
 
             Args:
-                node_key (str): The device key.
-                node_type (str): The device type.
+                node_key (str): The device key. This is the device MAC address
+                    Example: ff:ff:ff:ff:ff:ff
+                node_type (str): The device type. This is either 'netelement'
+                    or 'container'
 
             Returns:
                 response (dict): A dict that contains the results of the
