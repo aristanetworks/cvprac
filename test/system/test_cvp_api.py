@@ -1199,11 +1199,12 @@ class TestCvpClient(DutSystemTest):
         ''' Verify get_all_temp_actions
         '''
         # pylint: disable=protected-access
-        name = 'test_configlet'
-        config = 'lldp timer 9'
+        test_configlet_name = 'test_configlet'
+        test_configlet_config = 'lldp timer 9'
 
         # Add a configlet
-        key = self._create_configlet(name, config)
+        test_configlet_key = self._create_configlet(test_configlet_name,
+                                                    test_configlet_config)
 
         # Apply the configlet to the container
         data = {
@@ -1219,8 +1220,8 @@ class TestCvpClient(DutSystemTest):
                 'fromName': '',
                 'toName': self.container['name'],
                 'toIdType': 'container',
-                'configletList': [key],
-                'configletNamesList': [name],
+                'configletList': [test_configlet_key],
+                'configletNamesList': [test_configlet_name],
                 'ignoreConfigletList': [],
                 'ignoreConfigletNamesList': [],
                 'configletBuilderList' : [],
@@ -1234,17 +1235,25 @@ class TestCvpClient(DutSystemTest):
         # Request the list of temp actions
         result = self.api.get_all_temp_actions()
 
+        # Validate the results
+        # There should be 1 temp action for CVP versions before 2020.3.0
+        if self.clnt.apiversion < 5.0:
+            self.assertEqual(result['total'], 1)
+        else:
+            # For CVP versions starting with CVP 2020.3.0 there will be 2
+            # temp actions
+            self.assertEqual(result['total'], 2)
+
+        # The temp action should contain the data from the add action
+        for tempaction in result['data']:
+            if tempaction['info'] == data['data'][0]['info']:
+                for dkey in data['data'][0]:
+                    self.assertIn(dkey, tempaction.keys())
+                    self.assertEqual(data['data'][0][dkey], tempaction[dkey])
+
         # Delete the temporary action and the configlet
         self.clnt.post('//provisioning/deleteAllTempAction.do')
-        self.api.delete_configlet(name, key)
-
-        # Validate the results
-        # There should be 1 temp action
-        self.assertEqual(result['total'], 1)
-        # The temp action should contain the data from the add action
-        for dkey in data['data'][0]:
-            self.assertIn(dkey, result['data'][0].keys())
-            self.assertEqual(data['data'][0][dkey], result['data'][0][dkey])
+        self.api.delete_configlet(test_configlet_name, test_configlet_key)
 
     def test_api_get_event_by_id_bad(self):
         ''' Verify get_event_by_id returns an error for a bad ID
