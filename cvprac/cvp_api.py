@@ -809,16 +809,14 @@ class CvpApi(object):
                     otherwise returns an empty hash.
         '''
         self.log.debug('get_device_by_name: fqdn: %s' % fqdn)
-        data = self.get_inventory(start=0, end=0, query=fqdn)
-        if data:
-            for netelement in data:
-                if netelement['fqdn'] == fqdn:
-                    device = netelement
+        # data = self.get_inventory(start=0, end=0, query=fqdn)
+        data = self.search_topology(fqdn)
+        device = {}
+        if 'netElementList' in data:
+            for netelem in data['netElementList']:
+                if netelem['fqdn'] == fqdn:
+                    device = netelem
                     break
-            else:
-                device = {}
-        else:
-            device = {}
         return device
 
     def get_device_by_mac(self, device_mac):
@@ -832,12 +830,13 @@ class CvpApi(object):
                     otherwise returns an empty hash.
         '''
         self.log.debug('get_device_by_mac: MAC address: %s' % device_mac)
-        data = self.get_inventory(start=0, end=0, query=device_mac)
+        # data = self.get_inventory(start=0, end=0, query=device_mac)
+        data = self.search_topology(device_mac)
         device = {}
-        if data:
-            for netelement in data:
-                if netelement['systemMacAddress'] == device_mac:
-                    device = netelement
+        if 'netElementList' in data:
+            for netelem in data['netElementList']:
+                if netelem['systemMacAddress'] == device_mac:
+                    device = netelem
                     break
         return device
 
@@ -1739,6 +1738,14 @@ class CvpApi(object):
                              'startIndex=%d&endIndex=%d'
                              % (qplus(query), start, end),
                              timeout=self.request_timeout)
+        if 'netElementList' in data:
+            for device in data['netElementList']:
+                device['status'] = device['deviceStatus']
+                device['mlagEnabled'] = device['isMLAGEnabled']
+                device['danzEnabled'] = device['isDANZEnabled']
+                device['parentContainerKey'] = device['parentContainerId']
+                device['bootupTimestamp'] = device['bootupTimeStamp']
+                device['internalBuild'] = device['internalBuildId']
         return data
 
     def filter_topology(self, node_id='root', fmt='topology',
