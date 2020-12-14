@@ -223,6 +223,8 @@ class TestCvpClient(DutSystemTest):
             initial_user_status = result['user']['userStatus']
             initial_user_email = result['user']['email']
             initial_user_type = result['user']['userType']
+            initial_first_name = resutl['user']['firstName']
+            initial_last_name = resutl['user']['lastName']
             initial_user_role = result['roles'][0]
         except CvpApiError:
             # Test Create User
@@ -271,9 +273,21 @@ class TestCvpClient(DutSystemTest):
         else:
             update_user_email = 'test_cvp_pass@email.com'
 
+        if initial_first_name == "Net":
+            update_first_name = "Network"
+        else:
+            update_first_name = "Net"
+            
+        if initial_last_name == "Op":
+            update_last_name = "Operator"
+        else:
+            update_last_name = "Op"
+
         # Test Update User
         result = self.api.update_user('test_cvp_user', 'password',
-                                      update_user_status, update_user_role)
+                                      update_user_role, update_user_status,
+                                      update_first_name, update_last_name,
+                                      update_user_email, update_user_type)
         self.assertIsNotNone(result)
         self.assertIn('data', result)
         self.assertEqual(result['data'], 'success')
