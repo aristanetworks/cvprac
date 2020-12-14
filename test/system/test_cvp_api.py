@@ -203,6 +203,7 @@ class TestCvpClient(DutSystemTest):
         ''' Verify get_user, add_user and update_user
         '''
         # pylint: disable=too-many-statements
+        # pylint: disable=too-many-branches
         dut = self.duts[0]
         # Test Get User
         result = self.api.get_user(dut['username'])
@@ -230,7 +231,8 @@ class TestCvpClient(DutSystemTest):
             # Test Create User
             result = self.api.add_user('test_cvp_user', 'test_cvp_pass',
                                        'network-admin', 'Enabled', 'Net',
-                                       'Op', 'test_cvp_pass@email.com', 'Local')
+                                       'Op', 'test_cvp_pass@email.com',
+                                       'Local')
             self.assertIsNotNone(result)
             self.assertIn('data', result)
             self.assertIn('userId', result['data'])
@@ -281,7 +283,7 @@ class TestCvpClient(DutSystemTest):
             update_first_name = "Network"
         else:
             update_first_name = "Net"
-            
+
         if initial_last_name == "Op":
             update_last_name = "Operator"
         else:
