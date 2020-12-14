@@ -223,8 +223,8 @@ class TestCvpClient(DutSystemTest):
             initial_user_status = result['user']['userStatus']
             initial_user_email = result['user']['email']
             initial_user_type = result['user']['userType']
-            initial_first_name = resutl['user']['firstName']
-            initial_last_name = resutl['user']['lastName']
+            initial_first_name = result['user']['firstName']
+            initial_last_name = result['user']['lastName']
             initial_user_role = result['roles'][0]
         except CvpApiError:
             # Test Create User
@@ -252,6 +252,10 @@ class TestCvpClient(DutSystemTest):
             self.assertEqual(result['roles'], ['network-admin'])
             initial_user_status = result['user']['userStatus']
             initial_user_role = result['roles'][0]
+            initial_user_type = result['user']['userType']
+            initial_user_email = result['user']['email']
+            initial_first_name = result['user']['firstName']
+            initial_last_name = result['user']['lastName']
 
         if initial_user_status == 'Enabled':
             update_user_status = 'Disabled'
