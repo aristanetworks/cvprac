@@ -103,7 +103,7 @@ class CvpApi(object):
 
     # pylint: disable=too-many-arguments
     def add_user(self, username, password, role, status, first_name,
-                 last_name, email):
+                 last_name, email, user_type):
         ''' Add new local user to the CVP UI.
 
             Args:
@@ -114,6 +114,7 @@ class CvpApi(object):
                 first_name (str): first name of the user
                 last_name (str): last name of the user
                 email (str): email address of the user
+                user_type (str): type of AAA (Local/TACACS/RADIUS)
         '''
         if status not in ['Enabled', 'Disabled']:
             self.log.error('Invalid status %s.'
@@ -127,31 +128,41 @@ class CvpApi(object):
                          "lastName": last_name,
                          "password": password,
                          "userId": username,
-                         "userStatus": status}}
+                         "userStatus": status,
+                         "userType": user_type}}
         return self.clnt.post('/user/addUser.do', data=data,
                               timeout=self.request_timeout)
 
-    def update_user(self, username, password, status, role):
+    def update_user(self, username, password, role, status, first_name,
+                    last_name, email, user_type):
         ''' Updates username information, like
-            changing password, disable/enable the username
-            and user role.
+            changing password, user role, email address, names,
+            disable/enable the username.
 
             Args:
                 username (str): local username on CVP
                 password (str): password of the user
-                status (str): status of user (enable/disable)
                 role (str): role of the user
+                status (str): state of the user (Enabled/Disabled)
+                first_name (str): first name of the user
+                last_name (str): last name of the user
+                email (str): email address of the user
+                user_type (str): type of AAA (Local/TACACS/RADIUS)
         '''
         if status not in ['Enabled', 'Disabled']:
             self.log.error('Invalid status %s.'
                            ' Status must be Enabled or Disabled.'
                            ' Defaulting to Disabled' % status)
             status = 'Disabled'
-        data = {"user": {"userId": username,
-                         "userType": "Local",
+        data = {"roles": [role],
+                "user": {"contactNumber": "",
+                         "email": email,
+                         "firstName": first_name,
+                         "lastName": last_name,
+                         "password": password,
+                         "userId": username,
                          "userStatus": status,
-                         "password": password},
-                "roles": [role]}
+                         "userType": user_type}}
         return self.clnt.post('/user/updateUser.do?userId={}'.format(username),
                               data=data, timeout=self.request_timeout)
 
