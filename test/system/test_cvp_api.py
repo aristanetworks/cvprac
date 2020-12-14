@@ -221,12 +221,14 @@ class TestCvpClient(DutSystemTest):
             self.assertIn('userId', result['user'])
             self.assertEqual(result['user']['userId'], 'test_cvp_user')
             initial_user_status = result['user']['userStatus']
+            initial_user_email = result['user']['email']
+            initial_user_type = result['user']['userType']
             initial_user_role = result['roles'][0]
         except CvpApiError:
             # Test Create User
             result = self.api.add_user('test_cvp_user', 'test_cvp_pass',
                                        'network-admin', 'Enabled', 'Net',
-                                       'Op', 'test_cvp_pass@email.com')
+                                       'Op', 'test_cvp_pass@email.com', 'Local')
             self.assertIsNotNone(result)
             self.assertIn('data', result)
             self.assertIn('userId', result['data'])
@@ -242,6 +244,8 @@ class TestCvpClient(DutSystemTest):
             self.assertEqual(result['user']['userId'], 'test_cvp_user')
             self.assertIn('userStatus', result['user'])
             self.assertEqual(result['user']['userStatus'], 'Enabled')
+            self.assertIn('userType', result['user'])
+            self.assertEqual(result['user']['userType'], 'Local')
             self.assertIsNotNone(result['roles'])
             self.assertEqual(result['roles'], ['network-admin'])
             initial_user_status = result['user']['userStatus']
@@ -257,6 +261,16 @@ class TestCvpClient(DutSystemTest):
         else:
             update_user_role = 'network-admin'
 
+        if initial_user_type == 'Local':
+            update_user_type = 'TACACS'
+        else:
+            update_user_type = 'Local'
+
+        if initial_user_email == 'test_cvp_pass@email.com':
+            update_user_email = 'test_cvp_pass2@email.com'
+        else:
+            update_user_email = 'test_cvp_pass@email.com'
+
         # Test Update User
         result = self.api.update_user('test_cvp_user', 'password',
                                       update_user_status, update_user_role)
@@ -270,6 +284,10 @@ class TestCvpClient(DutSystemTest):
         self.assertEqual(result['user']['userId'], 'test_cvp_user')
         self.assertIn('userStatus', result['user'])
         self.assertEqual(result['user']['userStatus'], update_user_status)
+        self.assertIn('userType', result['user'])
+        self.assertEqual(result['user']['userType'], update_user_type)
+        self.assertIn('email', result['user'])
+        self.assertEqual(result['user']['email'], update_user_email)
         self.assertIsNotNone(result['roles'])
         self.assertEqual(result['roles'], [update_user_role])
 
