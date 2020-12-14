@@ -103,7 +103,7 @@ class CvpApi(object):
 
     # pylint: disable=too-many-arguments
     def add_user(self, username, password, role, status, first_name,
-                 last_name, email, utype):
+                 last_name, email, user_type):
         ''' Add new local user to the CVP UI.
 
             Args:
@@ -129,12 +129,12 @@ class CvpApi(object):
                          "password": password,
                          "userId": username,
                          "userStatus": status,
-                         "userType": utype}}
+                         "userType": user_type}}
         return self.clnt.post('/user/addUser.do', data=data,
                               timeout=self.request_timeout)
 
     def update_user(self, username, password, role, status, first_name,
-                 last_name, email, utype):
+                    last_name, email, user_type):
         ''' Updates username information, like
             changing password, user role, email address, names,
             disable/enable the username.
@@ -162,7 +162,7 @@ class CvpApi(object):
                          "password": password,
                          "userId": username,
                          "userStatus": status,
-                         "userType": utype}}
+                         "userType": user_type}}
         return self.clnt.post('/user/updateUser.do?userId={}'.format(username),
                               data=data, timeout=self.request_timeout)
 
