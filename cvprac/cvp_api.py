@@ -36,6 +36,7 @@ import time
 # This import is for proper file IO handling support for both Python 2 and 3
 # pylint: disable=redefined-builtin
 from io import open
+from datetime import datetime
 
 from cvprac.cvp_client_errors import CvpApiError
 
@@ -2410,7 +2411,7 @@ class CvpApi(object):
         return self.clnt.post('/changeControl/executeCC.do', data=data,
                               timeout=self.request_timeout)
 
-    def approve_change_control(self, cc_id, timestamp):
+    def approve_change_control(self, cc_id, timestamp=datetime.utcnow().isoformat()+'Z'):
         ''' Cancel the provided change controls.
 
             Args:
