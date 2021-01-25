@@ -15,7 +15,11 @@ Table of Contents
 
 #. `Getting Started`_
 
-   -  `Example`_
+   -  `Connecting`_
+   -  `CVP On Premises`_
+   -  `CVaaS`_
+   -  `CVP Version Handling`_
+   -  `Examples`_
 
 #. `Testing`_
 #. `License`_
@@ -127,7 +131,7 @@ Step 2: Check out the desired version or branch
     admin:~ admin$ git branch
 
     # Checkout the desired version of code
-    admin:~ admin$ git checkout v0.3.3
+    admin:~ admin$ git checkout v1.0.3
 
 Step 3: Install cvprac using Pip with -e switch
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -154,10 +158,60 @@ Getting Started
 Once the package has been installed you can run the following example to
 verify that everything has been installed properly.
 
-Example
--------
+Connecting
+----------
 
-Example using get method:
+Connecting to CVP will depend on your CVP setup. Several options are outlined below.
+
+CVP On Premises
+---------------
+
+CVP On Premises is for users with CVP running on a local server or cluster of servers. This is the
+standard form of connection. Multiple examples below demonstrate connecting to CVP On Premises setups.
+
+CVaaS
+-----
+
+CVaaS is CloudVision as a Service. Users with CVaaS have two options for connecting to CVP with REST APIs.
+
+1. Local CVP users with username/password login.
+
+   In order to use username/password login with CVaaS the user must be a user locally created within CVP.
+   This option looks very similar to a connection to an On Premises CVP cluster with a couple other options
+   (is_cvaas and tenant), required by CVaaS.
+
+2. Oauth users with REST API token.
+
+   In the case where users authenticate with CVP using Oauth a REST API token is required to be generated and
+   used for running REST APIs. In this case no login is necessary, but the API token must be provided to
+   cvprac client with the is_cvaas parameter. In the case that the cvaas_token is used for REST APIs the
+   username and password will be ignored and the tenant parameter is not needed.
+
+Examples for both types of CVaaS connections are shown below.
+
+
+CVP Version Handling
+--------------------
+
+The CVP RESTful APIs often change between releases of CVP. Cvprac attempts to mask these API changes from
+the user via making appropriate API calls based on the CVP version while attempting to maintain return data and
+not changing function names when possible. This helps maintain backward compatibility for users when they upgrade CVP
+so that any custom automation/scripts will continue to work. In some cases maintaining return data requires
+additional API calls so there are cases where this comes with the cost of a slight performance hit. Users are free
+to access the clients get(), post() and delete() methods and make API calls directly if they want to avoid the
+potential time delay of some API functions. The current API version information handled by cvprac is shown below.
+
+  Current latest API version is 4.0
+  API version is set to latest available version for CVaaS
+  API version is set to 4.0 for 2020.1.1 and beyond.
+  API version is set to 3.0 for 2019.0.0 through 2020.1.0
+  API version is set to 2.0 for 2018.2.X
+  API version is set to 1.0 for 2018.1.X and prior
+
+Examples
+--------
+
+Example using CVP On Prem client get method directly:
 
 ::
 
@@ -179,6 +233,31 @@ Same example as above using the API method:
     >>> result = clnt.api.get_cvp_info()
     >>> print result
     {u'version': u'2016.1.0'}
+    >>>
+
+Same example as above but connecting to CVaaS with a local CVP username/password:
+
+::
+
+    >>> from cvprac.cvp_client import CvpClient
+    >>> clnt = CvpClient()
+    >>> clnt.connect(nodes=['cvaas'], username='cvp_local_user', password='cvp_local_word', is_cvaas=True, tenant='user org/tenant')
+    >>> result = clnt.api.get_cvp_info()
+    >>> print result
+    {u'version': u'cvaas'}
+    >>>
+
+Same example as above but connecting to CVaaS with a token:
+Note that the username and password parameters are required by the connect function but will be ignored when using cvaas_token:
+
+::
+
+    >>> from cvprac.cvp_client import CvpClient
+    >>> clnt = CvpClient()
+    >>> clnt.connect(nodes=['cvaas'], username='', password='', is_cvaas=True, cvaas_token='user token')
+    >>> result = clnt.api.get_cvp_info()
+    >>> print result
+    {u'version': u'cvaas'}
     >>>
 
 Example using the API method to create a container, wait 5 seconds, then
@@ -265,7 +344,7 @@ For customers that are looking for a premium level of support, please contact yo
 License
 =======
 
-Copyright\ |copy| 2016, Arista Networks, Inc. All rights reserved.
+Copyright\ |copy| 2020, Arista Networks, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are

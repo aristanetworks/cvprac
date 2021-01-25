@@ -46,6 +46,7 @@ class TestClient(unittest.TestCase):
     """
     # pylint: disable=protected-access
     # pylint: disable=invalid-name
+    # pylint: disable=too-many-statements
 
     def setUp(self):
         """ Setup for CvpClient unittests
@@ -55,6 +56,116 @@ class TestClient(unittest.TestCase):
         self.clnt.nodes = nodes
         self.clnt.node_cnt = len(nodes)
         self.clnt.node_pool = cycle(nodes)
+
+    def test_set_version(self):
+        """ Test setting of client.apiversion parameter
+        """
+        self.assertEqual(self.clnt.apiversion, None)
+
+        test_version = '2018.0'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, 1.0)
+        self.clnt.apiversion = None
+
+        test_version = '2018.1'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, 1.0)
+        self.clnt.apiversion = None
+
+        test_version = '2018.1.0'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, 1.0)
+        self.clnt.apiversion = None
+
+        test_version = '2018.1.3'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, 1.0)
+        self.clnt.apiversion = None
+
+        test_version = '2018.2'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, 2.0)
+        self.clnt.apiversion = None
+
+        test_version = '2018.2.0'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, 2.0)
+        self.clnt.apiversion = None
+
+        test_version = '2018.2.5'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, 2.0)
+        self.clnt.apiversion = None
+
+        test_version = '2019.0'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, 3.0)
+        self.clnt.apiversion = None
+
+        test_version = '2019.1'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, 3.0)
+        self.clnt.apiversion = None
+
+        test_version = '2019.1.0'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, 3.0)
+        self.clnt.apiversion = None
+
+        test_version = '2019.1.1'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, 3.0)
+        self.clnt.apiversion = None
+
+        test_version = '2019.1.4'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, 3.0)
+        self.clnt.apiversion = None
+
+        test_version = '2020.0'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, 3.0)
+        self.clnt.apiversion = None
+
+        test_version = '2020.0.0'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, 3.0)
+        self.clnt.apiversion = None
+
+        test_version = '2020.1'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, 3.0)
+        self.clnt.apiversion = None
+
+        test_version = '2020.1.0'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, 3.0)
+        self.clnt.apiversion = None
+
+        test_version = '2020.1.0.1'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, 3.0)
+        self.clnt.apiversion = None
+
+        test_version = '2020.1.1'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, 4.0)
+        self.clnt.apiversion = None
+
+        test_version = '2020.1.1.1'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, 4.0)
+        self.clnt.apiversion = None
+
+        test_version = '2020.2'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, 4.0)
+        self.clnt.apiversion = None
+
+        test_version = '2020.2.0'
+        self.clnt.set_version(test_version)
+        self.assertEqual(self.clnt.apiversion, 4.0)
+        self.clnt.apiversion = None
 
     def test_create_session_default_https(self):
         """ Test connection to CVP nodes will default to https.
@@ -75,40 +186,15 @@ class TestClient(unittest.TestCase):
         self.clnt._create_session(all_nodes=True)
         self.assertEqual(self.clnt.url_prefix, url)
 
-    def test_create_session_http_fallback(self):
-        """ Test a failed https connection will attempt to fallback to http.
+    def test_create_session_no_http_fallback(self):
+        """ Test a failed https connection will not attempt to fallback to http.
         """
         self.clnt.port = None
-        url = 'http://1.1.1.1:80/web'
-        self.clnt._reset_session = Mock()
-        self.clnt._reset_session.side_effect = ['Failed to connect via https',
-                                                None]
-        self.clnt._create_session(all_nodes=True)
-        self.assertEqual(self.clnt.url_prefix, url)
-        self.assertEqual(self.clnt.error_msg, '\n')
-
-    def test_create_session_http_fallback_port(self):
-        """ Test http fallback will use a user provided port number.
-        """
-        self.clnt.port = 8888
-        url = 'http://1.1.1.1:8888/web'
-        self.clnt._reset_session = Mock()
-        self.clnt._reset_session.side_effect = ['Failed to connect via https',
-                                                None]
-        self.clnt._create_session(all_nodes=True)
-        self.assertEqual(self.clnt.url_prefix, url)
-        self.assertEqual(self.clnt.error_msg, '\n')
-
-    def test_create_session_no_http_fallback_with_cert(self):
-        """ If user passes a certificate to CvpClient it will only attempt to
-            use https and not fall back to http.
-        """
-        self.clnt.port = None
-        self.clnt.cert = 'cert'
         url = 'https://1.1.1.1:443/web'
         error = '\n1.1.1.1: Failed to connect via https\n'
         self.clnt._reset_session = Mock()
-        self.clnt._reset_session.return_value = 'Failed to connect via https'
+        self.clnt._reset_session.side_effect = ['Failed to connect via https',
+                                                None]
         self.clnt._create_session(all_nodes=True)
         self.assertEqual(self.clnt.url_prefix, url)
         self.assertEqual(self.clnt.error_msg, error)
@@ -238,6 +324,34 @@ class TestClient(unittest.TestCase):
         with self.assertRaises(CvpSessionLogOutError):
             self.clnt._make_request('GET', 'url', 2, {'data': 'data'})
         self.assertEqual(self.clnt.last_used_node, '1.1.1.1')
+
+    def test_finditem(self):
+        """ Test _finditem
+        """
+        testobj = {'key1': 'value1',
+                   'key2': {'nestkey1': 'nestval1'},
+                   'key3': ['nestlist1', 'nestlist2'],
+                   'key4': [{'nestobjkey1': 'nestobjval1'},
+                            {'nestobjkey2': 'nestobjval2'},
+                            ['nestlist1', 'nestlist2'], 'neststring']}
+        value = self.clnt._finditem(testobj, 'key5')
+        self.assertIsNone(value)
+
+        value = self.clnt._finditem(testobj, 'key1')
+        self.assertEqual(value, 'value1')
+
+        value = self.clnt._finditem(testobj, 'nestkey1')
+        self.assertEqual(value, 'nestval1')
+
+        value = self.clnt._finditem(testobj, 'key2')
+        self.assertEqual(value, {'nestkey1': 'nestval1'})
+
+        value = self.clnt._finditem(testobj, 'key3')
+        self.assertEqual(value, ['nestlist1', 'nestlist2'])
+
+        value = self.clnt._finditem(testobj, 'nestobjkey2')
+        self.assertEqual(value, 'nestobjval2')
+
 
 if __name__ == '__main__':
     unittest.main()
