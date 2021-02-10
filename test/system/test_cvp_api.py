@@ -538,8 +538,16 @@ class TestCvpClient(DutSystemTest):
         except CvpApiError as e:
             if 'Entity does not exist' in e.msg:
                 # Configlet Builder for 2019.x
-                cfglt = self.api.get_configlet_by_name(
-                    'SYS_TelemetryBuilderV3')
+                try:
+                    cfglt = self.api.get_configlet_by_name(
+                        'SYS_TelemetryBuilderV3')
+                except CvpApiError as e:
+                    if 'Entity does not exist' in e.msg:
+                        # Configlet Builder for 2021.x
+                        cfglt = self.api.get_configlet_by_name(
+                            'SYS_TelemetryBuilderV4')
+                    else:
+                        raise
             else:
                 raise
         result = self.api.get_configlet_builder(cfglt['key'])
@@ -1279,11 +1287,11 @@ class TestCvpClient(DutSystemTest):
         result = self.api.get_all_temp_actions()
 
         # Validate the results
-        # There should be 1 temp action for CVP versions before 2020.3.0
+        # There should be 1 temp action for CVP versions before 2020.2.4
         if self.clnt.apiversion < 5.0:
             self.assertEqual(result['total'], 1)
         else:
-            # For CVP versions starting with CVP 2020.3.0 there will be 2
+            # For CVP versions starting with CVP 2020.2.4 there will be 2
             # temp actions
             self.assertEqual(result['total'], 2)
 

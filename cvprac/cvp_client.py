@@ -207,7 +207,7 @@ class CvpClient(object):
         self.version = version
         self.log.info('Version %s', version)
         # Set apiversion to latest available API version for CVaaS
-        # Set apiversion to 5.0 for 2020.3.0 and beyond
+        # Set apiversion to 5.0 for 2020.2.4 and beyond
         # Set apiversion to 4.0 for 2020.1.1 through 2020.2.X
         # Set apiversion to 3.0 for 2019.0.0 through 2020.1.0
         # Set apiversion to 2.0 for 2018.2.X
@@ -224,7 +224,7 @@ class CvpClient(object):
                               ' Appending 0. Updated Version String - %s',
                               ".".join(version_components))
             full_version = ".".join(version_components)
-            if parse_version(full_version) >= parse_version('2020.3.0'):
+            if parse_version(full_version) >= parse_version('2020.2.4'):
                 self.log.info('Setting API version to v5')
                 self.apiversion = 5.0
             elif parse_version(full_version) >= parse_version('2020.1.1'):

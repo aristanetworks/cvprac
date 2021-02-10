@@ -2411,7 +2411,8 @@ class CvpApi(object):
         return self.clnt.post('/changeControl/executeCC.do', data=data,
                               timeout=self.request_timeout)
 
-    def approve_change_control(self, cc_id, timestamp=datetime.utcnow().isoformat()+'Z'):
+    def approve_change_control(self, cc_id,
+                               timestamp=datetime.utcnow().isoformat() + 'Z'):
         ''' Cancel the provided change controls.
 
             Args:
