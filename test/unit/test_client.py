@@ -186,40 +186,15 @@ class TestClient(unittest.TestCase):
         self.clnt._create_session(all_nodes=True)
         self.assertEqual(self.clnt.url_prefix, url)
 
-    def test_create_session_http_fallback(self):
-        """ Test a failed https connection will attempt to fallback to http.
+    def test_create_session_no_http_fallback(self):
+        """ Test a failed https connection will not attempt to fallback to http.
         """
         self.clnt.port = None
-        url = 'http://1.1.1.1:80/web'
-        self.clnt._reset_session = Mock()
-        self.clnt._reset_session.side_effect = ['Failed to connect via https',
-                                                None]
-        self.clnt._create_session(all_nodes=True)
-        self.assertEqual(self.clnt.url_prefix, url)
-        self.assertEqual(self.clnt.error_msg, '\n')
-
-    def test_create_session_http_fallback_port(self):
-        """ Test http fallback will use a user provided port number.
-        """
-        self.clnt.port = 8888
-        url = 'http://1.1.1.1:8888/web'
-        self.clnt._reset_session = Mock()
-        self.clnt._reset_session.side_effect = ['Failed to connect via https',
-                                                None]
-        self.clnt._create_session(all_nodes=True)
-        self.assertEqual(self.clnt.url_prefix, url)
-        self.assertEqual(self.clnt.error_msg, '\n')
-
-    def test_create_session_no_http_fallback_with_cert(self):
-        """ If user passes a certificate to CvpClient it will only attempt to
-            use https and not fall back to http.
-        """
-        self.clnt.port = None
-        self.clnt.cert = 'cert'
         url = 'https://1.1.1.1:443/web'
         error = '\n1.1.1.1: Failed to connect via https\n'
         self.clnt._reset_session = Mock()
-        self.clnt._reset_session.return_value = 'Failed to connect via https'
+        self.clnt._reset_session.side_effect = ['Failed to connect via https',
+                                                None]
         self.clnt._create_session(all_nodes=True)
         self.assertEqual(self.clnt.url_prefix, url)
         self.assertEqual(self.clnt.error_msg, error)

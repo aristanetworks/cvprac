@@ -203,6 +203,7 @@ class TestCvpClient(DutSystemTest):
         ''' Verify get_user, add_user and update_user
         '''
         # pylint: disable=too-many-statements
+        # pylint: disable=too-many-branches
         dut = self.duts[0]
         # Test Get User
         result = self.api.get_user(dut['username'])
@@ -221,12 +222,17 @@ class TestCvpClient(DutSystemTest):
             self.assertIn('userId', result['user'])
             self.assertEqual(result['user']['userId'], 'test_cvp_user')
             initial_user_status = result['user']['userStatus']
+            initial_user_email = result['user']['email']
+            initial_user_type = result['user']['userType']
+            initial_first_name = result['user']['firstName']
+            initial_last_name = result['user']['lastName']
             initial_user_role = result['roles'][0]
         except CvpApiError:
             # Test Create User
             result = self.api.add_user('test_cvp_user', 'test_cvp_pass',
                                        'network-admin', 'Enabled', 'Net',
-                                       'Op', 'test_cvp_pass@email.com')
+                                       'Op', 'test_cvp_pass@email.com',
+                                       'Local')
             self.assertIsNotNone(result)
             self.assertIn('data', result)
             self.assertIn('userId', result['data'])
@@ -242,10 +248,16 @@ class TestCvpClient(DutSystemTest):
             self.assertEqual(result['user']['userId'], 'test_cvp_user')
             self.assertIn('userStatus', result['user'])
             self.assertEqual(result['user']['userStatus'], 'Enabled')
+            self.assertIn('userType', result['user'])
+            self.assertEqual(result['user']['userType'], 'Local')
             self.assertIsNotNone(result['roles'])
             self.assertEqual(result['roles'], ['network-admin'])
             initial_user_status = result['user']['userStatus']
             initial_user_role = result['roles'][0]
+            initial_user_type = result['user']['userType']
+            initial_user_email = result['user']['email']
+            initial_first_name = result['user']['firstName']
+            initial_last_name = result['user']['lastName']
 
         if initial_user_status == 'Enabled':
             update_user_status = 'Disabled'
@@ -257,9 +269,31 @@ class TestCvpClient(DutSystemTest):
         else:
             update_user_role = 'network-admin'
 
+        if initial_user_type == 'Local':
+            update_user_type = 'TACACS'
+        else:
+            update_user_type = 'Local'
+
+        if initial_user_email == 'test_cvp_pass@email.com':
+            update_user_email = 'test_cvp_pass2@email.com'
+        else:
+            update_user_email = 'test_cvp_pass@email.com'
+
+        if initial_first_name == "Net":
+            update_first_name = "Network"
+        else:
+            update_first_name = "Net"
+
+        if initial_last_name == "Op":
+            update_last_name = "Operator"
+        else:
+            update_last_name = "Op"
+
         # Test Update User
         result = self.api.update_user('test_cvp_user', 'password',
-                                      update_user_status, update_user_role)
+                                      update_user_role, update_user_status,
+                                      update_first_name, update_last_name,
+                                      update_user_email, update_user_type)
         self.assertIsNotNone(result)
         self.assertIn('data', result)
         self.assertEqual(result['data'], 'success')
@@ -270,6 +304,10 @@ class TestCvpClient(DutSystemTest):
         self.assertEqual(result['user']['userId'], 'test_cvp_user')
         self.assertIn('userStatus', result['user'])
         self.assertEqual(result['user']['userStatus'], update_user_status)
+        self.assertIn('userType', result['user'])
+        self.assertEqual(result['user']['userType'], update_user_type)
+        self.assertIn('email', result['user'])
+        self.assertEqual(result['user']['email'], update_user_email)
         self.assertIsNotNone(result['roles'])
         self.assertEqual(result['roles'], [update_user_role])
 
@@ -366,6 +404,48 @@ class TestCvpClient(DutSystemTest):
         # Check compliance
         self.test_api_check_compliance()
 
+    def test_api_get_logs(self):
+        ''' Verify get_logs_by_id and get_audit_logs_by_id
+        '''
+        # pylint: disable=too-many-branches
+        if not self.clnt.apiversion:
+            self.api.get_cvp_info()
+        if self.clnt.apiversion < 5.0:
+            tasks = self.api.get_tasks()
+            for task in tasks['data']:
+                if 'workOrderId' in task:
+                    result = self.api.get_logs_by_id(task['workOrderId'])
+                    self.assertIsNotNone(result)
+                    if 'data' in result:
+                        self.assertIsNotNone(result['data'])
+                    break
+        else:
+            tasks = self.api.get_tasks()
+            task_cc = None
+            task_no_cc = None
+            for task in tasks['data']:
+                if 'ccIdV2' in task:
+                    if task['ccIdV2'] == '':
+                        task_no_cc = task
+                    else:
+                        task_cc = task
+            if task_cc:
+                result = self.api.get_logs_by_id(task_cc['workOrderId'])
+                self.assertIsNotNone(result)
+                if 'data' in result:
+                    self.assertIsNotNone(result['data'])
+            if task_no_cc:
+                result = self.api.get_logs_by_id(task_cc['workOrderId'])
+                self.assertIsNotNone(result)
+                if 'data' in result:
+                    self.assertIsNotNone(result['data'])
+                result = self.api.get_audit_logs_by_id(task_cc['ccIdV2'],
+                                                       task_cc['stageId'],
+                                                       75)
+                self.assertIsNotNone(result)
+                if 'data' in result:
+                    self.assertIsNotNone(result['data'])
+
     def test_api_validate_config(self):
         ''' Verify valid config returns True
         '''
@@ -458,8 +538,16 @@ class TestCvpClient(DutSystemTest):
         except CvpApiError as e:
             if 'Entity does not exist' in e.msg:
                 # Configlet Builder for 2019.x
-                cfglt = self.api.get_configlet_by_name(
-                    'SYS_TelemetryBuilderV3')
+                try:
+                    cfglt = self.api.get_configlet_by_name(
+                        'SYS_TelemetryBuilderV3')
+                except CvpApiError as e:
+                    if 'Entity does not exist' in e.msg:
+                        # Configlet Builder for 2021.x
+                        cfglt = self.api.get_configlet_by_name(
+                            'SYS_TelemetryBuilderV4')
+                    else:
+                        raise
             else:
                 raise
         result = self.api.get_configlet_builder(cfglt['key'])
@@ -575,7 +663,12 @@ class TestCvpClient(DutSystemTest):
         '''
         result = self.api.get_device_by_name(self.device['fqdn'])
         self.assertIsNotNone(result)
-        self.assertEqual(result, self.device)
+        for key in result:
+            self.assertIn(key, self.device)
+            # Some differences in result values between inventory
+            # and searchTopology. For example "no" vs "False" or
+            # "false" vs "False"
+            # self.assertEqual(result[key], self.device[key])
 
     def test_api_get_device_configuration(self):
         ''' Verify get_device_configuration
@@ -804,7 +897,7 @@ class TestCvpClient(DutSystemTest):
         '''
         # Create task and execute it
         (task_id, _) = self._create_task()
-        self._execute_task(task_id)
+        self._execute_long_running_task(task_id)
 
         # Check compliance
         self.test_api_check_compliance()
@@ -967,7 +1060,7 @@ class TestCvpClient(DutSystemTest):
         self.assertIn(label, result['description'])
 
         # Execute Task
-        self._execute_task(task_id)
+        self._execute_long_running_task(task_id)
 
         # Get the next task ID
         task_id = self._get_next_task_id()
@@ -989,7 +1082,7 @@ class TestCvpClient(DutSystemTest):
         self.assertIn(label, result['description'])
 
         # Execute Task
-        self._execute_task(task_id)
+        self._execute_long_running_task(task_id)
 
         # Delete the configlet
         self.api.delete_configlet(name, key)
@@ -1062,7 +1155,7 @@ class TestCvpClient(DutSystemTest):
         self.assertEqual(result['workOrderId'], task_id)
 
         # Execute Task
-        self._execute_task(task_id)
+        self._execute_long_running_task(task_id)
 
         # Get the next task ID
         task_id = self._get_next_task_id()
@@ -1085,7 +1178,7 @@ class TestCvpClient(DutSystemTest):
         self.assertEqual(result['workOrderId'], task_id)
 
         # Execute Task
-        self._execute_task(task_id)
+        self._execute_long_running_task(task_id)
 
         # Delete the configlet
         self.api.delete_configlet(name, key)
@@ -1133,7 +1226,7 @@ class TestCvpClient(DutSystemTest):
         # This should result in a reconciled config with 1 new line.
         resp = self.api.validate_configlets_for_device(self.device['key'],
                                                        compare_configlets,
-                                                       'viewConfig')
+                                                       'validateConfig')
         self.assertIn('reconciledConfig', resp)
         self.assertIn('new', resp)
         self.assertEqual(resp['new'], 1)
@@ -1157,11 +1250,12 @@ class TestCvpClient(DutSystemTest):
         ''' Verify get_all_temp_actions
         '''
         # pylint: disable=protected-access
-        name = 'test_configlet'
-        config = 'lldp timer 9'
+        test_configlet_name = 'test_configlet'
+        test_configlet_config = 'lldp timer 9'
 
         # Add a configlet
-        key = self._create_configlet(name, config)
+        test_configlet_key = self._create_configlet(test_configlet_name,
+                                                    test_configlet_config)
 
         # Apply the configlet to the container
         data = {
@@ -1177,8 +1271,8 @@ class TestCvpClient(DutSystemTest):
                 'fromName': '',
                 'toName': self.container['name'],
                 'toIdType': 'container',
-                'configletList': [key],
-                'configletNamesList': [name],
+                'configletList': [test_configlet_key],
+                'configletNamesList': [test_configlet_name],
                 'ignoreConfigletList': [],
                 'ignoreConfigletNamesList': [],
                 'configletBuilderList' : [],
@@ -1192,17 +1286,25 @@ class TestCvpClient(DutSystemTest):
         # Request the list of temp actions
         result = self.api.get_all_temp_actions()
 
+        # Validate the results
+        # There should be 1 temp action for CVP versions before 2020.2.4
+        if self.clnt.apiversion < 5.0:
+            self.assertEqual(result['total'], 1)
+        else:
+            # For CVP versions starting with CVP 2020.2.4 there will be 2
+            # temp actions
+            self.assertEqual(result['total'], 2)
+
+        # The temp action should contain the data from the add action
+        for tempaction in result['data']:
+            if tempaction['info'] == data['data'][0]['info']:
+                for dkey in data['data'][0]:
+                    self.assertIn(dkey, tempaction.keys())
+                    self.assertEqual(data['data'][0][dkey], tempaction[dkey])
+
         # Delete the temporary action and the configlet
         self.clnt.post('//provisioning/deleteAllTempAction.do')
-        self.api.delete_configlet(name, key)
-
-        # Validate the results
-        # There should be 1 temp action
-        self.assertEqual(result['total'], 1)
-        # The temp action should contain the data from the add action
-        for dkey in data['data'][0]:
-            self.assertIn(dkey, result['data'][0].keys())
-            self.assertEqual(data['data'][0][dkey], result['data'][0][dkey])
+        self.api.delete_configlet(test_configlet_name, test_configlet_key)
 
     def test_api_get_event_by_id_bad(self):
         ''' Verify get_event_by_id returns an error for a bad ID
@@ -1753,9 +1855,9 @@ class TestCvpClient(DutSystemTest):
     #                                   image_bundle=None, create_task=True)
     #     pprint('POST DEPLOY')
     #     pprint(resp)
-    #     pprint('PRE EXECTURE DEPLOY TASK')
+    #     pprint('PRE EXECUTE DEPLOY TASK')
     #     self._execute_long_running_task(task_id)
-    #     pprint('POST EXECTURE DEPLOY TASK')
+    #     pprint('POST EXECUTE DEPLOY TASK')
     #
     #     final_undef_devs = self.api.get_devices_in_container('Undefined')
     #     self.assertEqual(len(undefined_devs), len(final_undef_devs))

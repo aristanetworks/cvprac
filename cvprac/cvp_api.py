@@ -36,6 +36,7 @@ import time
 # This import is for proper file IO handling support for both Python 2 and 3
 # pylint: disable=redefined-builtin
 from io import open
+from datetime import datetime
 
 from cvprac.cvp_client_errors import CvpApiError
 
@@ -103,7 +104,7 @@ class CvpApi(object):
 
     # pylint: disable=too-many-arguments
     def add_user(self, username, password, role, status, first_name,
-                 last_name, email):
+                 last_name, email, user_type):
         ''' Add new local user to the CVP UI.
 
             Args:
@@ -114,6 +115,7 @@ class CvpApi(object):
                 first_name (str): first name of the user
                 last_name (str): last name of the user
                 email (str): email address of the user
+                user_type (str): type of AAA (Local/TACACS/RADIUS)
         '''
         if status not in ['Enabled', 'Disabled']:
             self.log.error('Invalid status %s.'
@@ -127,31 +129,41 @@ class CvpApi(object):
                          "lastName": last_name,
                          "password": password,
                          "userId": username,
-                         "userStatus": status}}
+                         "userStatus": status,
+                         "userType": user_type}}
         return self.clnt.post('/user/addUser.do', data=data,
                               timeout=self.request_timeout)
 
-    def update_user(self, username, password, status, role):
+    def update_user(self, username, password, role, status, first_name,
+                    last_name, email, user_type):
         ''' Updates username information, like
-            changing password, disable/enable the username
-            and user role.
+            changing password, user role, email address, names,
+            disable/enable the username.
 
             Args:
                 username (str): local username on CVP
                 password (str): password of the user
-                status (str): status of user (enable/disable)
                 role (str): role of the user
+                status (str): state of the user (Enabled/Disabled)
+                first_name (str): first name of the user
+                last_name (str): last name of the user
+                email (str): email address of the user
+                user_type (str): type of AAA (Local/TACACS/RADIUS)
         '''
         if status not in ['Enabled', 'Disabled']:
             self.log.error('Invalid status %s.'
                            ' Status must be Enabled or Disabled.'
                            ' Defaulting to Disabled' % status)
             status = 'Disabled'
-        data = {"user": {"userId": username,
-                         "userType": "Local",
+        data = {"roles": [role],
+                "user": {"contactNumber": "",
+                         "email": email,
+                         "firstName": first_name,
+                         "lastName": last_name,
+                         "password": password,
+                         "userId": username,
                          "userStatus": status,
-                         "password": password},
-                "roles": [role]}
+                         "userType": user_type}}
         return self.clnt.post('/user/updateUser.do?userId={}'.format(username),
                               data=data, timeout=self.request_timeout)
 
@@ -244,11 +256,62 @@ class CvpApi(object):
                 task (dict): The CVP log for the associated Id.  Returns None
                     if the task_id was invalid.
         '''
-        self.log.debug('get_log_by_id: task_id: %s' % task_id)
-        return self.clnt.get('/task/getLogsById.do?id=%s&queryparam='
-                             '&startIndex=%d&endIndex=%d' %
-                             (task_id, start, end),
-                             timeout=self.request_timeout)
+        self.log.debug('get_logs_by_id: task_id: %s' % task_id)
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion < 5.0:
+            self.log.debug('v1 - v4 /task/getLogsByID.do?')
+            resp = self.clnt.get('/task/getLogsById.do?id=%s&queryparam='
+                                 '&startIndex=%d&endIndex=%d' %
+                                 (task_id, start, end),
+                                 timeout=self.request_timeout)
+        else:
+            self.log.debug('v5 /audit/getLogs.do')
+            task_info = self.get_task_by_id(task_id)
+            stage_id = None
+            if 'stageId' in task_info:
+                stage_id = task_info['stageId']
+            else:
+                self.log.debug('No stage ID found for task %s' % task_id)
+            if 'ccIdV2' in task_info:
+                cc_id = task_info['ccIdV2']
+                if cc_id == '':
+                    self.log.debug('No ccIdV2 for task %s.'
+                                   ' It was likely cancelled.'
+                                   ' Using old /task/getLogsByID.do?'
+                                   % task_id)
+                    resp = self.clnt.get(
+                        '/task/getLogsById.do?id=%s&queryparam='
+                        '&startIndex=%d&endIndex=%d' % (task_id, start, end),
+                        timeout=self.request_timeout)
+                else:
+                    resp = self.get_audit_logs_by_id(cc_id, stage_id)
+            else:
+                self.log.debug('No change ID found for task %s' % task_id)
+                resp = None
+        return resp
+
+    def get_audit_logs_by_id(self, cc_id, stage_id=None, data_size=75):
+        ''' Returns the audit logs of a particular ChangeControl.
+
+            Args:
+                cc_id (string): change control ID from ccIdV2 field
+                stage_id (string): stage ID from stageId field
+                data_size (int): data size
+
+            Returns:
+                task (dict): The CVP log for the associated ccIdV2
+        '''
+        data = {"category": "ChangeControl",
+                "startTime": 0,
+                "endTime": 0,
+                "dataSize": data_size,
+                "objectKey": cc_id,
+                "lastRetrievedAudit": {}}
+        if stage_id:
+            data["tags"] = {"stageId": stage_id}
+        return self.clnt.post('/cvpservice/audit/getLogs.do?', data=data,
+                              timeout=self.request_timeout)
 
     def add_note_to_task(self, task_id, note):
         ''' Add notes to the task.
@@ -758,16 +821,14 @@ class CvpApi(object):
                     otherwise returns an empty hash.
         '''
         self.log.debug('get_device_by_name: fqdn: %s' % fqdn)
-        data = self.get_inventory(start=0, end=0, query=fqdn)
-        if data:
-            for netelement in data:
-                if netelement['fqdn'] == fqdn:
-                    device = netelement
+        # data = self.get_inventory(start=0, end=0, query=fqdn)
+        data = self.search_topology(fqdn)
+        device = {}
+        if 'netElementList' in data:
+            for netelem in data['netElementList']:
+                if netelem['fqdn'] == fqdn:
+                    device = netelem
                     break
-            else:
-                device = {}
-        else:
-            device = {}
         return device
 
     def get_device_by_mac(self, device_mac):
@@ -781,12 +842,13 @@ class CvpApi(object):
                     otherwise returns an empty hash.
         '''
         self.log.debug('get_device_by_mac: MAC address: %s' % device_mac)
-        data = self.get_inventory(start=0, end=0, query=device_mac)
+        # data = self.get_inventory(start=0, end=0, query=device_mac)
+        data = self.search_topology(device_mac)
         device = {}
-        if data:
-            for netelement in data:
-                if netelement['systemMacAddress'] == device_mac:
-                    device = netelement
+        if 'netElementList' in data:
+            for netelem in data['netElementList']:
+                if netelem['systemMacAddress'] == device_mac:
+                    device = netelem
                     break
         return device
 
@@ -1454,8 +1516,8 @@ class CvpApi(object):
             Args:
                 mac (str): MAC address of device to validate configlets for.
                 configlet_keys (list): List of configlet keys
-                page_type (list): Possible Values of pageType -
-                    'viewConfig', 'managementIPValidation', 'validate' etc..
+                page_type (list): Possible Values of pageType - 'viewConfig',
+                    'managementIPValidation', 'validateConfig', etc...
 
             Returns:
                 response (dict): A dict that contains ...
@@ -1688,6 +1750,14 @@ class CvpApi(object):
                              'startIndex=%d&endIndex=%d'
                              % (qplus(query), start, end),
                              timeout=self.request_timeout)
+        if 'netElementList' in data:
+            for device in data['netElementList']:
+                device['status'] = device['deviceStatus']
+                device['mlagEnabled'] = device['isMLAGEnabled']
+                device['danzEnabled'] = device['isDANZEnabled']
+                device['parentContainerKey'] = device['parentContainerId']
+                device['bootupTimestamp'] = device['bootupTimeStamp']
+                device['internalBuild'] = device['internalBuildId']
         return data
 
     def filter_topology(self, node_id='root', fmt='topology',
@@ -1713,8 +1783,10 @@ class CvpApi(object):
             applied to the device match the devices running configuration.
 
             Args:
-                node_key (str): The device key.
-                node_type (str): The device type.
+                node_key (str): The device key. This is the device MAC address
+                    Example: ff:ff:ff:ff:ff:ff
+                node_type (str): The device type. This is either 'netelement'
+                    or 'container'
 
             Returns:
                 response (dict): A dict that contains the results of the
@@ -2108,9 +2180,9 @@ class CvpApi(object):
         if self.clnt.apiversion is None:
             self.get_cvp_info()
         if self.clnt.apiversion >= 3.0:
-            self.log.debug('v3/v4 getChangeControls API Call')
+            self.log.debug('v3/v4/v5 getChangeControls API Call')
             self.log.warning(
-                'get_change_controls: change control APIs moved for v3/v4')
+                'get_change_controls: change control APIs moved for v3/v4/v5')
             return None
 
         self.log.debug('v2 getChangeControls API Call')
@@ -2138,7 +2210,8 @@ class CvpApi(object):
         if self.clnt.apiversion is None:
             self.get_cvp_info()
         if self.clnt.apiversion >= 3.0:
-            self.log.debug('v3/v4 uses existing get_task_by_status API Call')
+            self.log.debug(
+                'v3/v4/v5 uses existing get_task_by_status API Call')
             return self.get_tasks_by_status('PENDING')
 
         self.log.debug('v2 getTasksByStatus API Call')
@@ -2206,9 +2279,9 @@ class CvpApi(object):
         if self.clnt.apiversion is None:
             self.get_cvp_info()
         if self.clnt.apiversion >= 3.0:
-            self.log.debug('v3/v4 addOrUpdateChangeControl API Call')
+            self.log.debug('v3/v4/v5 addOrUpdateChangeControl API Call')
             self.log.warning('create_change_control:'
-                             ' change control APIs moved for v3/v4')
+                             ' change control APIs moved for v3/v4/v5')
             return None
 
         self.log.debug('v2 addOrUpdateChangeControl API Call')
@@ -2300,9 +2373,10 @@ class CvpApi(object):
         if self.clnt.apiversion is None:
             self.get_cvp_info()
         if self.clnt.apiversion >= 3.0:
-            self.log.debug('v3/v4 addNotesToChangeControl API Call deprecated')
+            self.log.debug(
+                'v3/v4/v5 addNotesToChangeControl API Call deprecated')
             self.log.warning('add_notes_to_change_control:'
-                             ' change control APIs not supported for v3/v4')
+                             ' change control APIs not supported for v3/v4/v5')
             return None
 
         self.log.debug('v2 addNotesToChangeControl API Call')
@@ -2321,7 +2395,7 @@ class CvpApi(object):
             self.get_cvp_info()
         if self.clnt.apiversion >= 3.0:
             self.log.debug(
-                'v3/v4 /api/v3/services/ccapi.ChangeControl/Start API Call')
+                'v3/v4/v5 /api/v3/services/ccapi.ChangeControl/Start API Call')
             for cc_id in cc_ids:
                 resp_list = []
                 data = {'cc_id': cc_id}
@@ -2337,7 +2411,8 @@ class CvpApi(object):
         return self.clnt.post('/changeControl/executeCC.do', data=data,
                               timeout=self.request_timeout)
 
-    def approve_change_control(self, cc_id, timestamp):
+    def approve_change_control(self, cc_id,
+                               timestamp=datetime.utcnow().isoformat() + 'Z'):
         ''' Cancel the provided change controls.
 
             Args:
@@ -2390,7 +2465,7 @@ class CvpApi(object):
             self.get_cvp_info()
         if self.clnt.apiversion >= 3.0:
             self.log.debug(
-                'v3/v4 /api/v3/services/ccapi.ChangeControl/Stop API Call')
+                'v3/v4/v5 /api/v3/services/ccapi.ChangeControl/Stop API Call')
             resp_list = []
             for cc_id in cc_ids:
                 data = {'cc_id': cc_id}
@@ -2414,8 +2489,8 @@ class CvpApi(object):
         if self.clnt.apiversion is None:
             self.get_cvp_info()
         if self.clnt.apiversion >= 3.0:
-            self.log.debug(
-                'v3/v4 /api/v3/services/ccapi.ChangeControl/Delete API Call')
+            self.log.debug('v3/v4/v5 /api/v3/services/'
+                           'ccapi.ChangeControl/Delete API Call')
             for cc_id in cc_ids:
                 resp_list = []
                 data = {'cc_id': cc_id}
@@ -2479,9 +2554,9 @@ class CvpApi(object):
             self.get_cvp_info()
         if self.clnt.apiversion >= 3.0:
             self.log.debug('get_change_control_info method deprecated for'
-                           ' v3/v4. Moved to get_change_control_status')
+                           ' v3/v4/v5. Moved to get_change_control_status')
             self.log.warning('get_change_control_info:'
-                             ' info change control API moved for v3/v4 to'
+                             ' info change control API moved for v3/v4/v5 to'
                              ' status')
             return None
 
