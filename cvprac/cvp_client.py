@@ -568,7 +568,7 @@ class CvpClient(object):
 
         :return:
         '''
-        response = self.session.post('/login/logout.do')
+        response = self.post('/login/logout.do')
         if response['data'] == 'success':
             self.log.info('User logged out.')
             self.session = None
