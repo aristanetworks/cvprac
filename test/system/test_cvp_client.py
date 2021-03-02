@@ -217,6 +217,14 @@ class TestCvpClient(DutSystemTest):
             self.clnt.connect([dut['node']], dut['username'], dut['password'],
                               port=700)
 
+    def test_connect_from_cb_script(self):
+        ''' Verify connection works from configlet builder scripts
+        '''
+        dut = self.duts[0]
+        os.environ["CURRENT_NODE_IP"] = dut['node']
+        self.clnt.connect(['localhost'], dut['username'], dut['password'])
+        self.clnt.connect(['127.0.0.1'], dut['username'], dut['password'])
+
     def test_get_not_connected(self):
         ''' Verify get with no connection raises a ValueError
         '''
