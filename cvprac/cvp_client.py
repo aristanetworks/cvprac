@@ -290,8 +290,8 @@ class CvpClient(object):
             raise TypeError('nodes argument must be a list')
 
         for idx, _ in enumerate(nodes):
-            if (os.environ.get('CURRENT_NODE_IP')
-                    and nodes[idx] in ['127.0.0.1', 'localhost']):
+            if (os.environ.get('CURRENT_NODE_IP') and
+                    nodes[idx] in ['127.0.0.1', 'localhost']):
                 # We set this env in script-executor container.
                 # Mask localhost or 127.0.0.1 with node IP if this
                 # is called from configlet builder scripts.
