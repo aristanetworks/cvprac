@@ -1104,31 +1104,33 @@ class CvpApi(object):
         return self.clnt.post('/configlet/updateConfiglet.do', data=body,
                               timeout=self.request_timeout)
 
-    def update_configlet_builder(self, config, key, name, draft=False):
+    def update_configlet_builder(self, name, key, config, draft=False,
+                                 wait_for_task=False):
         ''' Update an existing configlet builder.
-
             Args:
-                config (str): Contents of the buidler config
+                config (str): Contents of the configlet builder configuration
                 key: (str): key/id of the configlet builder to be updated
                 name: (str): name of the configlet builder
                 draft (boolean): is update a draft
+                wait_for_task (boolean): wait for task IDs to be generated
         '''
-
         data = {
             "name": name,
+            "waitForTaskIds": wait_for_task,
             "data": {
                 "main_script": {
                     "data": config
                 }
             }
         }
-
-        self.log.debug('update_configlet_builder: config: {} key: {} name: {} '.format(
-            config, key, name))
-
+        debug_str = 'update_configlet_builder:' \
+                    ' config: {} key: {} name: {} '
+        self.log.debug(debug_str.format(config, key, name))
         # Update the configlet builder
-        self.clnt.post('/configlet/addConfigletBuilder.do?isDraft={}&id={}&action=save'.format(
-            draft, key), data=data, timeout=self.request_timeout)
+        url_string = '/configlet/updateConfigletBuilder.do?' \
+                     'isDraft={}&id={}&action=save'
+        return self.clnt.post(url_string.format(draft, key),
+                              data=data, timeout=self.request_timeout)
 
     def add_note_to_configlet(self, key, note):
         ''' Add a note to a configlet.

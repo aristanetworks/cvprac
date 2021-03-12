@@ -722,7 +722,7 @@ class TestCvpClient(DutSystemTest):
         self.assertIsNotNone(key)
         return key
 
-    def test_api_add_delete_configlet_builder(self):
+    def test_api_add_update_delete_configlet_builder(self):
         ''' Verify add_configlet_builder and delete_configlet
             Will test a configlet builder with form data and without
         '''
@@ -733,7 +733,7 @@ class TestCvpClient(DutSystemTest):
                   "\n\nprint('hostname {0}'.format(dev_host))")
 
         draft = False
-        form = [{
+        forms = [{
             'fieldId': 'txt_hostname',
             'fieldLabel': 'Hostname',
             'type': 'Text box',
@@ -744,7 +744,7 @@ class TestCvpClient(DutSystemTest):
         }]
 
         # Add the configlet builder
-        key = self._create_configlet_builder(name, config, draft, form)
+        key = self._create_configlet_builder(name, config, draft, forms)
         key2 = self._create_configlet_builder(name2, config, draft)
 
         # Verify the configlet builder was added
@@ -760,9 +760,26 @@ class TestCvpClient(DutSystemTest):
         result2 = self.api.get_configlet_by_name(name2)
         self.assertIsNotNone(result2)
         self.assertEqual(result2['name'], name2)
-        # self.assertEqual(result2['config'], config)
+        # self.assertIn("dev_host", result2['config'])
+        # self.assertNotIn("device_hostname", result2['config'])
         self.assertEqual(result2['type'], 'Builder')
         self.assertEqual(result2['key'], key2)
+
+        # Update No Form data
+        config2 = ("from cvplibrary import Form\n\n" +
+                   "device_hostname = Form.getFieldById" +
+                   "('txt_hostname').getValue()" +
+                   "\n\nprint('Hostname {0}'.format(device_hostname))")
+        update_result2 = self.api.update_configlet_builder(name2, key2,
+                                                           config2)
+        self.assertIsNotNone(update_result2)
+        update_info2 = self.api.get_configlet_by_name(name2)
+        self.assertIsNotNone(update_info2)
+        self.assertEqual(update_info2['name'], name2)
+        # self.assertIn("device_hostname", update_info2['config'])
+        # self.assertNotIn("dev_host", update_info2['config'])
+        self.assertEqual(update_info2['type'], 'Builder')
+        self.assertEqual(update_info2['key'], key2)
 
         # Delete the configlet builder
         self.api.delete_configlet(name, key)
