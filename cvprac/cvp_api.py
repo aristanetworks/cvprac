@@ -1725,9 +1725,9 @@ class CvpApi(object):
 
                     Ex: {u'data': {u'status': u'success', u'taskIds': []}}
         '''
-        info = '%s moving device %s to container %s' % (app_name,
-                                                        device['fqdn'],
-                                                        container['name'])
+        info = 'Device Add {} to container {} by {}'.format(device['fqdn'],
+                                                       container['name'],
+                                                       app_name)
         self.log.debug('Attempting to move device %s to container %s'
                        % (device['fqdn'], container['name']))
         if 'parentContainerId' in device:
