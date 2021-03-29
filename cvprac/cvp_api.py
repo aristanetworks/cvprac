@@ -1132,6 +1132,37 @@ class CvpApi(object):
         return self.clnt.post(url_string.format(draft, key),
                               data=data, timeout=self.request_timeout)
 
+    def update_reconcile_configlet(self, device_mac, config, key, name,
+                                   reconciled=False):
+        ''' Update the reconcile configlet.
+
+            Args:
+                device_mac (str): Mac address/Key for device whose reconcile
+                    configlet is being updated
+                config (str): Reconciled config statements
+                key (str): Reconcile Configlet key
+                name (str): Reconcile Configlet name
+                reconciled (boolean): Wait for task IDs to generate
+
+            Returns:
+                data (dict): Contains success or failure message
+        '''
+        log_str = ('update_reconcile_configlet:'
+                   ' device_mac: {} config: {} key: {} name: {}')
+        self.log.debug(log_str.format(device_mac, config, key, name))
+
+        url_str = ('/provisioning/updateReconcileConfiglet.do?'
+                   'netElementId={}')
+        body = {
+            'config': config,
+            'key': key,
+            'name': name,
+            'reconciled': reconciled,
+            'unCheckedLines': '',
+        }
+        return self.clnt.post(url_str.format(device_mac), data=body,
+                              timeout=self.request_timeout)
+
     def add_note_to_configlet(self, key, note):
         ''' Add a note to a configlet.
 
@@ -1726,8 +1757,8 @@ class CvpApi(object):
                     Ex: {u'data': {u'status': u'success', u'taskIds': []}}
         '''
         info = 'Device Add {} to container {} by {}'.format(device['fqdn'],
-                                                       container['name'],
-                                                       app_name)
+                                                            container['name'],
+                                                            app_name)
         self.log.debug('Attempting to move device %s to container %s'
                        % (device['fqdn'], container['name']))
         if 'parentContainerId' in device:

@@ -792,6 +792,30 @@ class TestCvpClient(DutSystemTest):
         with self.assertRaises(CvpApiError):
             self.api.get_configlet_by_name(name2)
 
+    def test_api_update_reconcile_configlet(self):
+        ''' Verify update_reconcile_configlet
+        '''
+        rec_configlet_name = 'RECONCILE_{}'.format(self.device['ipAddress'])
+        # Verify this reconcile configlet doesn't already exist
+        with self.assertRaises(CvpApiError):
+            self.api.get_configlet_by_name(rec_configlet_name)
+        config = 'lldp timer 25'
+        # create reconcile configlet
+        result = self.api.update_reconcile_configlet(self.device['key'],
+                                                     config, "",
+                                                     rec_configlet_name,
+                                                     reconciled=True)
+        self.assertIsNotNone(result)
+        # Verify this reconcile configlet exists
+        new_rec_configlet = self.api.get_configlet_by_name(rec_configlet_name)
+        self.assertIsNotNone(new_rec_configlet)
+        self.assertEqual(new_rec_configlet['config'], 'lldp timer 25\n')
+        self.api.delete_configlet(new_rec_configlet['name'],
+                                  new_rec_configlet['key'])
+        # Verify this reconcile configlet has been removed
+        with self.assertRaises(CvpApiError):
+            self.api.get_configlet_by_name(rec_configlet_name)
+
     def test_api_get_device_image_info(self):
         ''' Verify get_device_image_info
         '''
