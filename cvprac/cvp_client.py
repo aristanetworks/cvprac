@@ -415,7 +415,7 @@ class CvpClient(object):
             msg = ('%s: Request Error: session logged out' % prefix)
             raise CvpSessionLogOutError(msg)
 
-        joutput = response.json()
+        joutput = json_decoder(response.text)
         err_code_val = self._finditem(joutput, 'errorCode')
         if err_code_val:
             if 'errorMessage' in joutput:
@@ -686,8 +686,14 @@ class CvpClient(object):
             except ValueError as error:
                 self.log.debug('Error trying to decode request response %s',
                                error)
-                self.log.debug('Attempt to return response text')
-                resp_data = dict(data=response.text)
+                if 'Extra data' in error.message:
+                    self.log.debug('Found multiple objects in response data.'
+                                   'Attempt to decode')
+                    decoded_data = json_decoder(response.text)
+                    resp_data = dict(data=decoded_data)
+                else:
+                    self.log.debug('Attempt to return response text')
+                    resp_data = dict(data=response.text)
         else:
             self.log.debug('Received no response for request %s %s',
                            req_type, url)
@@ -971,3 +977,21 @@ class CvpClient(object):
                     if item is not None:
                         break
         return item
+
+
+def json_decoder(data):
+    ''' Check for ...
+    '''
+    decoder = json.JSONDecoder()
+    position = 0
+    decoded_data = []
+    while True:
+        try:
+            obj, position = decoder.raw_decode(data, position)
+            decoded_data.append(obj)
+            position += 1
+        except ValueError:
+            break
+    if len(decoded_data) == 1:
+        return decoded_data[0]
+    return decoded_data
