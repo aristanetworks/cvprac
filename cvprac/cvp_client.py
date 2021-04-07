@@ -686,7 +686,7 @@ class CvpClient(object):
             except ValueError as error:
                 self.log.debug('Error trying to decode request response %s',
                                error)
-                if 'Extra data' in error.message:
+                if 'Extra data' in str(error):
                     self.log.debug('Found multiple objects in response data.'
                                    'Attempt to decode')
                     decoded_data = json_decoder(response.text)
