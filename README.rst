@@ -172,22 +172,20 @@ standard form of connection. Multiple examples below demonstrate connecting to C
 CVaaS
 -----
 
-CVaaS is CloudVision as a Service. Users with CVaaS have two options for connecting to CVP with REST APIs.
+CVaaS is CloudVision as a Service. Users with CVaaS must use a REST API token for accessing CVP with REST APIs.
 
-1. Local CVP users with username/password login.
+   In the case where users authenticate with CVP (CVaaS) using Oauth a REST API token is required to be generated
+   and used for running REST APIs. In this case no username/password login is necessary, but the API token
+   (via api_token parameter) must be provided to cvprac client with the is_cvaas parameter.
+   In the case that the api_token is used for REST APIs the username and password will be ignored and
+   the tenant parameter is not needed.
 
-   In order to use username/password login with CVaaS the user must be a user locally created within CVP.
-   This option looks very similar to a connection to an On Premises CVP cluster with a couple other options
-   (is_cvaas and tenant), required by CVaaS.
+An example of a CVaaS connection is shown below.
 
-2. Oauth users with REST API token.
-
-   In the case where users authenticate with CVP using Oauth a REST API token is required to be generated and
-   used for running REST APIs. In this case no login is necessary, but the API token must be provided to
-   cvprac client with the is_cvaas parameter. In the case that the cvaas_token is used for REST APIs the
-   username and password will be ignored and the tenant parameter is not needed.
-
-Examples for both types of CVaaS connections are shown below.
+Note that the token parameter was previously cvaas_token but this has been converted to api_token because
+tokens are also available for usage with On Prem CVP deployments. The api_token parameter name is more
+generic in this sense. If you are using the cvaas_token parameter please convert to api_token because the
+cvaas_token parameter will be deprecated in the future.
 
 
 CVP Version Handling
@@ -235,26 +233,14 @@ Same example as above using the API method:
     {u'version': u'2016.1.0'}
     >>>
 
-Same example as above but connecting to CVaaS with a local CVP username/password:
-
-::
-
-    >>> from cvprac.cvp_client import CvpClient
-    >>> clnt = CvpClient()
-    >>> clnt.connect(nodes=['cvaas'], username='cvp_local_user', password='cvp_local_word', is_cvaas=True, tenant='user org/tenant')
-    >>> result = clnt.api.get_cvp_info()
-    >>> print result
-    {u'version': u'cvaas'}
-    >>>
-
 Same example as above but connecting to CVaaS with a token:
-Note that the username and password parameters are required by the connect function but will be ignored when using cvaas_token:
+Note that the username and password parameters are required by the connect function but will be ignored when using api_token:
 
 ::
 
     >>> from cvprac.cvp_client import CvpClient
     >>> clnt = CvpClient()
-    >>> clnt.connect(nodes=['cvaas'], username='', password='', is_cvaas=True, cvaas_token='user token')
+    >>> clnt.connect(nodes=['cvaas'], username='', password='', is_cvaas=True, api_token='user token')
     >>> result = clnt.api.get_cvp_info()
     >>> print result
     {u'version': u'cvaas'}
