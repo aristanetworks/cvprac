@@ -997,10 +997,7 @@ class CvpApi(object):
                 configlets (list): The list of configlets applied to the device
         '''
         self.log.debug('get_configlets_by_device: mac: %s' % mac)
-        data = self.clnt.get('/provisioning/getConfigletsByNetElementId.do?'
-                             'netElementId=%s&queryParam=&startIndex=%d&'
-                             'endIndex=%d' % (mac, start, end),
-                             timeout=self.request_timeout)
+        data = self.get_configlets_by_netelement_id(mac, start, end)
         return data['configletList']
 
     def add_configlet_builder(self, name, config, draft=False, form=None):
