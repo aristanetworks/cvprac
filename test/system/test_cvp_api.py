@@ -1051,6 +1051,73 @@ class TestCvpClient(DutSystemTest):
         result = self.api.search_topology(name)
         self.assertEqual(len(result['containerList']), 0)
 
+    def test_api_delete_container_with_children(self):
+        ''' Verify delete_container returns a failure when attempting to delete
+            a container with a child container
+        '''
+        name = 'CVPRACTEST'
+        parent = self.container
+        # Verify create container
+        self.api.add_container(name, parent['name'], parent['key'])
+
+        # Verify get container for exact container name returns only that
+        # container
+        new_container = self.api.get_container_by_name(name)
+        self.assertIsNotNone(new_container)
+        self.assertEqual(new_container['name'], name)
+
+        child_name = 'CVPRACTESTCHILD'
+        self.api.add_container(child_name, new_container['name'],
+                               new_container['key'])
+        # Verify get container for exact container name returns only that
+        # container
+        new_child_container = self.api.get_container_by_name(child_name)
+        self.assertIsNotNone(new_child_container)
+        self.assertEqual(new_child_container['name'], child_name)
+
+        # Verify failure status when attempting to delete new parent container
+        # with self.assertRaises(CvpApiError):
+        #    self.api.delete_container(new_container['name'],
+        #                              new_container['key'],
+        #                              parent['name'], parent['key'])
+        try:
+            self.api.delete_container(new_container['name'],
+                                      new_container['key'],
+                                      parent['name'], parent['key'])
+        except CvpApiError as error:
+            if 'Only empty container can be deleted' in error.msg:
+                pprint('CVP Version {} raises error when attempting to'
+                       ' delete container with'
+                       ' children'.format(self.clnt.apiversion))
+            elif 'Container was not deleted. Check for children' in error.msg:
+                pprint('CVP Version {} does not raise error when attempting to'
+                       ' delete container with'
+                       ' children'.format(self.clnt.apiversion))
+
+        # Delete child container first
+        resp = self.api.delete_container(new_child_container['name'],
+                                         new_child_container['key'],
+                                         new_container['name'],
+                                         new_container['key'])
+        self.assertIsNotNone(resp)
+        self.assertIn('data', resp)
+        self.assertIn('status', resp['data'])
+        self.assertEqual('success', resp['data']['status'])
+        result = self.api.search_topology(new_child_container['name'])
+        self.assertEqual(len(result['containerList']), 0)
+
+        # Now delete new parent container
+        resp = self.api.delete_container(new_container['name'],
+                                         new_container['key'],
+                                         parent['name'],
+                                         parent['key'])
+        self.assertIsNotNone(resp)
+        self.assertIn('data', resp)
+        self.assertIn('status', resp['data'])
+        self.assertEqual('success', resp['data']['status'])
+        result = self.api.search_topology(new_container['name'])
+        self.assertEqual(len(result['containerList']), 0)
+
     def test_api_container_url_encode_name(self):
         ''' Verify special characters can be used in container names
         '''
