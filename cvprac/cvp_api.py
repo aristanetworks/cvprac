@@ -1714,8 +1714,23 @@ class CvpApi(object):
                        'parent: %s parent_key: %s' %
                        (container_name, container_key, parent_name,
                         parent_key))
-        return self._container_op(container_name, container_key, parent_name,
+        resp = self._container_op(container_name, container_key, parent_name,
                                   parent_key, 'delete')
+        # As of CVP version 2020.1 the addTempAction.do API endpoint stopped
+        # raising an Error when attempting to delete a container with children.
+        # To account for this try to see if the container being deleted
+        # still exists after the attempted delete. If it still exists
+        # raise an error similar to how CVP behaved prior to CVP 2020.1
+        try:
+            still_exists = self.get_container_by_id(container_key)
+        except CvpApiError as error:
+            if 'Invalid Container id' in error.msg:
+                return resp
+            else:
+                raise
+        if still_exists is not None:
+            raise CvpApiError('Container was not deleted. Check for children')
+        return resp
 
     def get_parent_container_for_device(self, device_mac):
         ''' Add the container to the specified parent.
