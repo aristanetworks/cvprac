@@ -997,10 +997,7 @@ class CvpApi(object):
                 configlets (list): The list of configlets applied to the device
         '''
         self.log.debug('get_configlets_by_device: mac: %s' % mac)
-        data = self.clnt.get('/provisioning/getConfigletsByNetElementId.do?'
-                             'netElementId=%s&queryParam=&startIndex=%d&'
-                             'endIndex=%d' % (mac, start, end),
-                             timeout=self.request_timeout)
+        data = self.get_configlets_by_netelement_id(mac, start, end)
         return data['configletList']
 
     def add_configlet_builder(self, name, config, draft=False, form=None):
@@ -1102,6 +1099,65 @@ class CvpApi(object):
         body = {'config': config, 'key': key, 'name': name,
                 'waitForTaskIds': wait_task_ids}
         return self.clnt.post('/configlet/updateConfiglet.do', data=body,
+                              timeout=self.request_timeout)
+
+    def update_configlet_builder(self, name, key, config, draft=False,
+                                 wait_for_task=False):
+        ''' Update an existing configlet builder.
+            Args:
+                config (str): Contents of the configlet builder configuration
+                key: (str): key/id of the configlet builder to be updated
+                name: (str): name of the configlet builder
+                draft (boolean): is update a draft
+                wait_for_task (boolean): wait for task IDs to be generated
+        '''
+        data = {
+            "name": name,
+            "waitForTaskIds": wait_for_task,
+            "data": {
+                "main_script": {
+                    "data": config
+                }
+            }
+        }
+        debug_str = 'update_configlet_builder:' \
+                    ' config: {} key: {} name: {} '
+        self.log.debug(debug_str.format(config, key, name))
+        # Update the configlet builder
+        url_string = '/configlet/updateConfigletBuilder.do?' \
+                     'isDraft={}&id={}&action=save'
+        return self.clnt.post(url_string.format(draft, key),
+                              data=data, timeout=self.request_timeout)
+
+    def update_reconcile_configlet(self, device_mac, config, key, name,
+                                   reconciled=False):
+        ''' Update the reconcile configlet.
+
+            Args:
+                device_mac (str): Mac address/Key for device whose reconcile
+                    configlet is being updated
+                config (str): Reconciled config statements
+                key (str): Reconcile Configlet key
+                name (str): Reconcile Configlet name
+                reconciled (boolean): Wait for task IDs to generate
+
+            Returns:
+                data (dict): Contains success or failure message
+        '''
+        log_str = ('update_reconcile_configlet:'
+                   ' device_mac: {} config: {} key: {} name: {}')
+        self.log.debug(log_str.format(device_mac, config, key, name))
+
+        url_str = ('/provisioning/updateReconcileConfiglet.do?'
+                   'netElementId={}')
+        body = {
+            'config': config,
+            'key': key,
+            'name': name,
+            'reconciled': reconciled,
+            'unCheckedLines': '',
+        }
+        return self.clnt.post(url_str.format(device_mac), data=body,
                               timeout=self.request_timeout)
 
     def add_note_to_configlet(self, key, note):
@@ -1658,8 +1714,23 @@ class CvpApi(object):
                        'parent: %s parent_key: %s' %
                        (container_name, container_key, parent_name,
                         parent_key))
-        return self._container_op(container_name, container_key, parent_name,
+        resp = self._container_op(container_name, container_key, parent_name,
                                   parent_key, 'delete')
+        # As of CVP version 2020.1 the addTempAction.do API endpoint stopped
+        # raising an Error when attempting to delete a container with children.
+        # To account for this try to see if the container being deleted
+        # still exists after the attempted delete. If it still exists
+        # raise an error similar to how CVP behaved prior to CVP 2020.1
+        try:
+            still_exists = self.get_container_by_id(container_key)
+        except CvpApiError as error:
+            if 'Invalid Container id' in error.msg:
+                return resp
+            else:
+                raise
+        if still_exists is not None:
+            raise CvpApiError('Container was not deleted. Check for children')
+        return resp
 
     def get_parent_container_for_device(self, device_mac):
         ''' Add the container to the specified parent.
@@ -1697,9 +1768,9 @@ class CvpApi(object):
 
                     Ex: {u'data': {u'status': u'success', u'taskIds': []}}
         '''
-        info = '%s moving device %s to container %s' % (app_name,
-                                                        device['fqdn'],
-                                                        container['name'])
+        info = 'Device Add {} to container {} by {}'.format(device['fqdn'],
+                                                            container['name'],
+                                                            app_name)
         self.log.debug('Attempting to move device %s to container %s'
                        % (device['fqdn'], container['name']))
         if 'parentContainerId' in device:

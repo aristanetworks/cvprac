@@ -722,7 +722,7 @@ class TestCvpClient(DutSystemTest):
         self.assertIsNotNone(key)
         return key
 
-    def test_api_add_delete_configlet_builder(self):
+    def test_api_add_update_delete_configlet_builder(self):
         ''' Verify add_configlet_builder and delete_configlet
             Will test a configlet builder with form data and without
         '''
@@ -733,7 +733,7 @@ class TestCvpClient(DutSystemTest):
                   "\n\nprint('hostname {0}'.format(dev_host))")
 
         draft = False
-        form = [{
+        forms = [{
             'fieldId': 'txt_hostname',
             'fieldLabel': 'Hostname',
             'type': 'Text box',
@@ -744,7 +744,7 @@ class TestCvpClient(DutSystemTest):
         }]
 
         # Add the configlet builder
-        key = self._create_configlet_builder(name, config, draft, form)
+        key = self._create_configlet_builder(name, config, draft, forms)
         key2 = self._create_configlet_builder(name2, config, draft)
 
         # Verify the configlet builder was added
@@ -760,9 +760,26 @@ class TestCvpClient(DutSystemTest):
         result2 = self.api.get_configlet_by_name(name2)
         self.assertIsNotNone(result2)
         self.assertEqual(result2['name'], name2)
-        # self.assertEqual(result2['config'], config)
+        # self.assertIn("dev_host", result2['config'])
+        # self.assertNotIn("device_hostname", result2['config'])
         self.assertEqual(result2['type'], 'Builder')
         self.assertEqual(result2['key'], key2)
+
+        # Update No Form data
+        config2 = ("from cvplibrary import Form\n\n" +
+                   "device_hostname = Form.getFieldById" +
+                   "('txt_hostname').getValue()" +
+                   "\n\nprint('Hostname {0}'.format(device_hostname))")
+        update_result2 = self.api.update_configlet_builder(name2, key2,
+                                                           config2)
+        self.assertIsNotNone(update_result2)
+        update_info2 = self.api.get_configlet_by_name(name2)
+        self.assertIsNotNone(update_info2)
+        self.assertEqual(update_info2['name'], name2)
+        # self.assertIn("device_hostname", update_info2['config'])
+        # self.assertNotIn("dev_host", update_info2['config'])
+        self.assertEqual(update_info2['type'], 'Builder')
+        self.assertEqual(update_info2['key'], key2)
 
         # Delete the configlet builder
         self.api.delete_configlet(name, key)
@@ -774,6 +791,30 @@ class TestCvpClient(DutSystemTest):
 
         with self.assertRaises(CvpApiError):
             self.api.get_configlet_by_name(name2)
+
+    def test_api_update_reconcile_configlet(self):
+        ''' Verify update_reconcile_configlet
+        '''
+        rec_configlet_name = 'RECONCILE_{}'.format(self.device['ipAddress'])
+        # Verify this reconcile configlet doesn't already exist
+        with self.assertRaises(CvpApiError):
+            self.api.get_configlet_by_name(rec_configlet_name)
+        config = 'lldp timer 25'
+        # create reconcile configlet
+        result = self.api.update_reconcile_configlet(self.device['key'],
+                                                     config, "",
+                                                     rec_configlet_name,
+                                                     reconciled=True)
+        self.assertIsNotNone(result)
+        # Verify this reconcile configlet exists
+        new_rec_configlet = self.api.get_configlet_by_name(rec_configlet_name)
+        self.assertIsNotNone(new_rec_configlet)
+        self.assertEqual(new_rec_configlet['config'], 'lldp timer 25\n')
+        self.api.delete_configlet(new_rec_configlet['name'],
+                                  new_rec_configlet['key'])
+        # Verify this reconcile configlet has been removed
+        with self.assertRaises(CvpApiError):
+            self.api.get_configlet_by_name(rec_configlet_name)
 
     def test_api_get_device_image_info(self):
         ''' Verify get_device_image_info
@@ -1008,6 +1049,73 @@ class TestCvpClient(DutSystemTest):
         # Verify delete container
         self.api.delete_container(name, key, parent['name'], parent['key'])
         result = self.api.search_topology(name)
+        self.assertEqual(len(result['containerList']), 0)
+
+    def test_api_delete_container_with_children(self):
+        ''' Verify delete_container returns a failure when attempting to delete
+            a container with a child container
+        '''
+        name = 'CVPRACTEST'
+        parent = self.container
+        # Verify create container
+        self.api.add_container(name, parent['name'], parent['key'])
+
+        # Verify get container for exact container name returns only that
+        # container
+        new_container = self.api.get_container_by_name(name)
+        self.assertIsNotNone(new_container)
+        self.assertEqual(new_container['name'], name)
+
+        child_name = 'CVPRACTESTCHILD'
+        self.api.add_container(child_name, new_container['name'],
+                               new_container['key'])
+        # Verify get container for exact container name returns only that
+        # container
+        new_child_container = self.api.get_container_by_name(child_name)
+        self.assertIsNotNone(new_child_container)
+        self.assertEqual(new_child_container['name'], child_name)
+
+        # Verify failure status when attempting to delete new parent container
+        # with self.assertRaises(CvpApiError):
+        #    self.api.delete_container(new_container['name'],
+        #                              new_container['key'],
+        #                              parent['name'], parent['key'])
+        try:
+            self.api.delete_container(new_container['name'],
+                                      new_container['key'],
+                                      parent['name'], parent['key'])
+        except CvpApiError as error:
+            if 'Only empty container can be deleted' in error.msg:
+                pprint('CVP Version {} raises error when attempting to'
+                       ' delete container with'
+                       ' children'.format(self.clnt.apiversion))
+            elif 'Container was not deleted. Check for children' in error.msg:
+                pprint('CVP Version {} does not raise error when attempting to'
+                       ' delete container with'
+                       ' children'.format(self.clnt.apiversion))
+
+        # Delete child container first
+        resp = self.api.delete_container(new_child_container['name'],
+                                         new_child_container['key'],
+                                         new_container['name'],
+                                         new_container['key'])
+        self.assertIsNotNone(resp)
+        self.assertIn('data', resp)
+        self.assertIn('status', resp['data'])
+        self.assertEqual('success', resp['data']['status'])
+        result = self.api.search_topology(new_child_container['name'])
+        self.assertEqual(len(result['containerList']), 0)
+
+        # Now delete new parent container
+        resp = self.api.delete_container(new_container['name'],
+                                         new_container['key'],
+                                         parent['name'],
+                                         parent['key'])
+        self.assertIsNotNone(resp)
+        self.assertIn('data', resp)
+        self.assertIn('status', resp['data'])
+        self.assertEqual('success', resp['data']['status'])
+        result = self.api.search_topology(new_container['name'])
         self.assertEqual(len(result['containerList']), 0)
 
     def test_api_container_url_encode_name(self):

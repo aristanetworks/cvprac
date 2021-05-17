@@ -90,6 +90,7 @@ Example:
     >>>
 '''
 
+import os
 import re
 import json
 import logging
@@ -288,6 +289,14 @@ class CvpClient(object):
         if not isinstance(nodes, list):
             raise TypeError('nodes argument must be a list')
 
+        for idx, _ in enumerate(nodes):
+            if (os.environ.get('CURRENT_NODE_IP') and
+                    nodes[idx] in ['127.0.0.1', 'localhost']):
+                # We set this env in script-executor container.
+                # Mask localhost or 127.0.0.1 with node IP if this
+                # is called from configlet builder scripts.
+                nodes[idx] = os.environ.get('CURRENT_NODE_IP')
+
         self.cert = cert
         self.nodes = nodes
         self.node_cnt = len(nodes)
@@ -406,7 +415,7 @@ class CvpClient(object):
             msg = ('%s: Request Error: session logged out' % prefix)
             raise CvpSessionLogOutError(msg)
 
-        joutput = response.json()
+        joutput = json_decoder(response.text)
         err_code_val = self._finditem(joutput, 'errorCode')
         if err_code_val:
             if 'errorMessage' in joutput:
@@ -472,7 +481,10 @@ class CvpClient(object):
         if self.api_token is not None:
             return self._set_headers_api_token()
         elif self.is_cvaas:
-            return self._login_cvaas()
+            raise CvpLoginError('CVaaS only supports API token authentication.'
+                                ' Please create an API token and provide it'
+                                ' via the api_token parameter in combination'
+                                ' with the is_cvaas parameter')
         return self._login_on_prem()
 
     def _login_on_prem(self):
@@ -512,47 +524,6 @@ class CvpClient(object):
         self.cookies = response.cookies
         self.headers['APP_SESSION_ID'] = response.json()['sessionId']
 
-    def _login_cvaas(self):
-        ''' Make a POST request to CVaaS login authentication.
-            An error can be raised from the post method call or the
-            _check_response_status method call.  Any errors raised would be
-            a good reason not to use this host.
-
-            Raises:
-                ConnectionError: A ConnectionError is raised if there was a
-                    network problem (e.g. DNS failure, refused connection, etc)
-                CvpApiError: A CvpApiError is raised if there was a JSON error.
-                CvpRequestError: A CvpRequestError is raised if the request
-                    is not properly constructed.
-                CvpSessionLogOutError: A CvpSessionLogOutError is raised if
-                    response from server indicates session was logged out.
-                HTTPError: A HTTPError is raised if there was an invalid HTTP
-                    response.
-                ReadTimeout: A ReadTimeout is raised if there was a request
-                    timeout when reading from the connection.
-                Timeout: A Timeout is raised if there was a request timeout.
-                TooManyRedirects: A TooManyRedirects is raised if the request
-                    exceeds the configured number of maximum redirections
-                ValueError: A ValueError is raised when there is no valid
-                    CVP session.  This occurs because the previous get or post
-                    request failed and no session could be established to a
-                    CVP node.  Destroy the class and re-instantiate.
-        '''
-        # For local CVaaS users no token is needed and the local username
-        # and password can be used with the below Login API.
-        url = (self.url_prefix_short +
-               '/api/v1/oauth?provider=local&next=false')
-        cvaas_auth = {"org": self.tenant,
-                      "name": self.authdata['userId'],
-                      "password": self.authdata['password']}
-        response = self.session.post(url,
-                                     data=json.dumps(cvaas_auth),
-                                     headers=self.headers,
-                                     timeout=self.connect_timeout,
-                                     verify=self.cert)
-        self._check_response_status(response, 'Authenticate: %s' % url)
-        self.cookies = response.cookies
-
     def _set_headers_api_token(self):
         ''' Sets headers with API token instead of making a call to login API.
         '''
@@ -568,7 +539,7 @@ class CvpClient(object):
 
         :return:
         '''
-        response = self.session.post('/login/logout.do')
+        response = self.post('/login/logout.do')
         if response['data'] == 'success':
             self.log.info('User logged out.')
             self.session = None
@@ -677,8 +648,14 @@ class CvpClient(object):
             except ValueError as error:
                 self.log.debug('Error trying to decode request response %s',
                                error)
-                self.log.debug('Attempt to return response text')
-                resp_data = dict(data=response.text)
+                if 'Extra data' in str(error):
+                    self.log.debug('Found multiple objects in response data.'
+                                   'Attempt to decode')
+                    decoded_data = json_decoder(response.text)
+                    resp_data = dict(data=decoded_data)
+                else:
+                    self.log.debug('Attempt to return response text')
+                    resp_data = dict(data=response.text)
         else:
             self.log.debug('Received no response for request %s %s',
                            req_type, url)
@@ -962,3 +939,21 @@ class CvpClient(object):
                     if item is not None:
                         break
         return item
+
+
+def json_decoder(data):
+    ''' Check for ...
+    '''
+    decoder = json.JSONDecoder()
+    position = 0
+    decoded_data = []
+    while True:
+        try:
+            obj, position = decoder.raw_decode(data, position)
+            decoded_data.append(obj)
+            position += 1
+        except ValueError:
+            break
+    if len(decoded_data) == 1:
+        return decoded_data[0]
+    return decoded_data
