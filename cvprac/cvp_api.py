@@ -1009,21 +1009,24 @@ class CvpApi(object):
                 draft (bool): If builder is a draft
                 form (list): Array/list of form data
                     Parameters:
-                        fieldId (str):
-                        fieldLabel (str):
-                        value (str):
-                        type (str): {
-                            'Text box',
+                        fieldId (str): "",
+                        fieldLabel (str): "",
+                        value (str): "",
+                        type (str): "", (Options below)
+                            ('Text box',
                             'Text area',
                             'Drop down',
                             'Check box',
                             'Radio button',
                             'IP address',
-                            'Password'
-                        }
-                        validation:
-                            mandatory (boolean):
-                        helpText (str)
+                            'Password')
+                        validation: {
+                            mandatory (boolean): true,
+                        },
+                        helpText (str): "",
+                        depends (str): "",
+                        dataValidationErrorExist (boolean): true,
+                        dataValidation (string): ""
 
             Returns:
                 key (str): The key for the configlet
@@ -1102,7 +1105,7 @@ class CvpApi(object):
                               timeout=self.request_timeout)
 
     def update_configlet_builder(self, name, key, config, draft=False,
-                                 wait_for_task=False):
+                                 wait_for_task=False, form=None):
         ''' Update an existing configlet builder.
             Args:
                 config (str): Contents of the configlet builder configuration
@@ -1110,19 +1113,43 @@ class CvpApi(object):
                 name: (str): name of the configlet builder
                 draft (boolean): is update a draft
                 wait_for_task (boolean): wait for task IDs to be generated
+                form (list): Array/list of form data
+                    Parameters:
+                        fieldId (str): "",
+                        fieldLabel (str): "",
+                        value (str): "",
+                        type (str): "", (Options below)
+                            ('Text box',
+                            'Text area',
+                            'Drop down',
+                            'Check box',
+                            'Radio button',
+                            'IP address',
+                            'Password')
+                        validation: {
+                            mandatory (boolean): true,
+                        },
+                        helpText (str): "",
+                        depends (str): "",
+                        dataValidationErrorExist (boolean): true,
+                        dataValidation (string): ""
         '''
+        if not form:
+            form = []
+
         data = {
             "name": name,
             "waitForTaskIds": wait_for_task,
             "data": {
+                "formList": form,
                 "main_script": {
                     "data": config
                 }
             }
         }
         debug_str = 'update_configlet_builder:' \
-                    ' config: {} key: {} name: {} '
-        self.log.debug(debug_str.format(config, key, name))
+                    ' config: {} key: {} name: {} form: {}'
+        self.log.debug(debug_str.format(config, key, name, form))
         # Update the configlet builder
         url_string = '/configlet/updateConfigletBuilder.do?' \
                      'isDraft={}&id={}&action=save'
