@@ -810,11 +810,12 @@ class CvpApi(object):
                     devices.append(device)
         return devices
 
-    def get_device_by_name(self, fqdn):
+    def get_device_by_name(self, fqdn, search_by_hostname=False):
         ''' Returns the net element device dict for the devices fqdn name.
 
             Args:
-                fqdn (str): Fully qualified domain name of the device.
+                fqdn (str): Fully qualified domain name or hostname of the device.
+                search_field (str): method to search for device: fqdn or hostname.
 
             Returns:
                 device (dict): The net element device dict for the device if
@@ -826,9 +827,14 @@ class CvpApi(object):
         device = {}
         if 'netElementList' in data:
             for netelem in data['netElementList']:
-                if netelem['fqdn'] == fqdn:
-                    device = netelem
-                    break
+                if search_by_hostname:
+                    if netelem['fqdn'] == fqdn:
+                        device = netelem
+                        break
+                else:
+                    if netelem['fqdn'].split(".")[0] == fqdn:
+                        device = netelem
+                        break
         return device
 
     def get_device_by_mac(self, device_mac):
