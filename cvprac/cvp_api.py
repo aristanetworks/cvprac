@@ -1289,7 +1289,7 @@ class CvpApi(object):
         return self.clnt.post(url, data=data, timeout=self.request_timeout)
 
     def apply_configlets_to_device(self, app_name, dev, new_configlets,
-                                   create_task=True):
+                                   create_task=True, reorder_configlets=False):
         ''' Apply the configlets to the device.
 
             Args:
@@ -1298,6 +1298,18 @@ class CvpApi(object):
                 new_configlets (list): List of configlet name and key pairs
                 create_task (bool): Determines whether or not to execute a save
                     and create the tasks (if any)
+                reorder_configlets (bool): Defaults to False. To use this
+                    parameter you must first get the full list of configlets
+                    applied to the device (for example via the
+                    get_configlets_by_device_id function) and provide the
+                    full list of configlets (in addition to any new configlets
+                    being applied) in the desired order as the new_configlets
+                    parameter. It is also important to keep in mind configlets
+                    that are applied to parent containers because they will
+                    be applied before configlets applied to the device
+                    directly. Set this parameter to True only with the full
+                    list of configlets being applied to the device provided
+                    via the new_configlets parameter.
 
             Returns:
                 response (dict): A dict that contains a status and a list of
@@ -1307,15 +1319,16 @@ class CvpApi(object):
         '''
         self.log.debug('apply_configlets_to_device: dev: %s names: %s' %
                        (dev, new_configlets))
-        # Get all the configlets assigned to the device.
-        configlets = self.get_configlets_by_device_id(dev['systemMacAddress'])
-
         # Get a list of the names and keys of the configlets
         cnames = []
         ckeys = []
-        for configlet in configlets:
-            cnames.append(configlet['name'])
-            ckeys.append(configlet['key'])
+
+        if not reorder_configlets:
+            # Get all the configlets assigned to the device.
+            configlets = self.get_configlets_by_device_id(dev['systemMacAddress'])
+            for configlet in configlets:
+                cnames.append(configlet['name'])
+                ckeys.append(configlet['key'])
 
         # Add the new configlets to the end of the arrays
         for entry in new_configlets:
