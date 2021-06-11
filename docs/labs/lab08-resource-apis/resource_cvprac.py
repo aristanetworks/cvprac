@@ -185,6 +185,3 @@ def assign_dtag(client, dId, label, value):
 
 # ### Assign an interface tag
 # assign_dtag(clnt, "JPE14070534", "topology_hint_pod", "ire-pod11" )
-
-
-

@@ -27,6 +27,3 @@ with open("aaa_users.csv") as csvfile:
         except CvpApiError as e:
             print(e)
         print ("Adding user {} to CVaaS".format(data['username']))
-
-
-

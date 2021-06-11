@@ -55,4 +55,3 @@ devices = (check_devices_under_container(clnt,container))
 for device in devices['netElementList']:
     code = device['complianceCode']
     print(device['fqdn'], ' ', code,' ', compliance[code])
-
