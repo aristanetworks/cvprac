@@ -814,8 +814,11 @@ class CvpApi(object):
         ''' Returns the net element device dict for the devices fqdn name.
 
             Args:
-                fqdn (str): Fully qualified domain name or hostname of the device.
-                search_field (str): method to search for device: fqdn or hostname.
+                fqdn (str): Fully qualified domain name or hostname of the
+                    device.
+                search_by_hostname (boolean): if set True will attempt to split
+                    the fqdn string to match on the hostname portion
+                    specifically which should be the first component
 
             Returns:
                 device (dict): The net element device dict for the device if
@@ -827,12 +830,12 @@ class CvpApi(object):
         device = {}
         if 'netElementList' in data:
             for netelem in data['netElementList']:
-                if search_by_hostname:
+                if not search_by_hostname:
                     if netelem['fqdn'] == fqdn:
                         device = netelem
                         break
                 else:
-                    if netelem['fqdn'].split(".")[0] == fqdn:
+                    if netelem['fqdn'].split('.')[0] == fqdn:
                         device = netelem
                         break
         return device
@@ -1331,7 +1334,8 @@ class CvpApi(object):
 
         if not reorder_configlets:
             # Get all the configlets assigned to the device.
-            configlets = self.get_configlets_by_device_id(dev['systemMacAddress'])
+            configlets = self.get_configlets_by_device_id(
+                dev['systemMacAddress'])
             for configlet in configlets:
                 cnames.append(configlet['name'])
                 ckeys.append(configlet['key'])

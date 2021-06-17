@@ -694,6 +694,20 @@ class TestCvpClient(DutSystemTest):
         self.assertIsNotNone(result)
         self.assertEqual(result, {})
 
+    def test_api_get_device_by_name_search_by_hostname(self):
+        ''' Verify get_device_by_name with hostname portion of fqdn is
+            successful with search_by_hostname parameter set to True
+        '''
+        if 'hostname' in self.device:
+            hostname = self.device['hostname']
+        else:
+            hostname = self.device['hostname'].split('.')[0]
+        result = self.api.get_device_by_name(hostname,
+                                             search_by_hostname=True)
+        self.assertIsNotNone(result)
+        self.assertEqual(result['fqdn'], self.device['fqdn'])
+        self.assertEqual(result['fqdn'].split('.')[0], hostname)
+
     def test_api_get_device_by_mac(self):
         ''' Verify get_device_by_mac with partial fqdn returns nothing
         '''
