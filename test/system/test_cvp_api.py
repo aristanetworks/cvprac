@@ -723,6 +723,20 @@ class TestCvpClient(DutSystemTest):
         self.assertIsNotNone(result)
         self.assertEqual(result, {})
 
+    def test_api_get_device_by_serial(self):
+        ''' Verify get_device_by_serial
+        '''
+        result = self.api.get_device_by_serial(self.device['serialNumber'])
+        self.assertIsNotNone(result)
+        self.assertEqual(result['serialNumber'], self.device['serialNumber'])
+
+    def test_api_get_device_by_serial_bad(self):
+        ''' Verify get_device_by_mac with bad serial
+        '''
+        result = self.api.get_device_by_serial('bogus_serial')
+        self.assertIsNotNone(result)
+        self.assertEqual(result, {})
+
     def _create_configlet_builder(self, name, config, draft, form=None):
         # Delete configlet builder in case it was left by a previous test run
         try:

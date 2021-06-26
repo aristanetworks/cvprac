@@ -871,8 +871,8 @@ class CvpApi(object):
                 device (dict): The net element device dict for the device if
                     otherwise returns an empty hash.
         '''
-        self.log.debug('get_device_by_mac: MAC address: %s' % device_serial)
-        # data = self.get_inventory(start=0, end=0, query=device_serial)
+        self.log.debug('get_device_by_serial: Serial Number: %s'
+                       % device_serial)
         data = self.search_topology(device_serial)
         device = {}
         if 'netElementList' in data:
