@@ -20,7 +20,3 @@ exclude Jenkinsfile
 exclude pre-commit.sh
 exclude report
 exclude htmlcov
-exclude token.txt
-exclude get_token.py
-exclude get_tags.py
-exclude cvp_resources.py
