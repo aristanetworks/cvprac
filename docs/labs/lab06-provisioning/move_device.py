@@ -13,7 +13,7 @@ with open("token.tok") as f:
     token = f.read().strip('\n')
 
 clnt = CvpClient()
-clnt.connect(nodes=['10.83.13.33'], username='',password='',api_token=token)
+clnt.connect(nodes=['cvp1'], username='',password='',api_token=token)
 
 container = clnt.api.get_container_by_name('TP_LEAFS') # container object
 

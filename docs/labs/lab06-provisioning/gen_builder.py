@@ -10,7 +10,7 @@ requests.packages.urllib3.disable_warnings()
 
 # Create connection to CloudVision
 clnt = CvpClient()
-clnt.connect(['10.83.13.33'],'cvpadmin', 'arastra')
+clnt.connect(['cvp1'],'username', 'password')
 
 container_id = clnt.api.get_container_by_name("TP_LEAFS")['key']
 builder_name = 'SYS_TelemetryBuilderV3'

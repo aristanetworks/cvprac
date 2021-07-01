@@ -10,7 +10,7 @@ requests.packages.urllib3.disable_warnings()
 
 # Create connection to CloudVision
 clnt = CvpClient()
-clnt.connect(['10.83.13.33'],'cvpadmin', 'arastra')
+clnt.connect(['cvp1'],'username', 'password')
 
 
 data = {"data":[{"info":"Device IP Address Changed",

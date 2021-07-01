@@ -10,7 +10,7 @@ requests.packages.urllib3.disable_warnings()
 
 # Create connection to CloudVision
 clnt = CvpClient()
-clnt.connect(nodes=['10.83.13.33'], username="cvpadmin",password="arastra")
+clnt.connect(nodes=['cvp1'], username="username",password="password")
 
 # Get devices in a specific container
 inventory = clnt.api.get_devices_in_container("Undefined")

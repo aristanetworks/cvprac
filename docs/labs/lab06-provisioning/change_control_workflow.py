@@ -10,7 +10,7 @@ requests.packages.urllib3.disable_warnings()
 from datetime import datetime
 
 clnt = CvpClient()
-clnt.connect(['10.83.12.79'],'cvpadmin', 'arastra')
+clnt.connect(['cvp1'],'username', 'password')
 
 ccid = 'cvprac0904211418'
 name = "cvprac CC test"

@@ -11,7 +11,7 @@ requests.packages.urllib3.disable_warnings()
 
 # Create connection to CloudVision
 clnt = CvpClient()
-clnt.connect(['10.83.13.33'],'cvpadmin', 'arastra')
+clnt.connect(['cvp1'],'username', 'password')
 
 image_name = "vEOS-4.26.0.1F"
 image = clnt.api.get_image_bundle_by_name(image_name)
