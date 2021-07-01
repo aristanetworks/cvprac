@@ -13,6 +13,7 @@ requests.packages.urllib3.disable_warnings()
 
 # Create connection to CloudVision
 clnt = CvpClient()
+
 clnt.connect(nodes=['cvp1'], username="username",password="password")
 
 import time
