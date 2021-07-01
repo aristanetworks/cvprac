@@ -12,6 +12,7 @@ recursive-include docs *.md
 recursive-include docs *.png
 recursive-include docs *.py
 recursive-include docs *.tok
+recursive-include docs *.txt
 recursive-include test *.py
 recursive-include test *.yaml
 recursive-include test *.swix
@@ -19,3 +20,7 @@ exclude Jenkinsfile
 exclude pre-commit.sh
 exclude report
 exclude htmlcov
+exclude token.txt
+exclude get_token.py
+exclude get_tags.py
+exclude cvp_resources.py
