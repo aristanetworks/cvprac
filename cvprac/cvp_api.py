@@ -810,11 +810,15 @@ class CvpApi(object):
                     devices.append(device)
         return devices
 
-    def get_device_by_name(self, fqdn):
+    def get_device_by_name(self, fqdn, search_by_hostname=False):
         ''' Returns the net element device dict for the devices fqdn name.
 
             Args:
-                fqdn (str): Fully qualified domain name of the device.
+                fqdn (str): Fully qualified domain name or hostname of the
+                    device.
+                search_by_hostname (boolean): if set True will attempt to split
+                    the fqdn string to match on the hostname portion
+                    specifically which should be the first component
 
             Returns:
                 device (dict): The net element device dict for the device if
@@ -826,9 +830,14 @@ class CvpApi(object):
         device = {}
         if 'netElementList' in data:
             for netelem in data['netElementList']:
-                if netelem['fqdn'] == fqdn:
-                    device = netelem
-                    break
+                if not search_by_hostname:
+                    if netelem['fqdn'] == fqdn:
+                        device = netelem
+                        break
+                else:
+                    if netelem['fqdn'].split('.')[0] == fqdn:
+                        device = netelem
+                        break
         return device
 
     def get_device_by_mac(self, device_mac):
@@ -848,6 +857,27 @@ class CvpApi(object):
         if 'netElementList' in data:
             for netelem in data['netElementList']:
                 if netelem['systemMacAddress'] == device_mac:
+                    device = netelem
+                    break
+        return device
+
+    def get_device_by_serial(self, device_serial):
+        ''' Returns the net element device dict for the devices serial number.
+
+            Args:
+                device_serial (str): Serial number of the device.
+
+            Returns:
+                device (dict): The net element device dict for the device if
+                    otherwise returns an empty hash.
+        '''
+        self.log.debug('get_device_by_serial: Serial Number: %s'
+                       % device_serial)
+        data = self.search_topology(device_serial)
+        device = {}
+        if 'netElementList' in data:
+            for netelem in data['netElementList']:
+                if netelem['serialNumber'] == device_serial:
                     device = netelem
                     break
         return device
@@ -1009,21 +1039,24 @@ class CvpApi(object):
                 draft (bool): If builder is a draft
                 form (list): Array/list of form data
                     Parameters:
-                        fieldId (str):
-                        fieldLabel (str):
-                        value (str):
-                        type (str): {
-                            'Text box',
+                        fieldId (str): "",
+                        fieldLabel (str): "",
+                        value (str): "",
+                        type (str): "", (Options below)
+                            ('Text box',
                             'Text area',
                             'Drop down',
                             'Check box',
                             'Radio button',
                             'IP address',
-                            'Password'
-                        }
-                        validation:
-                            mandatory (boolean):
-                        helpText (str)
+                            'Password')
+                        validation: {
+                            mandatory (boolean): true,
+                        },
+                        helpText (str): "",
+                        depends (str): "",
+                        dataValidationErrorExist (boolean): true,
+                        dataValidation (string): ""
 
             Returns:
                 key (str): The key for the configlet
@@ -1102,7 +1135,7 @@ class CvpApi(object):
                               timeout=self.request_timeout)
 
     def update_configlet_builder(self, name, key, config, draft=False,
-                                 wait_for_task=False):
+                                 wait_for_task=False, form=None):
         ''' Update an existing configlet builder.
             Args:
                 config (str): Contents of the configlet builder configuration
@@ -1110,19 +1143,43 @@ class CvpApi(object):
                 name: (str): name of the configlet builder
                 draft (boolean): is update a draft
                 wait_for_task (boolean): wait for task IDs to be generated
+                form (list): Array/list of form data
+                    Parameters:
+                        fieldId (str): "",
+                        fieldLabel (str): "",
+                        value (str): "",
+                        type (str): "", (Options below)
+                            ('Text box',
+                            'Text area',
+                            'Drop down',
+                            'Check box',
+                            'Radio button',
+                            'IP address',
+                            'Password')
+                        validation: {
+                            mandatory (boolean): true,
+                        },
+                        helpText (str): "",
+                        depends (str): "",
+                        dataValidationErrorExist (boolean): true,
+                        dataValidation (string): ""
         '''
+        if not form:
+            form = []
+
         data = {
             "name": name,
             "waitForTaskIds": wait_for_task,
             "data": {
+                "formList": form,
                 "main_script": {
                     "data": config
                 }
             }
         }
         debug_str = 'update_configlet_builder:' \
-                    ' config: {} key: {} name: {} '
-        self.log.debug(debug_str.format(config, key, name))
+                    ' config: {} key: {} name: {} form: {}'
+        self.log.debug(debug_str.format(config, key, name, form))
         # Update the configlet builder
         url_string = '/configlet/updateConfigletBuilder.do?' \
                      'isDraft={}&id={}&action=save'
@@ -1262,7 +1319,7 @@ class CvpApi(object):
         return self.clnt.post(url, data=data, timeout=self.request_timeout)
 
     def apply_configlets_to_device(self, app_name, dev, new_configlets,
-                                   create_task=True):
+                                   create_task=True, reorder_configlets=False):
         ''' Apply the configlets to the device.
 
             Args:
@@ -1271,6 +1328,18 @@ class CvpApi(object):
                 new_configlets (list): List of configlet name and key pairs
                 create_task (bool): Determines whether or not to execute a save
                     and create the tasks (if any)
+                reorder_configlets (bool): Defaults to False. To use this
+                    parameter you must first get the full list of configlets
+                    applied to the device (for example via the
+                    get_configlets_by_device_id function) and provide the
+                    full list of configlets (in addition to any new configlets
+                    being applied) in the desired order as the new_configlets
+                    parameter. It is also important to keep in mind configlets
+                    that are applied to parent containers because they will
+                    be applied before configlets applied to the device
+                    directly. Set this parameter to True only with the full
+                    list of configlets being applied to the device provided
+                    via the new_configlets parameter.
 
             Returns:
                 response (dict): A dict that contains a status and a list of
@@ -1280,15 +1349,17 @@ class CvpApi(object):
         '''
         self.log.debug('apply_configlets_to_device: dev: %s names: %s' %
                        (dev, new_configlets))
-        # Get all the configlets assigned to the device.
-        configlets = self.get_configlets_by_device_id(dev['systemMacAddress'])
-
         # Get a list of the names and keys of the configlets
         cnames = []
         ckeys = []
-        for configlet in configlets:
-            cnames.append(configlet['name'])
-            ckeys.append(configlet['key'])
+
+        if not reorder_configlets:
+            # Get all the configlets assigned to the device.
+            configlets = self.get_configlets_by_device_id(
+                dev['systemMacAddress'])
+            for configlet in configlets:
+                cnames.append(configlet['name'])
+                ckeys.append(configlet['key'])
 
         # Add the new configlets to the end of the arrays
         for entry in new_configlets:

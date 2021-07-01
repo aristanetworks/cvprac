@@ -694,6 +694,20 @@ class TestCvpClient(DutSystemTest):
         self.assertIsNotNone(result)
         self.assertEqual(result, {})
 
+    def test_api_get_device_by_name_search_by_hostname(self):
+        ''' Verify get_device_by_name with hostname portion of fqdn is
+            successful with search_by_hostname parameter set to True
+        '''
+        if 'hostname' in self.device:
+            hostname = self.device['hostname']
+        else:
+            hostname = self.device['hostname'].split('.')[0]
+        result = self.api.get_device_by_name(hostname,
+                                             search_by_hostname=True)
+        self.assertIsNotNone(result)
+        self.assertEqual(result['fqdn'], self.device['fqdn'])
+        self.assertEqual(result['fqdn'].split('.')[0], hostname)
+
     def test_api_get_device_by_mac(self):
         ''' Verify get_device_by_mac with partial fqdn returns nothing
         '''
@@ -706,6 +720,20 @@ class TestCvpClient(DutSystemTest):
         ''' Verify get_device_by_mac with bad mac
         '''
         result = self.api.get_device_by_mac('bogus_mac')
+        self.assertIsNotNone(result)
+        self.assertEqual(result, {})
+
+    def test_api_get_device_by_serial(self):
+        ''' Verify get_device_by_serial
+        '''
+        result = self.api.get_device_by_serial(self.device['serialNumber'])
+        self.assertIsNotNone(result)
+        self.assertEqual(result['serialNumber'], self.device['serialNumber'])
+
+    def test_api_get_device_by_serial_bad(self):
+        ''' Verify get_device_by_mac with bad serial
+        '''
+        result = self.api.get_device_by_serial('bogus_serial')
         self.assertIsNotNone(result)
         self.assertEqual(result, {})
 
@@ -1137,8 +1165,10 @@ class TestCvpClient(DutSystemTest):
 
     def test_api_configlets_to_device(self):
         ''' Verify apply_configlets_to_device and
-            remove_configlets_from_device
+            remove_configlets_from_device. Also test apply_configlets_to_device
+            with reorder_configlets parameter set to True
         '''
+        # pylint: disable=too-many-statements
         # Create a new configlet
         name = 'test_device_configlet'
         config = 'alias srie show running-config interface ethernet 1'
@@ -1170,10 +1200,50 @@ class TestCvpClient(DutSystemTest):
         # Execute Task
         self._execute_long_running_task(task_id)
 
+        # Get current configlets order with new configlet before reordering
+        configlets_order = self.api.get_configlets_by_device_id(
+            self.device['systemMacAddress'])
+        # Swap order of last two configlets
+        last_configlet = configlets_order[-1]
+        second_to_last = configlets_order[-2]
+        configlets_order[-1] = second_to_last
+        configlets_order[-2] = last_configlet
+
         # Get the next task ID
         task_id = self._get_next_task_id()
 
-        # Remove configlet from device
+        # reorder configlets
+        self.api.apply_configlets_to_device(label, self.device,
+                                            configlets_order, create_task=True,
+                                            reorder_configlets=True)
+
+        # Validate task was created to remove the configlet to device
+        # Wait 30 seconds for task to get created
+        cnt = 30
+        while cnt > 0:
+            time.sleep(1)
+            result = self.api.get_task_by_id(task_id)
+            if result is not None:
+                break
+            cnt -= 1
+        self.assertIsNotNone(result)
+        self.assertEqual(result['workOrderId'], task_id)
+        self.assertIn(label, result['description'])
+
+        # Execute Task
+        self._execute_long_running_task(task_id)
+
+        # Get reordered configlets
+        configlets_order = self.api.get_configlets_by_device_id(
+            self.device['systemMacAddress'])
+        # Verify order of last two configlets swapped
+        self.assertEqual(configlets_order[-1]['name'], second_to_last['name'])
+        self.assertEqual(configlets_order[-2]['name'], last_configlet['name'])
+
+        # Get the next task ID
+        task_id = self._get_next_task_id()
+
+        # Remove new configlet from device
         self.api.remove_configlets_from_device(label, self.device, [param])
 
         # Validate task was created to remove the configlet to device
@@ -1192,7 +1262,7 @@ class TestCvpClient(DutSystemTest):
         # Execute Task
         self._execute_long_running_task(task_id)
 
-        # Delete the configlet
+        # Delete the new configlet
         self.api.delete_configlet(name, key)
 
         # Check compliance
