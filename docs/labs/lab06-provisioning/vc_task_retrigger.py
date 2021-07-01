@@ -13,7 +13,11 @@ requests.packages.urllib3.disable_warnings()
 
 # Create connection to CloudVision
 clnt = CvpClient()
+<<<<<<< HEAD
 clnt.connect(nodes=['cvp1'], username="username",password="password")
+=======
+clnt.connect(nodes=['10.83.12.174'], username="cvpadmin",password="arastra")
+>>>>>>> 9dffdac8f7d8a87aceb8fb23b6f4204e7f7745fd
 
 # Trigger tasks after they were cancelled
 
