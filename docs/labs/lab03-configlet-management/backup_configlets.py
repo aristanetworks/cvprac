@@ -11,7 +11,7 @@ requests.packages.urllib3.disable_warnings()
 
 # Create connection to CloudVision
 clnt = CvpClient()
-clnt.connect(['10.83.12.79'],'cvpadmin', 'arastra')
+clnt.connect(['cvp1'],'username', 'password')
 
 configlets = clnt.api.get_configlets(start=0,end=0)
 

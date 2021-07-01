@@ -1,0 +1,6 @@
+tp-avd_tp-avd-leaf1
+tp-avd_tp-avd-leaf2
+tp-avd_tp-avd-leaf3
+tp-avd_tp-avd-leaf4
+tp-avd_tp-avd-spine1
+tp-avd_tp-avd-spine2

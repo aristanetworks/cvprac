@@ -36,7 +36,7 @@ with open("token.tok") as f:
     token = f.read().strip('\n')
 
 clnt = CvpClient()
-clnt.connect(nodes=['10.83.13.33'], username='',password='',api_token=token)
+clnt.connect(nodes=['cvp1'], username='',password='',api_token=token)
 
 def check_devices_under_container(client, container):
     ''' container is the container ID '''
