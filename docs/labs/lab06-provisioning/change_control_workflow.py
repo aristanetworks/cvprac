@@ -9,6 +9,7 @@ import requests.packages.urllib3
 requests.packages.urllib3.disable_warnings()
 from datetime import datetime
 
+# Note API token auth method is not yet supported with Change Controls
 clnt = CvpClient()
 clnt.connect(['cvp1'],'username', 'password')
 
