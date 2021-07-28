@@ -2865,10 +2865,19 @@ class CvpApi(object):
 
                     Ex: {'data': <token>}
         '''
+
+        # For on-prem check the version as it is only supported from 2021.2.0+
         if not self.clnt.is_cvaas:
-            data = {"reenrollDevices": devices, "duration": duration}
-            return self.clnt.post('/cvpservice/enroll/createToken', data=data,
-                                  timeout=self.request_timeout)
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+                if self.clnt.apiversion >= 6.0:
+                    self.log.debug('v6 /cvpservice/enroll/createToken')
+                    data = {"reenrollDevices": devices, "duration": duration}
+                    return self.clnt.post('/cvpservice/enroll/createToken', data=data,
+                                        timeout=self.request_timeout)
+                else:
+                    self.log.warning('Enrollment Token creation is only supported on CVP 2021.2.0+')
+                    return None
 
         else:
             data = { "enrollmentToken":{"reenrollDevices": devices,
