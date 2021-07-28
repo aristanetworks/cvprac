@@ -55,3 +55,4 @@ clnt.connect(nodes=['10.83.13.33'], username='',password='',api_token=token)
 #### Known Limitations
 
 - Change Control/Task execution is not yet supported with service accounts.
+- Support for REST API bindings for the Resource APIs (Lab 8) was added in CVP 2021.1.0
