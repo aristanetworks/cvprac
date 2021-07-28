@@ -1983,25 +1983,32 @@ class TestCvpClient(DutSystemTest):
             self.assertIn(key, known_dev_data)
             if self.clnt.apiversion == 1.0 or key not in diff_val_form_keys:
                 self.assertEqual(topo_dev_data[key], known_dev_data[key])
+
     def test_create_enroll_token(self):
         ''' Verify enrollment token creation on on-prem and CVaaS.
         '''
-
-        # Test if the returned value has a "data" key for on-prem
-        # Format of enroll token returned by on-prem should be:
-        # {'data': <token>}
-        if not self.clnt.is_cvaas:
-            gen_token = self.api.create_enroll_token("24h")
-            self.assertEqual(list(get_token.keys())[0], "data")
-        # Else if CVaaS is used check if the returned list has an
-        # "enrollmentToken" key
-        # The format of enroll token returned by CVaaS should be:
-        # [{'enrollmentToken':{'token': <token>, 'groups': [],
-        #   'reenrollDevices': <devices list>, 'validFor': <duration e.g 24h>,
-        #   'field_mask': None}}]
+        # Set client apiversion if it is not already set
+        if self.clnt.apiversion is None:
+            self.api.get_cvp_info()
+        if self.clnt.apiversion >= 6.0:
+            # Test if the returned value has a "data" key for on-prem
+            # Format of enroll token returned by on-prem should be:
+            # {'data': <token>}
+            if not self.clnt.is_cvaas:
+                gen_token = self.api.create_enroll_token("24h")
+                self.assertEqual(list(gen_token.keys())[0], "data")
+            # Else if CVaaS is used check if the returned list has an
+            # "enrollmentToken" key
+            # The format of enroll token returned by CVaaS should be:
+            # [{'enrollmentToken':{'token': <token>, 'groups': [],
+            #   'reenrollDevices': <devices list>, 'validFor': <duration e.g 24h>,
+            #   'field_mask': None}}]
+            else:
+                gen_token = self.api.create_enroll_token("24h")
+                self.assertEqual(list(gen_token[0].keys()), "enrollmentToken")
         else:
-            gen_token = clnt.api.create_enroll_token("24h")
-            self.assertEqual(list(get_token[0].keys()), "enrollmentToken")
+            pprint('SKIPPING TEST FOR API - {0}'.format(self.clnt.apiversion))
+            time.sleep(1)
 
     # def test_api_deploy_device(self):
     #     ''' Verify deploy_device
