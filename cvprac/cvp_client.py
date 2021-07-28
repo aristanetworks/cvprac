@@ -114,7 +114,7 @@ class CvpClient(object):
     # Maximum number of times to retry a get or post to the same
     # CVP node.
     NUM_RETRY_REQUESTS = 3
-    LATEST_API_VERSION = 5.0
+    LATEST_API_VERSION = 6.0
 
     def __init__(self, logger='cvprac', syslog=False, filename=None,
                  log_level='INFO'):
@@ -199,8 +199,8 @@ class CvpClient(object):
             For CVP versions 2018.1.X and prior, use api version 1.0
             For CVP versions 2018.2.X, use api version 2.0
             For CVP versions 2019.0.0 through 2020.1.0, use api version 3.0
-            For CVP versions 2020.1.1 through 2020.2.X, use api version 4.0
-            For CVP versions 2020.3.0 through 2021.1.x, use api version 5.0
+            For CVP versions 2020.1.1 through 2020.2.3, use api version 4.0
+            For CVP versions 2020.2.4 through 2021.1.x, use api version 5.0
             For CVP versions 2021.2.0 and beyond, use api version 6.0
 
             Args:
@@ -211,7 +211,7 @@ class CvpClient(object):
         # Set apiversion to latest available API version for CVaaS
         # Set apiversion to 6.0 for 2021.2.0 and beyond
         # Set apiversion to 5.0 for 2020.2.4 through 2021.1.x
-        # Set apiversion to 4.0 for 2020.1.1 through 2020.2.X
+        # Set apiversion to 4.0 for 2020.1.1 through 2020.2.3
         # Set apiversion to 3.0 for 2019.0.0 through 2020.1.0
         # Set apiversion to 2.0 for 2018.2.X
         # Set apiversion to 1.0 for 2018.1.X and prior
