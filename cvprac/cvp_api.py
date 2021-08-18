@@ -2844,44 +2844,45 @@ class CvpApi(object):
             return self._save_topology_v2([])
         return None
 
-    def create_enroll_token(self, duration, devices=["*"]):
+    def create_enroll_token(self, duration, devices=None):
         ''' Create TerminAttr enrollment token for device authentication
             via certificates.
 
             Args:
-               devices (list): list of device Serial Numbers for which the token
-                  should be generated. The default is all devices.
+               devices (list): list of device Serial Numbers for which the
+                   token should be generated. The default is all devices.
                duration (string): the token's validity time (max 1 month),
                   accepted formats are: "24h", "86400s", "60m"
             Returns:
-                response (list) on CVaas: A list that contains the generated
+                response (list) on CVaaS: A list that contains the generated
                     enrollment token.
 
                     Ex: [{'enrollmentToken':{'token': <token>, 'groups': [],
-                    'reenrollDevices': <devices list>, 'validFor': <duration e.g 24h>,
-                    'field_mask': None}}]
-                responese (dict) on CV on-prem: A dictionary that contains the
+                    'reenrollDevices': <devices list>,
+                    'validFor': <duration e.g 24h>, 'field_mask': None}}]
+                response (dict) on CV on-prem: A dictionary that contains the
                     generated enrollment token.
 
                     Ex: {'data': <token>}
         '''
-
+        if not devices:
+            devices = ["*"]
         # For on-prem check the version as it is only supported from 2021.2.0+
         if not self.clnt.is_cvaas:
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
-                if self.clnt.apiversion >= 6.0:
-                    self.log.debug('v6 /cvpservice/enroll/createToken')
-                    data = {"reenrollDevices": devices, "duration": duration}
-                    return self.clnt.post('/cvpservice/enroll/createToken', data=data,
-                                        timeout=self.request_timeout)
-                else:
-                    self.log.warning('Enrollment Token creation is only supported on CVP 2021.2.0+')
-                    return None
-
-        else:
-            data = { "enrollmentToken":{"reenrollDevices": devices,
-                                        "validFor": duration}}
-            return self.clnt.post(
+            if self.clnt.apiversion >= 6.0:
+                self.log.debug('v6 /cvpservice/enroll/createToken')
+                data = {"reenrollDevices": devices, "duration": duration}
+                return self.clnt.post('/cvpservice/enroll/createToken',
+                                      data=data, timeout=self.request_timeout)
+            self.log.warning(
+                'Enrollment Tokens only supported on CVP 2021.2.0+')
+            return None
+        data = {
+            "enrollmentToken": {"reenrollDevices": devices,
+                                "validFor": duration}
+        }
+        return self.clnt.post(
             '/api/v3/services/admin.Enrollment/AddEnrollmentToken',
             data=data, timeout=self.request_timeout)

@@ -2001,7 +2001,8 @@ class TestCvpClient(DutSystemTest):
             # "enrollmentToken" key
             # The format of enroll token returned by CVaaS should be:
             # [{'enrollmentToken':{'token': <token>, 'groups': [],
-            #   'reenrollDevices': <devices list>, 'validFor': <duration e.g 24h>,
+            #   'reenrollDevices': <devices list>,
+            #   'validFor': <duration e.g 24h>,
             #   'field_mask': None}}]
             else:
                 gen_token = self.api.create_enroll_token("24h")
