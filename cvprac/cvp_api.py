@@ -2553,14 +2553,15 @@ class CvpApi(object):
         return self.clnt.post('/changeControl/executeCC.do', data=data,
                               timeout=self.request_timeout)
 
-    def approve_change_control(self, cc_id,
-                               timestamp=datetime.utcnow().isoformat() + 'Z'):
+    def approve_change_control(self, cc_id, timestamp=None):
         ''' Cancel the provided change controls.
 
             Args:
                 cc_id (string): The change control IDs to be approved.
                 timestamp(string): The change controls timestamp.
         '''
+        if not timestamp:
+            timestamp = datetime.utcnow().isoformat() + 'Z'
         self.log.debug('approve_change_control')
         if self.clnt.apiversion is None:
             self.get_cvp_info()
