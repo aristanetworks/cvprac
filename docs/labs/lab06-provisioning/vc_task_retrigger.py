@@ -80,21 +80,24 @@ def main():
 
         for switch in devices:
             if switch['status'] == 'Registered' and switch['parentContainerId'] != 'undefined_container':
-                # generate device object
-                host = clnt.api.get_device_by_name(switch['hostname'])
 
                 if len(device_filters) > 0:
                 # iterate over device filters, and update task for any devices not in compliance
+                    
                     for filter_term in device_filters:
-                        if filter_term in host:
+                        print("Checking device: %s" % switch['hostname'])
+                        if filter_term in switch['hostname']:
                             # generate configlet list
                             cl = clnt.api.get_configlets_by_device_id(switch['systemMacAddress'])
                             # generate a task if config is out of sync
                             if switch['complianceCode'] in compliance.keys():
                                 print(clnt.api.apply_configlets_to_device("", switch, cl))
+                            else:
+                                print("%s is compliant, nothing to do" % switch['hostname'])
                         else:
-                            print("Skipping %s" % host)
+                            print("Skipping %s due to filter" % switch['hostname'])
                 else:
+                    print("Checking device: %s" % switch['hostname'])
                     cl = clnt.api.get_configlets_by_device_id(switch['systemMacAddress'])
                     # generate a task if config is out of sync
                     if switch['complianceCode'] in compliance.keys():
