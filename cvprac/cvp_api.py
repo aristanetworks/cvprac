@@ -2446,7 +2446,7 @@ class CvpApi(object):
         return self.clnt.post('/changeControl/addOrUpdateChangeControl.do',
                               data=data, timeout=self.request_timeout)
 
-    def create_change_control_v3(self, cc_id, name, tasks):
+    def create_change_control_v3(self, cc_id, name, tasks, sequential=True):
         ''' Create change control with provided information and return
             change control ID.
 
@@ -2455,6 +2455,8 @@ class CvpApi(object):
                 name (string): The name for the new change control.
                 tasks (list): A list of Task IDs as strings
                     Ex: ['10', '11', '12']
+                sequential (bool): A flag for running tasks sequentially or
+                    in parallel. Defaults to True for running sequentially.
 
             Returns:
                 response (dict): A dict that contains...
@@ -2475,18 +2477,34 @@ class CvpApi(object):
 
         self.log.debug('v3 Update change control API Call')
         stages = []
-        for index, task in enumerate(tasks):
-            stage_id = 'stage%d' % index
-            stage = {'stage': [{
-                'id': stage_id,
-                'action': {
-                    'name': 'task',
-                    'args': {
-                        'TaskID': task,
+        if sequential:
+            for index, task in enumerate(tasks):
+                stage_id = 'stage%d' % index
+                stage = {'stage': [{
+                    'id': stage_id,
+                    'action': {
+                        'name': 'task',
+                        'args': {
+                            'TaskID': task,
+                        }
+                    }
+                }]}
+                stages.append(stage)
+        else:
+            stage_rows = []
+            for index, task in enumerate(tasks):
+                stage_id = 'stage%d' % index
+                stage_row = {
+                    'id': stage_id,
+                    'action': {
+                        'name': 'task',
+                        'args': {
+                            'TaskID': task,
+                        }
                     }
                 }
-            }]}
-            stages.append(stage)
+                stage_rows.append(stage_row)
+            stages.append({'stage': stage_rows})
         data = {'config': {
             'id': cc_id,
             'name': name,
