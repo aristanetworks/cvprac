@@ -7,6 +7,7 @@
 import argparse
 import ssl
 import sys
+from packaging import version
 from getpass import getpass
 from cvprac.cvp_client import CvpClient
 
@@ -55,14 +56,19 @@ def main():
             clnt.connect(nodes=[cvpserver], username=args.username, password=args.password)
         except Exception as e:
             print("Unable to connect to CVP: %s" % str(e))
-        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # Trigger compliance check here
-        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
-        try:
-            clnt.api.check_compliance('root', 'container')
-        except:
-            # Bad practice, but the check compliance applied to a container can't actually work
-            # since the complianceIndication  key doesn't exist on the container level
+
+        # Get the current CVP version
+        cvp_release = clnt.api.get_cvp_info()['version']
+        if version.parse(cvp_release) < version.parse('2020.3.0'):
+            # For older CVP, we manually trigger a compliance check
+            try:
+                clnt.api.check_compliance('root', 'container')
+            except:
+                # Bad practice, but the check compliance applied to a container can't actually work
+                # since the complianceIndication  key doesn't exist on the container level
+                pass
+        else:
+            # with continuous compliance checks, triggering the check is no longer required
             pass
 
 
