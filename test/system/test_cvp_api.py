@@ -1871,6 +1871,41 @@ class TestCvpClient(DutSystemTest):
                 self.clnt.apiversion))
             time.sleep(1)
 
+    # def test_api_change_control_v3(self):
+    #     ''' Verify create_change_control_v3
+    #     '''
+    #     # Set client apiversion if it is not already set
+    #     if self.clnt.apiversion is None:
+    #         self.api.get_cvp_info()
+    #     if self.clnt.apiversion > 3.0:
+    #         pprint('RUN TEST FOR V3 CHANGE CONTROL APIs')
+    #         chg_ctrl_name = 'test_api_%d' % time.time()
+    #         (task_id, _) = self._create_task()
+    #         chg_ctrl = self.api.create_change_control_v3(
+    #             chg_ctrl_name, chg_ctrl_name, [task_id], True)
+    #         cc_id = ''
+    #         if len(chg_ctrl) > 0:
+    #             if 'id' in chg_ctrl[0]:
+    #                 cc_id = chg_ctrl[0]['id']
+    #         print('')
+    #         print(chg_ctrl)
+    #         print(cc_id)
+    #         print('')
+    #
+    #         if cc_id != '':
+    #             # Verify the pending change control information
+    #             status_url = '/cvpservice/changeControl/' \
+    #                          'getChangeControlInformation.do?' \
+    #                          'startIndex=0&endIndex=0&ccId={}'.format(cc_id)
+    #             chg_ctrl_pending = self.clnt.get(status_url)
+    #             print('')
+    #             print(chg_ctrl_pending)
+    #             print('')
+    #     else:
+    #         pprint('SKIPPING TEST FOR API - {0}'.format(
+    #             self.clnt.apiversion))
+    #         time.sleep(1)
+
     def test_api_cancel_change_control(self):
         ''' Verify cancel_change_control.
         '''
