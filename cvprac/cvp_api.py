@@ -3007,7 +3007,7 @@ class CvpApi(object):
                 "label": tag_label,
                 "value": tag_value
             },
-            "remove": "remove"
+            "remove": remove
         }
         # For on-prem check the version as it is only supported from 2021.2.0+
         if not self.clnt.is_cvaas:
