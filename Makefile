@@ -48,9 +48,8 @@ coverage_report:
 	$(COVERAGE) report -m
 
 pep8:
-	-pep8 -r --ignore=$(PEP8_IGNORE) cvprac/
+	-pep8 -r --ignore=$(PEP8_IGNORE) --max-line-length=120 cvprac/
 	-pep8 -r --ignore=$(PEP8_IGNORE),E402 test/
-
 pyflakes:
 	pyflakes cvprac/ test/
 
