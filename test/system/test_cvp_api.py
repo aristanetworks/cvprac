@@ -326,7 +326,15 @@ class TestCvpClient(DutSystemTest):
         '''
         key = self.device['key']
         ntype = self.device['type']
+        # Test compliance started timing out often aroung CVP2020
+        orig_timeout = self.api.request_timeout
+        if not self.clnt.apiversion:
+            self.api.get_cvp_info()
+        if self.clnt.apiversion >= 4.0:
+            self.api.request_timeout = orig_timeout * 3
         result = self.api.check_compliance(key, ntype)
+        if self.clnt.apiversion >= 4.0:
+            self.api.request_timeout = orig_timeout
         self.assertEqual(result['complianceCode'], '0000')
         self.assertEqual(result['complianceIndication'], 'NONE')
 
@@ -1757,6 +1765,7 @@ class TestCvpClient(DutSystemTest):
     def test_api_inventory(self):
         ''' Verify add_device_to_inventory and delete_device(s)
         '''
+        # pylint: disable=too-many-locals
         # Get a device
         full_inv = self.api.get_inventory()
         device = full_inv[0]
@@ -1774,6 +1783,12 @@ class TestCvpClient(DutSystemTest):
         res = self.api.get_device_by_name(device['fqdn'])
         self.assertEqual(res, {})
         # add back to inventory
+        # Adding device back to inv started timing out in CVP2021.2.0
+        orig_timeout = self.api.request_timeout
+        if not self.clnt.apiversion:
+            self.api.get_cvp_info()
+        if self.clnt.apiversion >= 6.0:
+            self.api.request_timeout = orig_timeout * 3
         self.api.add_device_to_inventory(device['ipAddress'],
                                          orig_cont['name'],
                                          orig_cont['key'], True)
@@ -1812,6 +1827,8 @@ class TestCvpClient(DutSystemTest):
             task_status = self.api.get_task_by_id(
                 results['data']['taskIds'][0])
             time.sleep(1)
+        if self.clnt.apiversion >= 6.0:
+            self.api.request_timeout = orig_timeout
 
         # delete from inventory
         # self.api.delete_device(device['systemMacAddress'])

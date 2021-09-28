@@ -281,8 +281,15 @@ class TestCvpClient(DutSystemTest):
         '''
         dut = self.duts[0]
         self.clnt.connect([dut['node']], dut['username'], dut['password'])
-        with self.assertRaises(CvpApiError):
-            self.clnt.get('/aaa/bogus.do')
+        # Error raised changes in CVP 2021.2.0
+        if not self.clnt.apiversion:
+            self.clnt.api.get_cvp_info()
+        if self.clnt.apiversion < 6.0:
+            with self.assertRaises(CvpApiError):
+                self.clnt.get('/aaa/bogus.do')
+        else:
+            with self.assertRaises(CvpRequestError):
+                self.clnt.get('/aaa/bogus.do')
 
     def test_get_handle_timeout(self):
         ''' Verify get with bad URL returns an error
@@ -388,8 +395,15 @@ class TestCvpClient(DutSystemTest):
         '''
         dut = self.duts[0]
         self.clnt.connect([dut['node']], dut['username'], dut['password'])
-        with self.assertRaises(CvpApiError):
-            self.clnt.post('/aaa/bogus.do', None)
+        # Error raised changes in CVP 2021.2.0
+        if not self.clnt.apiversion:
+            self.clnt.api.get_cvp_info()
+        if self.clnt.apiversion < 6.0:
+            with self.assertRaises(CvpApiError):
+                self.clnt.post('/aaa/bogus.do', None)
+        else:
+            with self.assertRaises(CvpRequestError):
+                self.clnt.post('/aaa/bogus.do', None)
 
     def test_post_except_fail_reconn(self):
         ''' Verify exception raised if session fails and cannot be
