@@ -1267,7 +1267,7 @@ class CvpApi(object):
                     for message in item['messages']:
                         self.log.info('Validation of config returned'
                                       ' message - %s' % message)
-        return validated
+        return result
 
     def get_all_temp_actions(self, start=0, end=0):
         ''' Returns a list of existing temp actions.
