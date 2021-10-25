@@ -1231,7 +1231,7 @@ class CvpApi(object):
         return self.clnt.post('/configlet/addNoteToConfiglet.do',
                               data=data, timeout=self.request_timeout)
 
-    def validate_config(self, device_mac, config):
+    def validate_config_for_device(self, device_mac, config):
         ''' Validate a config against a device
 
             Args:
@@ -1242,12 +1242,27 @@ class CvpApi(object):
                 response (dict): A dict that contains the result of the
                     validation operation
         '''
-        self.log.debug('validate_config: name: %s config: %s'
+        self.log.debug('validate_config_for_device: device_mac: %s config: %s'
                        % (device_mac, config))
         body = {'netElementId': device_mac, 'config': config}
-        # Invoke the validate API call
-        result = self.clnt.post('/configlet/validateConfig.do', data=body,
-                                timeout=self.request_timeout)
+        return self.clnt.post('/configlet/validateConfig.do', data=body,
+                              timeout=self.request_timeout)
+
+    def validate_config(self, device_mac, config):
+        ''' Validate a config against a device and parse response to
+            produce log messages are return a flag for the config validity.
+
+            Args:
+                device_mac (str): Device MAC address
+                config (str): Switch config statements
+
+            Returns:
+                response (boolean): A flag signifying if the config is valid or
+                    not.
+        '''
+        self.log.debug('validate_config: device_mac: %s config: %s'
+                       % (device_mac, config))
+        result = self.validate_config_for_device(device_mac, config)
         validated = True
         if 'warningCount' in result and result['warnings']:
             for warning in result['warnings']:
