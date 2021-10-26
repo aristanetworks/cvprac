@@ -2943,7 +2943,7 @@ class CvpApi(object):
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
             if self.clnt.apiversion >= 6.0:
-                self.log.debug('v6 /api/resources/tag/v2/Tag/all')
+                self.log.debug('v6 {}'.format(tag_url))
                 response = self.clnt.post(tag_url, data=payload)
                 return response
         return self.clnt.post(tag_url, data=payload)
@@ -2980,7 +2980,7 @@ class CvpApi(object):
                 return response
         return self.clnt.post(tag_url, data=payload)
 
-    def get_tag_assigment_edits(self, workspace_id):
+    def get_tag_assignment_edits(self, workspace_id):
         ''' Show all tags assignment edits in a workspace
 
             Args:
@@ -3047,7 +3047,7 @@ class CvpApi(object):
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
             if self.clnt.apiversion >= 6.0:
-                self.log.debug('v6 /api/resources/tag/v2/TagConfig/ ' + str(payload))
+                self.log.debug('v6 {} '.format(tag_url) + str(payload))
                 response = self.clnt.post(tag_url, data=payload)
                 return response
         return self.clnt.post(tag_url, data=payload)
@@ -3095,13 +3095,49 @@ class CvpApi(object):
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
             if self.clnt.apiversion >= 6.0:
-                self.log.debug('v6 /api/resources/tag/v2/TagAssignmentConfig/ ' + str(payload))
+                self.log.debug('v6 {} '.format(tag_url) + str(payload))
                 response = self.clnt.post(tag_url, data=payload)
                 return response
         return self.clnt.post(tag_url, data=payload)
 
+    def get_all_workspaces(self):
+        ''' Get state information for all workspaces
+
+            Returns:
+               response (dict): A dict that contains a list of key-values for workspaces
+        '''
+        tag_url = '/api/resources/workspace/v1/Workspace/all'
+        payload = {}
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion >= 6.0:
+                self.log.debug('v6 {}'.format(tag_url))
+                response = self.clnt.post(tag_url, data=payload)
+                return response
+        return self.clnt.post(tag_url, data=payload)
+
+    def get_workspace(self, workspace_id):
+        ''' Get state information for all workspaces
+
+            Returns:
+               response (dict): A dict that contains a list of key-values for workspaces
+        '''
+        tag_url = '/api/resources/workspace/v1/Workspace?key.workspaceId={}'.format(workspace_id)
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion >= 6.0:
+                self.log.debug('v6 {}'.format(tag_url))
+                response = self.clnt.get(tag_url)
+                return response
+        return self.clnt.get(tag_url)
+
     def workspace_config(self, workspace_id, display_name,
-                         description='', request='REQUEST_UNSPECIFIED', request_id=''):
+                         description='', request='REQUEST_UNSPECIFIED',
+                         request_id=''):
         ''' Create, Build and Submit workspaces.
 
             Args:
@@ -3116,7 +3152,8 @@ class CvpApi(object):
                     - REQUEST_SUBMIT
                     - REQUEST_ABANDON
                     - REQUEST_ROLLBACK
-                requestId (str): An arbitrary requestId for the build and submit process.
+                request_id (str): An arbitrary requestId that is required for the
+                    build and submit process.
 
             Returns:
                response (dict): A dict that contains...
@@ -3161,8 +3198,8 @@ class CvpApi(object):
                     Ex: {'value': {'key': {'workspaceId': 'string', 'buildId': 'string'},
                          'state': 'BUILD_STATE_SUCCESS', 'buildResults': {'values': ...
         '''
-        queryparams = 'key.workspaceId={}&key.buildId={}'.format(workspace_id, build_id)
-        url = '/api/resources/workspace/v1/WorkspaceBuild?' + queryparams
+        params = 'key.workspaceId={}&key.buildId={}'.format(workspace_id, build_id)
+        url = '/api/resources/workspace/v1/WorkspaceBuild?' + params
         # For on-prem check the version as it is only supported from 2021.2.0+
         if not self.clnt.is_cvaas:
             if self.clnt.apiversion is None:
