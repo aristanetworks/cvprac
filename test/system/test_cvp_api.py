@@ -54,6 +54,7 @@ import shutil
 import sys
 import time
 import unittest
+import uuid
 from pprint import pprint
 from requests.exceptions import Timeout
 
@@ -2046,7 +2047,7 @@ class TestCvpClient(DutSystemTest):
             if self.clnt.apiversion == 1.0 or key not in diff_val_form_keys:
                 self.assertEqual(topo_dev_data[key], known_dev_data[key])
 
-    def test_create_enroll_token(self):
+    def test_api_create_enroll_token(self):
         ''' Verify enrollment token creation on on-prem and CVaaS.
         '''
         # Set client apiversion if it is not already set
@@ -2070,7 +2071,188 @@ class TestCvpClient(DutSystemTest):
                 gen_token = self.api.create_enroll_token("24h")
                 self.assertEqual(list(gen_token[0].keys()), "enrollmentToken")
         else:
-            pprint('SKIPPING TEST FOR API - {0}'.format(self.clnt.apiversion))
+            pprint('SKIPPING TEST (test_api_create_enroll_token) FOR API - {0}'.format(
+                self.clnt.apiversion))
+            time.sleep(1)
+
+    def test_api_tags(self):
+        ''' Test Tags Resource API Endpoints
+        '''
+        # pylint: disable=too-many-statements
+        # Set client apiversion if it is not already set
+        if self.clnt.apiversion is None:
+            self.api.get_cvp_info()
+        if self.clnt.apiversion >= 6.0:
+            system_tags = self.api.get_all_tags()
+            if 'data' in system_tags:
+                self.assertNotEqual(len(system_tags['data']), 0,
+                                    "Expected system tags to not be zero")
+
+            existing_workspaces = self.api.get_all_workspaces()
+            self.assertIn('data', existing_workspaces)
+            self.assertNotEqual(len(existing_workspaces['data']), 0,
+                                "Expected existing workspaces to not be zero")
+            # Test Create New Workspace
+            new_uuid = uuid.uuid1()
+            new_workspace_id = 'CVPRAC_TEST_' + str(new_uuid)
+            response = self.api.workspace_config(new_workspace_id,
+                                                 "CVPRAC_TEST_NAME",
+                                                 "CVPRAC TEST",
+                                                 "REQUEST_UNSPECIFIED")
+            self.assertIn('value', response)
+            self.assertIn('key', response['value'])
+            self.assertEqual(new_workspace_id, response['value']['key']['workspaceId'])
+            self.assertEqual(response['value']['displayName'], "CVPRAC_TEST_NAME")
+
+            # Test getting all tags for new workspace. Should be None.
+            new_workspace_tags = self.api.get_all_tags(element_type='ELEMENT_TYPE_UNSPECIFIED',
+                                                       workspace_id=new_workspace_id)
+            self.assertIn('data', new_workspace_tags)
+            self.assertEqual(len(new_workspace_tags['data']), 0,
+                             "Expected new workspace to have no tags yet")
+
+            # Test getting new workspace
+            result = self.api.get_workspace(new_workspace_id)
+            self.assertIn('value', result)
+            self.assertIn('key', result['value'])
+            self.assertEqual(new_workspace_id, result['value']['key']['workspaceId'])
+
+            # Pre tag creation and edit Get tag assignment edits
+            response = self.api.get_tag_assignment_edits(new_workspace_id)
+            self.assertIn('data', response)
+            self.assertEqual(len(response['data']), 0)
+
+            # Pre tag creation and edit Get tag edits
+            response = self.api.get_tag_edits(new_workspace_id)
+            self.assertIn('data', response)
+            self.assertEqual(len(response['data']), 0)
+
+            # Test config of new tag for Interface
+            response = self.api.tag_config("ELEMENT_TYPE_INTERFACE", new_workspace_id,
+                                           "cvpractestint", "TAGTESTINT", remove=False)
+            self.assertIn('value', response)
+            self.assertIn('key', response['value'])
+            self.assertEqual(new_workspace_id, response['value']['key']['workspaceId'])
+            self.assertEqual("cvpractestint", response['value']['key']['label'])
+            self.assertEqual("TAGTESTINT", response['value']['key']['value'])
+            self.assertEqual("ELEMENT_TYPE_INTERFACE", response['value']['key']['elementType'])
+
+            # Test config of new tag for Device
+            response = self.api.tag_config("ELEMENT_TYPE_DEVICE", new_workspace_id,
+                                           "cvpractestdev", "TAGTESTDEV", remove=False)
+            self.assertIn('value', response)
+            self.assertIn('key', response['value'])
+            self.assertEqual(new_workspace_id, response['value']['key']['workspaceId'])
+            self.assertEqual("cvpractestdev", response['value']['key']['label'])
+            self.assertEqual("TAGTESTDEV", response['value']['key']['value'])
+            self.assertEqual("ELEMENT_TYPE_DEVICE", response['value']['key']['elementType'])
+
+            # Test getting all tags for workspace again
+            result = self.api.get_all_tags(element_type="ELEMENT_TYPE_UNSPECIFIED",
+                                           workspace_id=new_workspace_id)
+            self.assertIn('data', result)
+            self.assertEqual(len(result['data']), 2)
+            for tag_data in result['data']:
+                self.assertEqual(tag_data['result']['value']['key']['workspaceId'],
+                                 new_workspace_id)
+
+            # Test getting device tags for workspace
+            result = self.api.get_all_tags(element_type="ELEMENT_TYPE_DEVICE",
+                                           workspace_id=new_workspace_id)
+            self.assertNotIn('data', result)
+
+            # Test assign tag to device
+            response = self.api.tag_assignment_config("ELEMENT_TYPE_DEVICE", new_workspace_id,
+                                                      "cvpractestdev", "TAGTESTDEV",
+                                                      self.device['serialNumber'], "",
+                                                      remove=False)
+            self.assertEqual(response['value']['key']['deviceId'], "veos1")
+            self.assertEqual(response['value']['key']['interfaceId'], "")
+
+            # Test assign tag to interface
+            response = self.api.tag_assignment_config("ELEMENT_TYPE_INTERFACE", new_workspace_id,
+                                                      "cvpractestint", "TAGTESTINT",
+                                                      self.device['serialNumber'], "Ethernet1",
+                                                      remove=False)
+            self.assertEqual(response['value']['key']['deviceId'], "veos1")
+            self.assertEqual(response['value']['key']['interfaceId'], "Ethernet1")
+
+            # Post tag creation and edit Get tag assignment edits
+            response = self.api.get_tag_assignment_edits(new_workspace_id)
+            self.assertIn('data', response)
+            self.assertEqual(len(response['data']), 2)
+
+            # Post tag creation and edit Get tag edits
+            response = self.api.get_tag_edits(new_workspace_id)
+            self.assertIn('data', response)
+            self.assertEqual(len(response['data']), 2)
+
+            # Test Workspace Build
+            new_build_id = new_workspace_id + '_BUILD_' + str(new_uuid)
+            response = self.api.workspace_config(new_workspace_id,
+                                                 "CVPRAC_TEST_NAME",
+                                                 'CVPRAC TEST',
+                                                 'REQUEST_START_BUILD',
+                                                 new_build_id)
+            self.assertIn('value', response)
+            self.assertEqual(response['value']['key']['workspaceId'], new_workspace_id)
+            self.assertEqual(response['value']['request'], 'REQUEST_START_BUILD')
+            self.assertEqual(response['value']['requestParams']['requestId'], new_build_id)
+
+            # Test getting new workspace post build
+            result = self.api.get_workspace(new_workspace_id)
+            self.assertIn('value', result)
+            self.assertIn('key', result['value'])
+            self.assertEqual(new_workspace_id, result['value']['key']['workspaceId'])
+            self.assertEqual('WORKSPACE_STATE_PENDING', result['value']['state'])
+            last_build_id = result['value']['lastBuildId']
+
+            # Test checking build status
+            response = self.api.workspace_build_status(new_workspace_id, last_build_id)
+            self.assertIn('value', response)
+            build_state_options = {
+                'BUILD_STATE_SUCCESS': 'BUILD_STATE_SUCCESS',
+                'BUILD_STATE_IN_PROGRESS': 'BUILD_STATE_IN_PROGRESS',
+            }
+            self.assertIn(response['value']['state'], build_state_options)
+
+            # Test Remove Device Tag
+            response = self.api.tag_config("ELEMENT_TYPE_DEVICE", new_workspace_id,
+                                           "cvpractestdev", "TAGTESTDEV", remove=True)
+            self.assertIn('value', response)
+            self.assertEqual(response['value']['remove'], True)
+
+            response = self.api.tag_config("ELEMENT_TYPE_INTERFACE", new_workspace_id,
+                                           "cvpractestint", "TAGTESTINT", remove=True)
+            self.assertIn('value', response)
+            self.assertEqual(response['value']['remove'], True)
+
+            # Test read workspace tags post removal
+            result = self.api.get_all_tags(element_type="ELEMENT_TYPE_UNSPECIFIED",
+                                           workspace_id=new_workspace_id)
+            self.assertIn('data', result)
+            self.assertEqual(len(result['data']), 0)
+
+            # Test Submit Workspace
+            new_submit_id = new_workspace_id + '_SUBMIT_' + str(new_uuid)
+            response = self.api.workspace_config(new_workspace_id,
+                                                 "CVPRAC_TEST_NAME",
+                                                 'CVPRAC TEST',
+                                                 'REQUEST_SUBMIT',
+                                                 new_submit_id)
+            self.assertEqual(response['value']['key']['workspaceId'], new_workspace_id)
+            self.assertEqual(response['value']['request'], 'REQUEST_SUBMIT')
+            self.assertEqual(response['value']['requestParams']['requestId'], new_submit_id)
+
+            # Test getting new workspace post submit
+            result = self.api.get_workspace(new_workspace_id)
+            self.assertIn('value', result)
+            self.assertIn('key', result['value'])
+            self.assertEqual(new_workspace_id, result['value']['key']['workspaceId'])
+            self.assertEqual('WORKSPACE_STATE_SUBMITTED', result['value']['state'])
+        else:
+            pprint('SKIPPING TEST (test_api_tags) FOR API - {0}'.format(
+                self.clnt.apiversion))
             time.sleep(1)
 
     # def test_api_deploy_device(self):
