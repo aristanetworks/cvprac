@@ -733,7 +733,9 @@ class CvpClient(object):
                     else:
                         fhs = dict()
                         fhs['Accept'] = self.headers['Accept']
-                        fhs['APP_SESSION_ID'] = self.headers['APP_SESSION_ID']
+                        if 'APP_SESSION_ID' in self.headers:
+                            fhs['APP_SESSION_ID'] = self.headers[
+                                'APP_SESSION_ID']
                         if 'Authorization' in self.headers:
                             fhs['Authorization'] = self.headers[
                                 'Authorization']
