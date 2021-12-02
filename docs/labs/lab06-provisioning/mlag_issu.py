@@ -11,10 +11,10 @@
 # target_eos_version: 4.25.4M
 # target_terminattr_version: 1.13.6
 # mlag_couples:
-#     - peer1: lfiqrstr101-1
-#       peer2: lfiqrstr101-2
-#     - peer1: lfiqtstr102-1
-#       peer2: lfiqrstr102-2
+#     - peer1: leaf101-1
+#       peer2: leaf101-2
+#     - peer1: leaf102-1
+#       peer2: leaf102-2
 #
 # Note: upgrades are performed in parallel
 
