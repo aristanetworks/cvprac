@@ -3210,7 +3210,7 @@ class CvpApi(object):
 
 
     def get_change_control(self, key_id, cc_time=None):
-        ''' Get the state of a change control using Resource APIs.
+        ''' Get the configuration and status of a change control using Resource APIs.
 
             Args:
                key_id (str): The ID of the change control.
@@ -3218,12 +3218,13 @@ class CvpApi(object):
                     If no time is given, the server will use the time at which it makes the request.
             Returns:
                response (dict): A dict that contains...
-                  Ex: {"value":{"key":{"id":"<CC ID>"}, "change":{"name":"string",
-                  "rootStageId":"string", "stages":{"values":{"<stageId>":{"name":"<stage name>",
-                  "rows":{"values":[{"values":["string"]}]}}, "<stageId>":{"name":"<action type>",
-                  "action":{"name":"task", "timeout":3000, "args":{"values":{"TaskID":"<tasID>"}}}}}},
-                  "notes":"", "time":"<rfc3339 time>",
-                  "user":"string"}}, "time":"<rfc3339 time>"}%
+                  Ex: {"value":{"key":{"id":"rL6Tog6UU"}, "change":{"name":"Change 20211213_210554",
+                       "rootStageId":"kZUWqyIArD", "stages":{"values":{"kZUWqyIArD":{"name":"Change 20211213_210554 Root",
+                       "rows":{"values":[{"values":["vazWhKyVRR"]}]}}, "vazWhKyVRR":{"name":"Update Config",
+                       "action":{"name":"task", "timeout":3000, "args":{"values":{"TaskID":"538"}}}}}},
+                       "notes":"", "time":"2021-12-13T21:05:58.813750128Z", "user":"cvpadmin"},
+                       "approve":{"value":true, "time":"2021-12-13T21:11:26.788753264Z",
+                       "user":"cvpadmin"}}, "time":"2021-12-13T21:11:26.788753264Z"}%
         '''
         if cc_time is None:
             params = 'key.id={}'.format(key_id)
@@ -3240,12 +3241,59 @@ class CvpApi(object):
 
 
     def get_all_change_controls(self):
-        ''' Get state information for all Change Controls using Resource APIs.
+        ''' Get the configuration and status of all Change Controls using Resource APIs.
 
             Returns:
                response (dict): A dict that contains a list of all Change Controls.
         '''
         url = '/api/resources/changecontrol/v1/ChangeControl/all'
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion >= 6.0:
+                self.log.debug('v6 {}'.format(url))
+                response = self.clnt.get(url, timeout=self.request_timeout)
+                return response
+        return self.clnt.get(url, timeout=self.request_timeout)
+
+
+    def get_change_control_config(self, key_id, cc_time=None):
+        ''' Get the configuration of a change control using Resource APIs.
+
+            Args:
+               key_id (str): The ID of the change control.
+               time (str): Time indicates the time for which you are interested in the data.
+                    If no time is given, the server will use the time at which it makes the request.
+            Returns:
+               response (dict): A dict that contains...
+                  Ex: {"value":{"key":{"id":"rL6Tog6UU"}, "change":{"name":"Change 20211213_210554",
+                  "rootStageId":"kZUWqyIArD", "stages":{"values":{"kZUWqyIArD":{"name":"Change 20211213_210554 Root",
+                  "rows":{"values":[{"values":["vazWhKyVRR"]}]}}, "vazWhKyVRR":{"name":"Update Config",
+                  "action":{"name":"task", "timeout":3000, "args":{"values":{"TaskID":"538"}}}}}},
+                  "notes":""}}, "time":"2021-12-13T21:05:58.813750128Z"}%
+        '''
+        if cc_time is None:
+            params = 'key.id={}'.format(key_id)
+        else:
+            params = 'key.id={}&time={}'.format(key_id, cc_time)
+        url = '/api/resources/changecontrol/v1/ChangeControlConfig?' + params
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion >= 6.0:
+                return self.clnt.get(url, timeout=self.request_timeout)
+        return self.clnt.get(url, timeout=self.request_timeout)
+
+
+    def get_all_change_controls_config(self):
+        ''' Get the configuration and status of all Change Controls using Resource APIs.
+
+            Returns:
+               response (dict): A dict that contains a list of all Change Controls.
+        '''
+        url = '/api/resources/changecontrol/v1/ChangeControlConfig/all'
         # For on-prem check the version as it is only supported from 2021.2.0+
         if not self.clnt.is_cvaas:
             if self.clnt.apiversion is None:
@@ -3325,3 +3373,83 @@ class CvpApi(object):
             "version": version
         }
         return self.clnt.post(url, data=payload, timeout=self.request_timeout)
+
+
+    def delete_change_control_config(self, key_id):
+        ''' Delete a pending Change Control using Resource APIs.
+
+            Args:
+              key_id (str): The ID of the change control.
+        '''
+        params = 'key.id={}'.format(key_id)
+        url = '/api/resources/changecontrol/v1/ChangeControlConfig?' + params
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion >= 6.0:
+                return self.clnt.delete(url, timeout=self.request_timeout)
+        return self.clnt.delete(url, timeout=self.request_timeout)
+
+
+    def change_control_config_create(self, cc_data):
+        ''' Create a Change Control using Resource APIs.
+        '''
+        payload = cc_data
+        url = '/api/resources/changecontrol/v1/ChangeControlConfig'
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion >= 6.0:
+                self.log.debug('v6 ' + str(url) + ' ' + str(payload))
+                response = self.clnt.post(url, data=payload)
+                return response
+        return self.clnt.post(url, data=payload)
+
+    def change_control_config_start(self, key_id, notes=""):
+        ''' Start a Change Control using Resource APIs.
+        '''
+        payload = {
+                "key": {
+                    "id": key_id
+                },
+                "start": {
+                    "value": True,
+                    "notes": notes
+                }
+        }
+        url = '/api/resources/changecontrol/v1/ChangeControlConfig'
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion >= 6.0:
+                self.log.debug('v6 ' + str(url) + ' ' + str(payload))
+                response = self.clnt.post(url, data=payload)
+                return response
+        return self.clnt.post(url, data=payload)
+
+
+    def change_control_config_stop(self, key_id, stages):
+        ''' Stop a Change Control using Resource APIs.
+        '''
+        payload = {
+                "key": {
+                    "id": key_id
+                },
+                "start": {
+                    "value": False,
+                    "notes": notes
+                }
+        }
+        url = '/api/resources/changecontrol/v1/ChangeControlConfig'
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion >= 6.0:
+                self.log.debug('v6 ' + str(url) + ' ' + str(payload))
+                response = self.clnt.post(url, data=payload)
+                return response
+        return self.clnt.post(url, data=payload)
