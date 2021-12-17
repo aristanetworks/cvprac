@@ -3209,11 +3209,11 @@ class CvpApi(object):
         return self.clnt.get(url, timeout=self.request_timeout)
 
 
-    def get_change_control(self, key_id, cc_time=None):
+    def get_change_control(self, cc_id, cc_time=None):
         ''' Get the configuration and status of a change control using Resource APIs.
 
             Args:
-               key_id (str): The ID of the change control.
+               cc_id (str): The ID of the change control.
                time (str): Time indicates the time for which you are interested in the data.
                     If no time is given, the server will use the time at which it makes the request.
             Returns:
@@ -3227,9 +3227,9 @@ class CvpApi(object):
                        "user":"cvpadmin"}}, "time":"2021-12-13T21:11:26.788753264Z"}%
         '''
         if cc_time is None:
-            params = 'key.id={}'.format(key_id)
+            params = 'key.id={}'.format(cc_id)
         else:
-            params = 'key.id={}&time={}'.format(key_id, cc_time)
+            params = 'key.id={}&time={}'.format(cc_id, cc_time)
         url = '/api/resources/changecontrol/v1/ChangeControl?' + params
         # For on-prem check the version as it is only supported from 2021.2.0+
         if not self.clnt.is_cvaas:
@@ -3258,58 +3258,11 @@ class CvpApi(object):
         return self.clnt.get(url, timeout=self.request_timeout)
 
 
-    def get_change_control_config(self, key_id, cc_time=None):
-        ''' Get the configuration of a change control using Resource APIs.
-
-            Args:
-               key_id (str): The ID of the change control.
-               time (str): Time indicates the time for which you are interested in the data.
-                    If no time is given, the server will use the time at which it makes the request.
-            Returns:
-               response (dict): A dict that contains...
-                  Ex: {"value":{"key":{"id":"rL6Tog6UU"}, "change":{"name":"Change 20211213_210554",
-                  "rootStageId":"kZUWqyIArD", "stages":{"values":{"kZUWqyIArD":{"name":"Change 20211213_210554 Root",
-                  "rows":{"values":[{"values":["vazWhKyVRR"]}]}}, "vazWhKyVRR":{"name":"Update Config",
-                  "action":{"name":"task", "timeout":3000, "args":{"values":{"TaskID":"538"}}}}}},
-                  "notes":""}}, "time":"2021-12-13T21:05:58.813750128Z"}%
-        '''
-        if cc_time is None:
-            params = 'key.id={}'.format(key_id)
-        else:
-            params = 'key.id={}&time={}'.format(key_id, cc_time)
-        url = '/api/resources/changecontrol/v1/ChangeControlConfig?' + params
-        # For on-prem check the version as it is only supported from 2021.2.0+
-        if not self.clnt.is_cvaas:
-            if self.clnt.apiversion is None:
-                self.get_cvp_info()
-            if self.clnt.apiversion >= 6.0:
-                return self.clnt.get(url, timeout=self.request_timeout)
-        return self.clnt.get(url, timeout=self.request_timeout)
-
-
-    def get_all_change_controls_config(self):
-        ''' Get the configuration and status of all Change Controls using Resource APIs.
-
-            Returns:
-               response (dict): A dict that contains a list of all Change Controls.
-        '''
-        url = '/api/resources/changecontrol/v1/ChangeControlConfig/all'
-        # For on-prem check the version as it is only supported from 2021.2.0+
-        if not self.clnt.is_cvaas:
-            if self.clnt.apiversion is None:
-                self.get_cvp_info()
-            if self.clnt.apiversion >= 6.0:
-                self.log.debug('v6 {}'.format(url))
-                response = self.clnt.get(url, timeout=self.request_timeout)
-                return response
-        return self.clnt.get(url, timeout=self.request_timeout)
-
-
-    def get_change_control_approve_config(self, key_id, cc_time=None):
+    def get_change_control_approval(self, cc_id, cc_time=None):
         ''' Get the state of a specific Change Control's approve config using Resource APIs.
 
             Args:
-               key_id (str): The ID of the change control.
+               cc_id (str): The ID of the change control.
                time (str): Time indicates the time for which you are interested in the data.
                     If no time is given, the server will use the time at which it makes the request.
             Returns:
@@ -3318,9 +3271,9 @@ class CvpApi(object):
                          'version': '2021-12-13T21:05:58.813750128Z'}, 'time': '2021-12-13T21:11:26.788753264Z'}
         '''
         if cc_time is None:
-            params = 'key.id={}'.format(key_id)
+            params = 'key.id={}'.format(cc_id)
         else:
-            params = 'key.id={}&time={}'.format(key_id, cc_time)
+            params = 'key.id={}&time={}'.format(cc_id, cc_time)
         url = '/api/resources/changecontrol/v1/ApproveConfig?' + params
         # For on-prem check the version as it is only supported from 2021.2.0+
         if not self.clnt.is_cvaas:
@@ -3331,7 +3284,7 @@ class CvpApi(object):
         return self.clnt.get(url, timeout=self.request_timeout)
 
 
-    def get_all_change_control_approve_config(self):
+    def get_all_change_control_approvals(self):
         ''' Get state information for all Change Control Approvals using Resource APIs.
 
             Returns:
@@ -3349,11 +3302,11 @@ class CvpApi(object):
                 return response
         return self.clnt.get(url, timeout=self.request_timeout)
 
-    def change_control_approve_config(self, key_id, notes="", approve=True):
+    def change_control_approve(self, cc_id, notes="", approve=True):
         ''' Approve/Unapprove a change control using Resource APIs.
 
             Args:
-              key_id (str): The ID of the change control.
+              cc_id (str): The ID of the change control.
               version (str): The timestamp of the Change Control. Can be fetched using get_change_control().
               notes (str): An optional approval note.
               approve (bool): Set to True to approve a change and to False to unapprove a change. The default is True.
@@ -3361,10 +3314,10 @@ class CvpApi(object):
         url = '/api/resources/changecontrol/v1/ApproveConfig'
         # For on-prem check the version as it is only supported from 2021.2.0+
         # Since the get_change_control already checks this, no need to check it again
-        version = self.clnt.api.get_change_control(key_id)['time']
+        version = self.clnt.api.get_change_control(cc_id)['time']
         payload = {
             "key": {
-                "id": key_id
+                "id": cc_id
             },
             "approve": {
                 "value": approve,
@@ -3375,13 +3328,13 @@ class CvpApi(object):
         return self.clnt.post(url, data=payload, timeout=self.request_timeout)
 
 
-    def delete_change_control_config(self, key_id):
+    def change_control_delete(self, cc_id):
         ''' Delete a pending Change Control using Resource APIs.
 
             Args:
-              key_id (str): The ID of the change control.
+              cc_id (str): The ID of the change control.
         '''
-        params = 'key.id={}'.format(key_id)
+        params = 'key.id={}'.format(cc_id)
         url = '/api/resources/changecontrol/v1/ChangeControlConfig?' + params
         # For on-prem check the version as it is only supported from 2021.2.0+
         if not self.clnt.is_cvaas:
@@ -3392,10 +3345,105 @@ class CvpApi(object):
         return self.clnt.delete(url, timeout=self.request_timeout)
 
 
-    def change_control_config_create(self, cc_data):
-        ''' Create a Change Control using Resource APIs.
+    def change_control_create_with_custom_stages(self, custom_cc=None):
+        ''' Create a Change Control with custom stage hierarchy using Resource APIs.
+            Args:
+                custom_cc (dict): A dictionary with the entire stage hierarchy.
+                Ex1: {'key': {'id': '409b94d1-c0cb-4d74-8f88-89f66f13f109'},
+                     'change': {'name': 'Change_20211217_034338',
+                     'notes': 'cvprac CC',
+                     'rootStageId': 'root',
+                     'stages': {'values': {'root': {'name': 'root',
+                                                'rows': {'values': [{'values': ['1-2']},
+                                                                    {'values': ['3']}]}},
+                                        '1-2': {'name': 'stages 1-2',
+                                                'rows': {'values': [{'values': ['1ab']},
+                                                                    {'values': ['2']}]}},
+                                        '1a': {'action': {'args': {'values': {'TaskID': '1242'}},
+                                                            'name': 'task',
+                                                            'timeout': 3000},
+                                                'name': 'stage 1a'},
+                                        '1ab': {'name': 'stage 1ab',
+                                                'rows': {'values': [{'values': ['1a',
+                                                                                '1b']}]}},
+                                        '1b': {'action': {'args': {'values': {'TaskID': '1243'}},
+                                                            'timeout': 3000},
+                                                'name': 'stage 1b'},
+                                        '2': {'action': {'args': {'values': {'TaskID': '1240'}},
+                                                        'name': 'task',
+                                                        'timeout': 3000},
+                                                'name': 'stage 2'},
+                                        '3': {'action': {'args': {'values': {'TaskID': '1241'}},
+                                                        'name': 'task',
+                                                        'timeout': 3000},
+                                                'name': 'stage 3'},
+                                        }}}}
+                The above would result in the following hierarchy:
+                    root (series)
+                    |- stages 1-2 (series)
+                    |  |- stage 1ab (parallel)
+                    |  |    |- stage 1a
+                    |  |    |- stage 1b
+                    |  |- stage 2
+                    |- stage 3
+
+                Ex2 (MLAG ISSU):
+                    {'key': {'id': 'PXs9cKimC'},
+                     'change': {'name': 'Change 20211217_040530',
+                     'notes': '',
+                     'rootStageId': 'root',
+                     'stages': {'values': { 'root': {'name': 'Change 20211217_040530 Root',
+                                                           'rows': {'values': [{'values': ['left-leafs']}]}},
+                                            'upgrade1': {'action': {'args': {'values': {'TaskID': '1242'}},
+                                                                      'name': 'task',
+                                                                      'timeout': 3000},
+                                                           'name': 'Image Upgrade'},
+                                            'pre-mlag-check-l2': {'action': {'args': {'values': {'DeviceID': 'SN2'}},
+                                                                     'name': 'mlaghealthcheck'},
+                                                          'name': 'Check MLAG Health'},
+                                            'left-leafs': {'name': 'left-leafs',
+                                                          'rows': {'values': [{'values': ['leaf1']},
+                                                                              {'values': ['leaf2']}]}},
+                                            'upgrade2': {'action': {'args': {'values': {'TaskID': '1243'}},
+                                                                      'name': 'task',
+                                                                      'timeout': 3000},
+                                                           'name': 'Image Upgrade'},
+                                            'pre-mlag-check-l1': {'action': {'args': {'values': {'DeviceID': 'SN1'}},
+                                                                     'name': 'mlaghealthcheck'},
+                                                          'name': 'Check MLAG Health'},
+                                            'post-mlag-check-l2': {'action': {'args': {'values': {'DeviceID': 'SN1'}},
+                                                                      'name': 'mlaghealthcheck'},
+                                                           'name': 'Check MLAG Health'},
+                                            'leaf1': {'name': 'leaf1',
+                                                          'rows': {'values': [{'values': ['pre-mlag-check-l1']},
+                                                                              {'values': ['upgrade1']},
+                                                                              {'values': ['post-mlag-check-l1']}]}},
+                                            'post-mlag-check-l1': {'action': {'args': {'values': {'DeviceID': 'SN2'}},
+                                                                      'name': 'mlaghealthcheck'},
+                                                           'name': 'Check MLAG Health'},
+                                            'leaf2': {'name': 'leaf2',
+                                                          'rows': {'values': [{'values': ['pre-mlag-check-l2']},
+                                                                              {'values': ['upgrade2']},
+                                                                              {'values': ['post-mlag-check-l2']}]}}}}}
+                    }
+                    The above would result in the following hierarchy:
+                    root (series)
+                    |- left-leafs (series)
+                       |- leaf1 (series)
+                       |    |- pre-mlag-check-l1
+                       |    |- upgrade1
+                       |    |- post-mlag-check-l1
+                       |- leaf2 (series)
+                            |- pre-mlag-check-l1
+                            |- upgrade1
+                            |- post-mlag-check-l1
+
+            Returns:
+                response (dict): A dict that contains...
+                Ex: {'value': {'key': {'id':cc_id,
+                      'time': '...'}
         '''
-        payload = cc_data
+        payload = custom_cc
         url = '/api/resources/changecontrol/v1/ChangeControlConfig'
         # For on-prem check the version as it is only supported from 2021.2.0+
         if not self.clnt.is_cvaas:
@@ -3407,12 +3455,68 @@ class CvpApi(object):
                 return response
         return self.clnt.post(url, data=payload)
 
-    def change_control_config_start(self, key_id, notes=""):
+    def change_control_create_for_tasks(self, cc_id, name, tasks, series=True):
+        ''' Create a simple Change Control for tasks using Resource APIs.
+            This function will create a change with either all Task actions in series or parallel. For custom
+            stage hierarchy the change_control_create_with_custom_stages() should be used.
+            Args:
+                cc_id (string): The ID for the new change control.
+                name (string): The name for the new change control.
+                tasks (list): A list of Task IDs as strings
+                    Ex: ['10', '11', '12']
+                series (bool): A flag for running tasks in series or
+                    in parallel. Defaults to True for running in series.
+            Returns:
+                response (dict): A dict that contains...
+                Ex: {'value': {'key': {'id':cc_id,
+                      'time': '...'}
+        '''
+        stages = {'values': {'root': {'name': 'root', 'rows': {'values': []}}}}
+        if series == True:
+            for index, task in enumerate(tasks):
+                stage_id = 'stage%d' % index
+                stages['values']['root']['rows']['values'].append({'values':[stage_id]})
+                stages['values'][stage_id] = {'action': {'args': {'values': {'TaskID': task}},'name':'task','timeout':3000},'name':stage_id}
+        else:
+            stages['values']['root']['rows']['values'].append({'values':[]})
+            for index, task in enumerate(tasks):
+                stage_id = 'stage%d' % index
+                stages['values']['root']['rows']['values'][0]['values'].append(stage_id)
+                stages['values'][stage_id] = {'action': {'args': {'values': {'TaskID': task}},'name':'task','timeout':3000},'name':stage_id}
+        payload = {'key': {
+                        'id': cc_id
+                        },
+                        'change': {
+                                'name': name,
+                                'rootStageId': 'root',
+                                'notes': 'randomString',
+                                'stages': stages
+                        }
+        }
+        url = '/api/resources/changecontrol/v1/ChangeControlConfig'
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion >= 6.0:
+                self.log.debug('v6 ' + str(url) + ' ' + str(payload))
+                response = self.clnt.post(url, data=payload, timeout=self.request_timeout)
+                return response
+        return self.clnt.post(url, data=payload, timeout=self.request_timeout)
+
+    def change_control_start(self, cc_id, notes=""):
         ''' Start a Change Control using Resource APIs.
+            Args:
+                cc_id (string): The ID for the new change control.
+                notes (string): An optional note.
+            Returns:
+                response (dict): A dict that contains...
+                Ex: {"value":{"key":{"id":cc_id}, "start":{"value":true, "notes":"note"}},
+                     "time":"2021-12-14T21:02:21.830306071Z"}
         '''
         payload = {
                 "key": {
-                    "id": key_id
+                    "id": cc_id
                 },
                 "start": {
                     "value": True,
@@ -3426,17 +3530,24 @@ class CvpApi(object):
                 self.get_cvp_info()
             if self.clnt.apiversion >= 6.0:
                 self.log.debug('v6 ' + str(url) + ' ' + str(payload))
-                response = self.clnt.post(url, data=payload)
+                response = self.clnt.post(url, data=payload, timeout=self.request_timeout)
                 return response
-        return self.clnt.post(url, data=payload)
+        return self.clnt.post(url, data=payload, timeout=self.request_timeout)
 
 
-    def change_control_config_stop(self, key_id, stages):
+    def change_control_stop(self, cc_id, notes=""):
         ''' Stop a Change Control using Resource APIs.
+            Args:
+                cc_id (string): The ID for the new change control.
+                notes (string): An optional note.
+            Returns:
+                response (dict): A dict that contains...
+                Ex: {"value":{"key":{"id":cc_id}, "start":{"value":false, "notes":"note"}},
+                     "time":"2021-12-14T21:02:21.830306071Z"}
         '''
         payload = {
                 "key": {
-                    "id": key_id
+                    "id": cc_id
                 },
                 "start": {
                     "value": False,
@@ -3450,6 +3561,6 @@ class CvpApi(object):
                 self.get_cvp_info()
             if self.clnt.apiversion >= 6.0:
                 self.log.debug('v6 ' + str(url) + ' ' + str(payload))
-                response = self.clnt.post(url, data=payload)
+                response = self.clnt.post(url, data=payload, timeout=self.request_timeout)
                 return response
-        return self.clnt.post(url, data=payload)
+        return self.clnt.post(url, data=payload, timeout=self.request_timeout)
