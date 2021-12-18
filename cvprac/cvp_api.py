@@ -2946,7 +2946,8 @@ class CvpApi(object):
                 self.log.debug('v6 {}'.format(tag_url))
                 response = self.clnt.post(tag_url, data=payload)
                 return response
-        return self.clnt.post(tag_url, data=payload)
+        else:
+            return self.clnt.post(tag_url, data=payload)
 
     def get_tag_edits(self, workspace_id):
         ''' Show all tags edits in a workspace
@@ -2978,7 +2979,8 @@ class CvpApi(object):
                 self.log.debug('v6 ' + tag_url + ' ' + str(payload))
                 response = self.clnt.post(tag_url, data=payload)
                 return response
-        return self.clnt.post(tag_url, data=payload)
+        else:
+            return self.clnt.post(tag_url, data=payload)
 
     def get_tag_assignment_edits(self, workspace_id):
         ''' Show all tags assignment edits in a workspace
@@ -3010,7 +3012,8 @@ class CvpApi(object):
                 self.log.debug('v6 ' + tag_url + ' ' + str(payload))
                 response = self.clnt.post(tag_url, data=payload)
                 return response
-        return self.clnt.post(tag_url, data=payload)
+        else:
+            return self.clnt.post(tag_url, data=payload)
 
     def tag_config(self, element_type, workspace_id, tag_label, tag_value, remove=False):
         ''' Create/Delete device or interface tags.
@@ -3050,7 +3053,8 @@ class CvpApi(object):
                 self.log.debug('v6 {} '.format(tag_url) + str(payload))
                 response = self.clnt.post(tag_url, data=payload)
                 return response
-        return self.clnt.post(tag_url, data=payload)
+        else:
+            return self.clnt.post(tag_url, data=payload)
 
     def tag_assignment_config(self, element_type, workspace_id, tag_label,
                               tag_value, device_id, interface_id, remove=False):
@@ -3098,7 +3102,8 @@ class CvpApi(object):
                 self.log.debug('v6 {} '.format(tag_url) + str(payload))
                 response = self.clnt.post(tag_url, data=payload)
                 return response
-        return self.clnt.post(tag_url, data=payload)
+        else:
+            return self.clnt.post(tag_url, data=payload)
 
     def get_all_workspaces(self):
         ''' Get state information for all workspaces
@@ -3116,7 +3121,8 @@ class CvpApi(object):
                 self.log.debug('v6 {}'.format(tag_url))
                 response = self.clnt.post(tag_url, data=payload)
                 return response
-        return self.clnt.post(tag_url, data=payload)
+        else:
+            return self.clnt.post(tag_url, data=payload)
 
     def get_workspace(self, workspace_id):
         ''' Get state information for all workspaces
@@ -3133,7 +3139,8 @@ class CvpApi(object):
                 self.log.debug('v6 {}'.format(tag_url))
                 response = self.clnt.get(tag_url)
                 return response
-        return self.clnt.get(tag_url)
+        else:
+            return self.clnt.get(tag_url)
 
     def workspace_config(self, workspace_id, display_name,
                          description='', request='REQUEST_UNSPECIFIED',
@@ -3184,7 +3191,8 @@ class CvpApi(object):
                 self.log.debug('v6 ' + str(url) + ' ' + str(payload))
                 response = self.clnt.post(url, data=payload)
                 return response
-        return self.clnt.post(url, data=payload)
+        else:
+            return self.clnt.post(url, data=payload)
 
     def workspace_build_status(self, workspace_id, build_id):
         ''' Verify the state of the workspace build process.
@@ -3206,7 +3214,8 @@ class CvpApi(object):
                 self.get_cvp_info()
             if self.clnt.apiversion >= 6.0:
                 return self.clnt.get(url, timeout=self.request_timeout)
-        return self.clnt.get(url, timeout=self.request_timeout)
+        else:
+            return self.clnt.get(url, timeout=self.request_timeout)
 
 
     def get_change_control(self, cc_id, cc_time=None):
@@ -3214,7 +3223,7 @@ class CvpApi(object):
 
             Args:
                cc_id (str): The ID of the change control.
-               time (str): Time indicates the time for which you are interested in the data.
+               cc_time (str): Time indicates the time for which you are interested in the data.
                     If no time is given, the server will use the time at which it makes the request.
             Returns:
                response (dict): A dict that contains...
@@ -3237,7 +3246,8 @@ class CvpApi(object):
                 self.get_cvp_info()
             if self.clnt.apiversion >= 6.0:
                 return self.clnt.get(url, timeout=self.request_timeout)
-        return self.clnt.get(url, timeout=self.request_timeout)
+        else:
+            return self.clnt.get(url, timeout=self.request_timeout)
 
 
     def get_all_change_controls(self):
@@ -3255,7 +3265,8 @@ class CvpApi(object):
                 self.log.debug('v6 {}'.format(url))
                 response = self.clnt.get(url, timeout=self.request_timeout)
                 return response
-        return self.clnt.get(url, timeout=self.request_timeout)
+        else:
+            return self.clnt.get(url, timeout=self.request_timeout)
 
 
     def get_change_control_approval(self, cc_id, cc_time=None):
@@ -3263,7 +3274,7 @@ class CvpApi(object):
 
             Args:
                cc_id (str): The ID of the change control.
-               time (str): Time indicates the time for which you are interested in the data.
+               cc_time (str): Time indicates the time for which you are interested in the data.
                     If no time is given, the server will use the time at which it makes the request.
             Returns:
                response (dict): A dict that contains...
@@ -3275,13 +3286,19 @@ class CvpApi(object):
         else:
             params = 'key.id={}&time={}'.format(cc_id, cc_time)
         url = '/api/resources/changecontrol/v1/ApproveConfig?' + params
-        # For on-prem check the version as it is only supported from 2021.2.0+
-        if not self.clnt.is_cvaas:
-            if self.clnt.apiversion is None:
-                self.get_cvp_info()
-            if self.clnt.apiversion >= 6.0:
+        cc_status = self.clnt.api.get_change_control(cc_id)
+        if 'approve' in cc_status['value']:
+            # For on-prem check the version as it is only supported from 2021.2.0+
+            if not self.clnt.is_cvaas:
+                if self.clnt.apiversion is None:
+                    self.get_cvp_info()
+                if self.clnt.apiversion >= 6.0:
+                    return self.clnt.get(url, timeout=self.request_timeout)
+            else:
                 return self.clnt.get(url, timeout=self.request_timeout)
-        return self.clnt.get(url, timeout=self.request_timeout)
+        else:
+            msg = "The change has not been approved yet."
+            return msg
 
 
     def get_all_change_control_approvals(self):
@@ -3300,21 +3317,21 @@ class CvpApi(object):
                 self.log.debug('v6 {}'.format(url))
                 response = self.clnt.get(url, timeout=self.request_timeout)
                 return response
-        return self.clnt.get(url, timeout=self.request_timeout)
+        else:
+            return self.clnt.get(url, timeout=self.request_timeout)
 
     def change_control_approve(self, cc_id, notes="", approve=True):
         ''' Approve/Unapprove a change control using Resource APIs.
 
             Args:
               cc_id (str): The ID of the change control.
-              version (str): The timestamp of the Change Control. Can be fetched using get_change_control().
               notes (str): An optional approval note.
               approve (bool): Set to True to approve a change and to False to unapprove a change. The default is True.
         '''
         url = '/api/resources/changecontrol/v1/ApproveConfig'
         # For on-prem check the version as it is only supported from 2021.2.0+
         # Since the get_change_control already checks this, no need to check it again
-        version = self.clnt.api.get_change_control(cc_id)['time']
+        version = self.clnt.api.get_change_control(cc_id)['value']['change']['time']
         payload = {
             "key": {
                 "id": cc_id
@@ -3342,7 +3359,8 @@ class CvpApi(object):
                 self.get_cvp_info()
             if self.clnt.apiversion >= 6.0:
                 return self.clnt.delete(url, timeout=self.request_timeout)
-        return self.clnt.delete(url, timeout=self.request_timeout)
+        else:
+            return self.clnt.delete(url, timeout=self.request_timeout)
 
 
     def change_control_create_with_custom_stages(self, custom_cc=None):
@@ -3453,7 +3471,8 @@ class CvpApi(object):
                 self.log.debug('v6 ' + str(url) + ' ' + str(payload))
                 response = self.clnt.post(url, data=payload)
                 return response
-        return self.clnt.post(url, data=payload)
+        else:
+            return self.clnt.post(url, data=payload)
 
     def change_control_create_for_tasks(self, cc_id, name, tasks, series=True):
         ''' Create a simple Change Control for tasks using Resource APIs.
@@ -3502,7 +3521,8 @@ class CvpApi(object):
                 self.log.debug('v6 ' + str(url) + ' ' + str(payload))
                 response = self.clnt.post(url, data=payload, timeout=self.request_timeout)
                 return response
-        return self.clnt.post(url, data=payload, timeout=self.request_timeout)
+        else:
+            return self.clnt.post(url, data=payload, timeout=self.request_timeout)
 
     def change_control_start(self, cc_id, notes=""):
         ''' Start a Change Control using Resource APIs.
@@ -3532,7 +3552,8 @@ class CvpApi(object):
                 self.log.debug('v6 ' + str(url) + ' ' + str(payload))
                 response = self.clnt.post(url, data=payload, timeout=self.request_timeout)
                 return response
-        return self.clnt.post(url, data=payload, timeout=self.request_timeout)
+        else:
+            return self.clnt.post(url, data=payload, timeout=self.request_timeout)
 
 
     def change_control_stop(self, cc_id, notes=""):
@@ -3563,4 +3584,5 @@ class CvpApi(object):
                 self.log.debug('v6 ' + str(url) + ' ' + str(payload))
                 response = self.clnt.post(url, data=payload, timeout=self.request_timeout)
                 return response
-        return self.clnt.post(url, data=payload, timeout=self.request_timeout)
+        else:
+            return self.clnt.post(url, data=payload, timeout=self.request_timeout)
