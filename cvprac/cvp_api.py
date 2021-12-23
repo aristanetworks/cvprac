@@ -3252,6 +3252,7 @@ class CvpApi(object):
 
     def change_control_get_one(self, cc_id, cc_time=None):
         ''' Get the configuration and status of a change control using Resource APIs.
+            Supported versions: CVP 2021.2.0 or newer and CVaaS.
 
             Args:
                cc_id (str): The ID of the change control.
@@ -3288,6 +3289,7 @@ class CvpApi(object):
 
     def change_control_get_all(self):
         ''' Get the configuration and status of all Change Controls using Resource APIs.
+            Supported versions: CVP 2021.2.0 or newer and CVaaS.
 
             Returns:
                response (dict): A dict that contains a list of all Change Controls.
@@ -3311,6 +3313,7 @@ class CvpApi(object):
 
     def change_control_approval_get_one(self, cc_id, cc_time=None):
         ''' Get the state of a specific Change Control's approve config using Resource APIs.
+            Supported versions: CVP 2021.2.0 or newer and CVaaS.
 
             Args:
                cc_id (str): The ID of the change control.
@@ -3348,6 +3351,7 @@ class CvpApi(object):
 
     def change_control_approval_get_all(self):
         ''' Get state information for all Change Control Approvals using Resource APIs.
+            Supported versions: CVP 2021.2.0 or newer and CVaaS.
 
             Returns:
                response (dict): A dict that contains a list of all Change Control Approval Configs.
@@ -3371,6 +3375,7 @@ class CvpApi(object):
 
     def change_control_approve(self, cc_id, notes="", approve=True):
         ''' Approve/Unapprove a change control using Resource APIs.
+            Supported versions: CVP 2021.2.0 or newer and CVaaS.
 
             Args:
               cc_id (str): The ID of the change control.
@@ -3396,6 +3401,7 @@ class CvpApi(object):
 
     def change_control_delete(self, cc_id):
         ''' Delete a pending Change Control using Resource APIs.
+            Supported versions: CVP 2021.2.0 or newer and CVaaS.
 
             Args:
               cc_id (str): The ID of the change control.
@@ -3418,6 +3424,8 @@ class CvpApi(object):
 
     def change_control_create_with_custom_stages(self, custom_cc=None):
         ''' Create a Change Control with custom stage hierarchy using Resource APIs.
+            Supported versions: CVP 2021.2.0 or newer and CVaaS.
+
             Args:
                 custom_cc (dict): A dictionary with the entire stage hierarchy.
                 Ex1: {'key': {'id': '409b94d1-c0cb-4d74-8f88-89f66f13f109'},
@@ -3533,6 +3541,8 @@ class CvpApi(object):
 
     def change_control_create_for_tasks(self, cc_id, name, tasks, series=True):
         ''' Create a simple Change Control for tasks using Resource APIs.
+            Supported versions: CVP 2021.2.0 or newer and CVaaS.
+
             This function will create a change with either all Task actions in series or parallel. For custom
             stage hierarchy the change_control_create_with_custom_stages() should be used.
             Args:
@@ -3587,6 +3597,7 @@ class CvpApi(object):
 
     def change_control_start(self, cc_id, notes=""):
         ''' Start a Change Control using Resource APIs.
+            Supported versions: CVP 2021.2.0 or newer and CVaaS.
             Args:
                 cc_id (string): The ID for the new change control.
                 notes (string): An optional note.
@@ -3623,6 +3634,8 @@ class CvpApi(object):
 
     def change_control_stop(self, cc_id, notes=""):
         ''' Stop a Change Control using Resource APIs.
+            Supported versions: CVP 2021.2.0 or newer and CVaaS.
+
             Args:
                 cc_id (string): The ID for the new change control.
                 notes (string): An optional note.
@@ -3651,6 +3664,47 @@ class CvpApi(object):
                 return response
             elif self.clnt.apiversion < 6.0:
                     self.log.warning('change_control_stop: Change Control Resource APIs are supported'
+                                     ' from 2021.2.0 or newer.')
+                    return None
+        else:
+            return self.clnt.post(url, data=payload, timeout=self.request_timeout)
+
+
+    def change_control_schedule(self, cc_id, schedule_time, notes=""):
+        ''' Schedule a Change Control using Resource APIs.
+            Supported versions: CVP 2021.2.0 or newer and CVaaS.
+
+            Args:
+                cc_id (string): The ID for the new change control.
+                schedule_time (string): rfc3339 time format, e.g: 2021-12-23T02:07:00.0Z
+                notes (string): An optional note.
+            Returns:
+                response (dict): A dict that contains...
+                Ex: {"value":{"key":{"id":"5821c7c1-e276-4387-b60a"},
+                              "schedule":{"value":"2021-12-23T02:07:00Z",
+                                          "notes":"CC schedule via curl"}},
+                     "time":"2021-12-23T02:06:18.739965204Z"}
+        '''
+        payload = {
+                "key": {
+                    "id": cc_id
+                },
+                "schedule": {
+                    "value": schedule_time,
+                    "notes": notes
+                }
+        }
+        url = '/api/resources/changecontrol/v1/ChangeControlConfig'
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion >= 6.0:
+                self.log.debug('v6 ' + str(url) + ' ' + str(payload))
+                response = self.clnt.post(url, data=payload, timeout=self.request_timeout)
+                return response
+            elif self.clnt.apiversion < 6.0:
+                    self.log.warning('change_control_schedule: Change Control Resource APIs are supported'
                                      ' from 2021.2.0 or newer.')
                     return None
         else:
