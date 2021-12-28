@@ -143,22 +143,43 @@ class TestCvpClient(DutSystemTest):
             Uses default protocol and port.
         '''
         dut = self.duts[0]
-        self.clnt.connect([dut['node']], dut['username'], dut['password'])
+        if not dut['cvaas']:
+            self.clnt.connect([dut['node']], dut['username'], dut['password'])
+        else:
+            self.clnt.connect([dut['node']], "", "", is_cvaas=True, api_token=dut['api_token'])
+
+
+    # def test_connect_http_good_token(self):
+    #     ''' Verify http connection succeeds to a single CVP node
+    #         Uses default protocol and port.
+    #     '''
+    #     print("Inside the testcase")
+    #     dut = self.duts[0]
+    #     self.clnt.connect([dut['node']], "", "", is_cvaas=True, api_token=dut['user_token'])
+    #     # result = self.clnt.get('/cvpInfo/getCvpInfo.do')
+        # print("Connection result %s", result)
 
     def test_connect_https_good(self):
         ''' Verify https connection succeeds to a single CVP node
             Uses https protocol and port.
         '''
         dut = self.duts[0]
-        self.clnt.connect([dut['node']], dut['username'], dut['password'])
+        if not dut['cvaas']:
+            self.clnt.connect([dut['node']], dut['username'], dut['password'])
+        else:
+            self.clnt.connect([dut['node']], "", "", is_cvaas=True, api_token=dut['api_token'])
+        # self.clnt.connect([dut['node']], dut['username'], dut['password'])
 
     def test_connect_set_request_timeout(self):
         ''' Verify API request timeout is set when provided to
             client connect method.
         '''
         dut = self.duts[0]
-        self.clnt.connect([dut['node']], dut['username'], dut['password'],
-                          request_timeout=34)
+        if not dut['cvaas']:
+            self.clnt.connect([dut['node']], dut['username'], dut['password'],
+                              request_timeout=34)
+        else:
+            self.clnt.connect([dut['node']], "", "", is_cvaas=True, api_token=dut['api_token'], request_timeout=34)
         self.assertEqual(self.clnt.api.request_timeout, 34)
 
     def test_connect_username_bad(self):
@@ -166,27 +187,43 @@ class TestCvpClient(DutSystemTest):
         '''
         dut = self.duts[0]
         with self.assertRaises(CvpLoginError):
-            self.clnt.connect([dut['node']], 'username', dut['password'])
+            if not dut['cvaas']:
+                self.clnt.connect([dut['node']], 'username', dut['password'])
+            else:
+                self.clnt.connect([dut['node']], "", "", is_cvaas=True, api_token=dut['api_token'])
+
 
     def test_connect_password_bad(self):
         ''' Verify connect fails with bad password.
         '''
         dut = self.duts[0]
         with self.assertRaises(CvpLoginError):
-            self.clnt.connect([dut['node']], dut['username'], 'password')
+            if not dut['cvaas']:
+                self.clnt.connect([dut['node']], dut['username'], 'password')
+            else:
+                self.clnt.connect([dut['node']], "", "", is_cvaas=True, api_token=dut['api_token'])
 
     def test_connect_node_bad(self):
         ''' Verify connection fails to a single bogus CVP node
         '''
+        dut = self.duts[0]
         with self.assertRaises(CvpLoginError):
-            self.clnt.connect(['bogus'], 'username', 'password',
-                              connect_timeout=1)
+            if not dut['cvaas']:
+                self.clnt.connect(['bogus'], 'username', 'password',
+                                  connect_timeout=1)
+            else:
+                self.clnt.connect(['bogus'], 'username', 'password', is_cvaas=True, api_token=dut['api_token_invalid'])
 
     def test_connect_non_cvp_node(self):
         ''' Verify connection fails to a non-CVP node
         '''
+        dut = self.duts[0]
         with self.assertRaises(CvpLoginError):
-            self.clnt.connect(['localhost'], 'username', 'password')
+            if not dut['cvaas']:
+                self.clnt.connect(['localhost'], 'username', 'password')
+            else:
+                self.clnt.connect(['localhost'], "", "", is_cvaas=True, api_token=dut['api_token'])
+
 
     def test_connect_all_nodes_bad(self):
         ''' Verify connection fails to a single bogus CVP node
@@ -199,8 +236,11 @@ class TestCvpClient(DutSystemTest):
         ''' Verify connect succeeds even if one node is bad
         '''
         dut = self.duts[0]
-        self.clnt.connect(['bogus', dut['node']], dut['username'],
-                          dut['password'], connect_timeout=5)
+        if not dut['cvaas']:
+            self.clnt.connect(['bogus', dut['node']], dut['username'],
+                              dut['password'], connect_timeout=5)
+        else:
+            self.clnt.connect(['bogus', dut['node']], dut['username'], dut['password'], is_cvaas=True, api_token=dut['api_token'], connect_timeout=5)
 
     def test_connect_nodes_arg_bad(self):
         ''' Verify non-list nodes argument raises a TypeError
@@ -214,16 +254,25 @@ class TestCvpClient(DutSystemTest):
         '''
         dut = self.duts[0]
         with self.assertRaises(CvpLoginError):
-            self.clnt.connect([dut['node']], dut['username'], dut['password'],
-                              port=700)
+            if not dut['cvaas']:
+                self.clnt.connect([dut['node']], dut['username'], dut['password'],
+                                  port=700)
+            else:
+                self.clnt.connect([dut['node']], "", "", is_cvaas=True, api_token=dut['api_token'], port=700)
+
 
     def test_connect_from_cb_script(self):
         ''' Verify connection works from configlet builder scripts
         '''
         dut = self.duts[0]
         os.environ["CURRENT_NODE_IP"] = dut['node']
-        self.clnt.connect(['localhost'], dut['username'], dut['password'])
-        self.clnt.connect(['127.0.0.1'], dut['username'], dut['password'])
+        if not dut['cvaas']:
+            self.clnt.connect(['localhost'], dut['username'], dut['password'])
+            self.clnt.connect(['127.0.0.1'], dut['username'], dut['password'])
+        else:
+            self.clnt.connect(['localhost'], "", "", is_cvaas=True, api_token=dut['api_token'])
+            self.clnt.connect(['127.0.0.1'], "", "", is_cvaas=True, api_token=dut['api_token'])
+
 
     def test_get_not_connected(self):
         ''' Verify get with no connection raises a ValueError
@@ -235,7 +284,10 @@ class TestCvpClient(DutSystemTest):
         ''' Verify get of CVP info
         '''
         dut = self.duts[0]
-        self.clnt.connect([dut['node']], dut['username'], dut['password'])
+        if not dut['cvaas']:
+            self.clnt.connect([dut['node']], dut['username'], dut['password'])
+        else:
+            self.clnt.connect([dut['node']], "", "", is_cvaas=True, api_token=dut['api_token'])
         result = self.clnt.get('/cvpInfo/getCvpInfo.do')
         self.assertIn('version', result)
 
@@ -243,7 +295,10 @@ class TestCvpClient(DutSystemTest):
         ''' Verify client(get) recovers session after logout
         '''
         dut = self.duts[0]
-        self.clnt.connect([dut['node']], dut['username'], dut['password'])
+        if not dut['cvaas']:
+            self.clnt.connect([dut['node']], dut['username'], dut['password'])
+        else:
+            self.clnt.connect([dut['node']], "", "", is_cvaas=True, api_token=dut['api_token'])
         result = self.clnt.post('/login/logout.do', None)
         self.assertIn('data', result)
         self.assertEqual('success', result['data'])
@@ -254,8 +309,11 @@ class TestCvpClient(DutSystemTest):
         ''' Verify client(get) recovers session after logout for bad/good node
         '''
         dut = self.duts[0]
-        self.clnt.connect(['bogus', dut['node']], dut['username'],
-                          dut['password'])
+        if not dut['cvaas']:
+            self.clnt.connect(['bogus', dut['node']], dut['username'],
+                              dut['password'])
+        else:
+            self.clnt.connect(['bogus', dut['node']], "", "", is_cvaas=True, api_token=dut['api_token'])
         result = self.clnt.post('/login/logout.do', None)
         self.assertIn('data', result)
         self.assertEqual('success', result['data'])
@@ -266,7 +324,10 @@ class TestCvpClient(DutSystemTest):
         ''' Verify get of bad CVP request returns an error
         '''
         dut = self.duts[0]
-        self.clnt.connect([dut['node']], dut['username'], dut['password'])
+        if not dut['cvaas']:
+            self.clnt.connect([dut['node']], dut['username'], dut['password'])
+        else:
+            self.clnt.connect([dut['node']], "", "", is_cvaas=True, api_token=dut['api_token'])
         if self.clnt.apiversion is None:
             self.clnt.api.get_cvp_info()
         if self.clnt.apiversion == 1.0:
@@ -280,7 +341,10 @@ class TestCvpClient(DutSystemTest):
         ''' Verify get with bad URL returns an error
         '''
         dut = self.duts[0]
-        self.clnt.connect([dut['node']], dut['username'], dut['password'])
+        if not dut['cvaas']:
+            self.clnt.connect([dut['node']], dut['username'], dut['password'])
+        else:
+            self.clnt.connect([dut['node']], "", "", is_cvaas=True, api_token=dut['api_token'])
         # Error raised changes in CVP 2021.2.0
         if not self.clnt.apiversion:
             self.clnt.api.get_cvp_info()
@@ -295,48 +359,51 @@ class TestCvpClient(DutSystemTest):
         ''' Verify get with bad URL returns an error
         '''
         dut = self.duts[0]
-        self.clnt.connect([dut['node']], dut['username'], dut['password'])
+        if not dut['cvaas']:
+            self.clnt.connect([dut['node']], dut['username'], dut['password'])
+        else:
+            self.clnt.connect([dut['node']], "", "", is_cvaas=True, api_token=dut['api_token'])
         with self.assertRaises(Timeout):
             self.clnt.get('/tasks/getTasks.do', timeout=0.0001)
 
-    def test_get_except_fail_reconnect(self):
-        ''' Verify exception raised if session fails and cannot be
-            re-established.
-        '''
-        dut = self.duts[0]
-        nodes = ['bogus', dut['node']]
-        self.clnt.connect(nodes, dut['username'], dut['password'])
-        # Change the password for the CVP user so that a session reconnect
-        # to any node will fail
-        self._change_passwd(nodes, dut['username'], dut['password'],
-                            self.NEW_PASSWORD)
-
-        try:
-            # Logout to end the current session and force a reconnect for the
-            # next request.
-            result = self.clnt.post('/login/logout.do', None)
-            self.assertIn('data', result)
-            self.assertEqual('success', result['data'])
-
-        except Exception as error:
-            # Should not have had an exception.  Restore the CVP password
-            # and re-raise the error.
-            self._change_passwd(nodes, dut['username'], self.NEW_PASSWORD,
-                                dut['password'])
-            raise error
-        try:
-            # Try a get request and expect a CvpSessionLogOutError
-            result = self.clnt.get('/cvpInfo/getCvpInfo.do')
-        except (CvpSessionLogOutError, CvpApiError) as error:
-            pass
-        except Exception as error:
-            # Unexpected error, restore password and re-raise the error.
-            self._change_passwd(nodes, dut['username'], self.NEW_PASSWORD,
-                                dut['password'])
-            raise error
-        # Restore password
-        self._change_passwd(nodes, dut['username'], self.NEW_PASSWORD,
-                            dut['password'])
+    # def test_get_except_fail_reconnect(self):
+    #     ''' Verify exception raised if session fails and cannot be
+    #         re-established.
+    #     '''
+    #     dut = self.duts[0]
+    #     nodes = ['bogus', dut['node']]
+    #     self.clnt.connect(nodes, dut['username'], dut['password'])
+    #     # Change the password for the CVP user so that a session reconnect
+    #     # to any node will fail
+    #     self._change_passwd(nodes, dut['username'], dut['password'],
+    #                         self.NEW_PASSWORD)
+    #
+    #     try:
+    #         # Logout to end the current session and force a reconnect for the
+    #         # next request.
+    #         result = self.clnt.post('/login/logout.do', None)
+    #         self.assertIn('data', result)
+    #         self.assertEqual('success', result['data'])
+    #
+    #     except Exception as error:
+    #         # Should not have had an exception.  Restore the CVP password
+    #         # and re-raise the error.
+    #         self._change_passwd(nodes, dut['username'], self.NEW_PASSWORD,
+    #                             dut['password'])
+    #         raise error
+    #     try:
+    #         # Try a get request and expect a CvpSessionLogOutError
+    #         result = self.clnt.get('/cvpInfo/getCvpInfo.do')
+    #     except (CvpSessionLogOutError, CvpApiError) as error:
+    #         pass
+    #     except Exception as error:
+    #         # Unexpected error, restore password and re-raise the error.
+    #         self._change_passwd(nodes, dut['username'], self.NEW_PASSWORD,
+    #                             dut['password'])
+    #         raise error
+    #     # Restore password
+    #     self._change_passwd(nodes, dut['username'], self.NEW_PASSWORD,
+    #                         dut['password'])
 
     def test_post_not_connected(self):
         ''' Verify post with no connection raises a ValueError
@@ -348,7 +415,10 @@ class TestCvpClient(DutSystemTest):
         ''' Verify post of CVP info
         '''
         dut = self.duts[0]
-        self.clnt.connect([dut['node']], dut['username'], dut['password'])
+        if not dut['cvaas']:
+            self.clnt.connect([dut['node']], dut['username'], dut['password'])
+        else:
+            self.clnt.connect([dut['node']], "", "", is_cvaas=True, api_token=dut['api_token'])
         result = self.clnt.post('/login/logout.do', None)
         self.assertIn('data', result)
         self.assertEqual('success', result['data'])
@@ -357,7 +427,10 @@ class TestCvpClient(DutSystemTest):
         ''' Verify client(post) recovers session after logout
         '''
         dut = self.duts[0]
-        self.clnt.connect([dut['node']], dut['username'], dut['password'])
+        if not dut['cvaas']:
+            self.clnt.connect([dut['node']], dut['username'], dut['password'])
+        else:
+            self.clnt.connect(['bogus', dut['node']], "", "", is_cvaas=True, api_token=dut['api_token'])
         result = self.clnt.post('/login/logout.do', None)
         self.assertIn('data', result)
         self.assertEqual('success', result['data'])
@@ -368,8 +441,11 @@ class TestCvpClient(DutSystemTest):
         ''' Verify client(post) recovers session after logout for bad/good node
         '''
         dut = self.duts[0]
-        self.clnt.connect(['bogus', dut['node']], dut['username'],
-                          dut['password'])
+        if not dut['cvaas']:
+            self.clnt.connect(['bogus', dut['node']], dut['username'],
+                              dut['password'])
+        else:
+            self.clnt.connect(['bogus', dut['node']], "", "", is_cvaas=True, api_token=dut['api_token'])
         result = self.clnt.post('/login/logout.do', None)
         self.assertIn('data', result)
         self.assertEqual('success', result['data'])
@@ -380,7 +456,10 @@ class TestCvpClient(DutSystemTest):
         ''' Verify post with bad schema returns an error
         '''
         dut = self.duts[0]
-        self.clnt.connect([dut['node']], dut['username'], dut['password'])
+        if not dut['cvaas']:
+            self.clnt.connect([dut['node']], dut['username'], dut['password'])
+        else:
+            self.clnt.connect([dut['node']], "", "", is_cvaas=True, api_token=dut['api_token'])
         if self.clnt.apiversion is None:
             self.clnt.api.get_cvp_info()
         if self.clnt.apiversion == 1.0:
@@ -394,7 +473,10 @@ class TestCvpClient(DutSystemTest):
         ''' Verify post with bad URL returns an error
         '''
         dut = self.duts[0]
-        self.clnt.connect([dut['node']], dut['username'], dut['password'])
+        if not dut['cvaas']:
+            self.clnt.connect([dut['node']], dut['username'], dut['password'])
+        else:
+            self.clnt.connect([dut['node']], "", "", is_cvaas=True, api_token=dut['api_token'])
         # Error raised changes in CVP 2021.2.0
         if not self.clnt.apiversion:
             self.clnt.api.get_cvp_info()
@@ -405,45 +487,45 @@ class TestCvpClient(DutSystemTest):
             with self.assertRaises(CvpRequestError):
                 self.clnt.post('/aaa/bogus.do', None)
 
-    def test_post_except_fail_reconn(self):
-        ''' Verify exception raised if session fails and cannot be
-            re-established.
-        '''
-        dut = self.duts[0]
-        nodes = ['bogus', dut['node']]
-        self.clnt.connect(nodes, dut['username'], dut['password'])
-        # Change the password for the CVP user so that a session reconnect
-        # to any node will fail
-        self._change_passwd(nodes, dut['username'], dut['password'],
-                            self.NEW_PASSWORD)
-
-        try:
-            # Logout to end the current session and force a reconnect for the
-            # next request.
-            result = self.clnt.post('/login/logout.do', None)
-            self.assertIn('data', result)
-            self.assertEqual('success', result['data'])
-
-        except Exception as error:
-            # Should not have had an exception.  Restore the CVP password
-            # and re-raise the error.
-            self._change_passwd(nodes, dut['username'], self.NEW_PASSWORD,
-                                dut['password'])
-            raise error
-        try:
-            # Try a post request and expect a CvpSessionLogOutError
-            result = self.clnt.post('/login/logout.do', None)
-        except (CvpSessionLogOutError, CvpApiError) as error:
-            pass
-        except Exception as error:
-            # Unexpected error, restore password and re-raise the error.
-            self._change_passwd(nodes, dut['username'], self.NEW_PASSWORD,
-                                dut['password'])
-            raise error
-        # Restore password
-        self._change_passwd(nodes, dut['username'], self.NEW_PASSWORD,
-                            dut['password'])
-
+    # def test_post_except_fail_reconn(self):
+    #     ''' Verify exception raised if session fails and cannot be
+    #         re-established.
+    #     '''
+    #     dut = self.duts[0]
+    #     nodes = ['bogus', dut['node']]
+    #     self.clnt.connect(nodes, dut['username'], dut['password'])
+    #     # Change the password for the CVP user so that a session reconnect
+    #     # to any node will fail
+    #     self._change_passwd(nodes, dut['username'], dut['password'],
+    #                         self.NEW_PASSWORD)
+    #
+    #     try:
+    #         # Logout to end the current session and force a reconnect for the
+    #         # next request.
+    #         result = self.clnt.post('/login/logout.do', None)
+    #         self.assertIn('data', result)
+    #         self.assertEqual('success', result['data'])
+    #
+    #     except Exception as error:
+    #         # Should not have had an exception.  Restore the CVP password
+    #         # and re-raise the error.
+    #         self._change_passwd(nodes, dut['username'], self.NEW_PASSWORD,
+    #                             dut['password'])
+    #         raise error
+    #     try:
+    #         # Try a post request and expect a CvpSessionLogOutError
+    #         result = self.clnt.post('/login/logout.do', None)
+    #     except (CvpSessionLogOutError, CvpApiError) as error:
+    #         pass
+    #     except Exception as error:
+    #         # Unexpected error, restore password and re-raise the error.
+    #         self._change_passwd(nodes, dut['username'], self.NEW_PASSWORD,
+    #                             dut['password'])
+    #         raise error
+    #     # Restore password
+    #     self._change_passwd(nodes, dut['username'], self.NEW_PASSWORD,
+    #                         dut['password'])
+    #
 
 if __name__ == '__main__':
     unittest.main()

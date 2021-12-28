@@ -1,9 +1,4 @@
-- node: cvp
-  username: CvpRacTest
-  password: AristaInnovates
-- node: cvp2
-  username: CvpRacTest
-  password: AristaInnovates
-- node: cvp3
-  username: CvpRacTest
-  password: AristaInnovates
+- node: "www.cv-staging.corp.arista.io"
+  api_token: "<api_token>"
+  api_token_invalid: "<api_token_invalid>"
+  cvaas: true
