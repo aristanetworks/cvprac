@@ -2942,16 +2942,12 @@ class CvpApi(object):
         if not self.clnt.is_cvaas:
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
-            if self.clnt.apiversion >= 6.0:
-                self.log.debug('v6 {}'.format(tag_url))
-                response = self.clnt.post(tag_url, data=payload)
-                return response
-            elif self.clnt.apiversion < 6.0:
-                    self.log.warning('tag_assignment_config: Tag.V2 Resource APIs are supported'
-                                     ' from 2021.2.0 or newer.')
-                    return None
-        else:
-            return self.clnt.post(tag_url, data=payload)
+            if self.clnt.apiversion < 6.0:
+                self.log.warning('tag_assignment_config: Tag.V2 Resource APIs are supported'
+                                 ' from 2021.2.0 or newer.')
+                return None
+        self.log.debug('v6 {}'.format(tag_url))
+        return self.clnt.post(tag_url, data=payload)
 
     def get_tag_edits(self, workspace_id):
         ''' Show all tags edits in a workspace
@@ -2981,10 +2977,8 @@ class CvpApi(object):
                 self.get_cvp_info()
             if self.clnt.apiversion >= 6.0:
                 self.log.debug('v6 ' + tag_url + ' ' + str(payload))
-                response = self.clnt.post(tag_url, data=payload)
-                return response
-        else:
-            return self.clnt.post(tag_url, data=payload)
+                return self.clnt.post(tag_url, data=payload)
+        return self.clnt.post(tag_url, data=payload)
 
     def get_tag_assignment_edits(self, workspace_id):
         ''' Show all tags assignment edits in a workspace
@@ -3012,16 +3006,12 @@ class CvpApi(object):
         if not self.clnt.is_cvaas:
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
-            if self.clnt.apiversion >= 6.0:
-                self.log.debug('v6 ' + tag_url + ' ' + str(payload))
-                response = self.clnt.post(tag_url, data=payload)
-                return response
-            elif self.clnt.apiversion < 6.0:
-                    self.log.warning('tag_assignment_config: Tag.V2 Resource APIs are supported'
+            if self.clnt.apiversion < 6.0:
+                self.log.warning('tag_assignment_config: Tag.V2 Resource APIs are supported'
                                      ' from 2021.2.0 or newer.')
-                    return None
-        else:
-            return self.clnt.post(tag_url, data=payload)
+                return None
+        self.log.debug('v6 ' + tag_url + ' ' + str(payload))
+        return self.clnt.post(tag_url, data=payload)
 
     def tag_config(self, element_type, workspace_id, tag_label, tag_value, remove=False):
         ''' Create/Delete device or interface tags.
@@ -3057,16 +3047,12 @@ class CvpApi(object):
         if not self.clnt.is_cvaas:
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
-            if self.clnt.apiversion >= 6.0:
-                self.log.debug('v6 {} '.format(tag_url) + str(payload))
-                response = self.clnt.post(tag_url, data=payload)
-                return response
-            elif self.clnt.apiversion < 6.0:
-                    self.log.warning('tag_assignment_config: Tag.V2 Resource APIs are supported'
+            if self.clnt.apiversion < 6.0:
+                self.log.warning('tag_assignment_config: Tag.V2 Resource APIs are supported'
                                      ' from 2021.2.0 or newer.')
-                    return None
-        else:
-            return self.clnt.post(tag_url, data=payload)
+                return None
+        self.log.debug('v6 {} '.format(tag_url) + str(payload))
+        return self.clnt.post(tag_url, data=payload)
 
     def tag_assignment_config(self, element_type, workspace_id, tag_label,
                               tag_value, device_id, interface_id, remove=False):
@@ -3110,16 +3096,12 @@ class CvpApi(object):
         if not self.clnt.is_cvaas:
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
-            if self.clnt.apiversion >= 6.0:
-                self.log.debug('v6 {} '.format(tag_url) + str(payload))
-                response = self.clnt.post(tag_url, data=payload)
-                return response
-            elif self.clnt.apiversion < 6.0:
-                    self.log.warning('tag_assignment_config: Tag.V2 Resource APIs are supported'
+            if self.clnt.apiversion < 6.0:
+                self.log.warning('tag_assignment_config: Tag.V2 Resource APIs are supported'
                                      ' from 2021.2.0 or newer.')
-                    return None
-        else:
-            return self.clnt.post(tag_url, data=payload)
+                return None
+        self.log.debug('v6 {} '.format(tag_url) + str(payload))
+        return self.clnt.post(tag_url, data=payload)
 
     def get_all_workspaces(self):
         ''' Get state information for all workspaces
@@ -3127,22 +3109,18 @@ class CvpApi(object):
             Returns:
                response (dict): A dict that contains a list of key-values for workspaces
         '''
-        tag_url = '/api/resources/workspace/v1/Workspace/all'
+        url = '/api/resources/workspace/v1/Workspace/all'
         payload = {}
         # For on-prem check the version as it is only supported from 2021.2.0+
         if not self.clnt.is_cvaas:
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
-            if self.clnt.apiversion >= 6.0:
-                self.log.debug('v6 {}'.format(tag_url))
-                response = self.clnt.post(tag_url, data=payload)
-                return response
-            elif self.clnt.apiversion < 6.0:
+            if self.clnt.apiversion < 6.0:
                     self.log.warning('get_all_workspaces: Workspace Resource APIs are supported'
                                      ' from 2021.2.0 or newer.')
                     return None
-        else:
-            return self.clnt.post(tag_url, data=payload)
+        self.log.debug('v6 {}'.format(url))
+        return self.clnt.post(url, data=payload)
 
     def get_workspace(self, workspace_id):
         ''' Get state information for all workspaces
@@ -3150,21 +3128,17 @@ class CvpApi(object):
             Returns:
                response (dict): A dict that contains a list of key-values for workspaces
         '''
-        tag_url = '/api/resources/workspace/v1/Workspace?key.workspaceId={}'.format(workspace_id)
+        url = '/api/resources/workspace/v1/Workspace?key.workspaceId={}'.format(workspace_id)
         # For on-prem check the version as it is only supported from 2021.2.0+
         if not self.clnt.is_cvaas:
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
-            if self.clnt.apiversion >= 6.0:
-                self.log.debug('v6 {}'.format(tag_url))
-                response = self.clnt.get(tag_url)
-                return response
-            elif self.clnt.apiversion < 6.0:
-                    self.log.warning('get_workspace: Workspace Resource APIs are supported'
+            if self.clnt.apiversion < 6.0:
+                self.log.warning('get_workspace: Workspace Resource APIs are supported'
                                      ' from 2021.2.0 or newer.')
-                    return None
-        else:
-            return self.clnt.get(tag_url)
+                return None
+        self.log.debug('v6 {}'.format(url))
+        return self.clnt.get(url)
 
     def workspace_config(self, workspace_id, display_name,
                          description='', request='REQUEST_UNSPECIFIED',
@@ -3211,16 +3185,12 @@ class CvpApi(object):
         if not self.clnt.is_cvaas:
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
-            if self.clnt.apiversion >= 6.0:
-                self.log.debug('v6 ' + str(url) + ' ' + str(payload))
-                response = self.clnt.post(url, data=payload)
-                return response
-            elif self.clnt.apiversion < 6.0:
-                    self.log.warning('workspace_config: Workspace Resource APIs are supported'
+            if self.clnt.apiversion < 6.0:
+                self.log.warning('workspace_config: Workspace Resource APIs are supported'
                                      ' from 2021.2.0 or newer.')
-                    return None
-        else:
-            return self.clnt.post(url, data=payload)
+                return None
+        self.log.debug('v6 ' + str(url) + ' ' + str(payload))
+        return self.clnt.post(url, data=payload)
 
     def workspace_build_status(self, workspace_id, build_id):
         ''' Verify the state of the workspace build process.
@@ -3240,14 +3210,12 @@ class CvpApi(object):
         if not self.clnt.is_cvaas:
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
-            if self.clnt.apiversion >= 6.0:
-                return self.clnt.get(url, timeout=self.request_timeout)
-            elif self.clnt.apiversion < 6.0:
-                    self.log.warning('workspace_build_status: Workspace Resource APIs are supported'
+            if self.clnt.apiversion < 6.0:
+                self.log.warning('workspace_build_status: Workspace Resource APIs are supported'
                                      ' from 2021.2.0 or newer.')
-                    return None
-        else:
-            return self.clnt.get(url, timeout=self.request_timeout)
+                return None
+        self.log.debug('v6 {}'.format(url+params))
+        return self.clnt.get(url, timeout=self.request_timeout)
 
 
     def change_control_get_one(self, cc_id, cc_time=None):
@@ -3258,6 +3226,7 @@ class CvpApi(object):
                cc_id (str): The ID of the change control.
                cc_time (str): Time indicates the time for which you are interested in the data.
                     If no time is given, the server will use the time at which it makes the request.
+                    The time format is RFC 3339, e.g.: 2021-12-24T11:30:00.00Z.
             Returns:
                response (dict): A dict that contains...
                   Ex: {"value":{"key":{"id":"rL6Tog6UU"}, "change":{"name":"Change 20211213_210554",
@@ -3277,14 +3246,12 @@ class CvpApi(object):
         if not self.clnt.is_cvaas:
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
-            if self.clnt.apiversion >= 6.0:
-                return self.clnt.get(url, timeout=self.request_timeout)
-            elif self.clnt.apiversion < 6.0:
-                    self.log.warning('change_control_get_one: Change Control Resource APIs are supported'
+            if self.clnt.apiversion < 6.0:
+                self.log.warning('change_control_get_one: Change Control Resource APIs are supported'
                                      ' from 2021.2.0 or newer.')
-                    return None
-        else:
-            return self.clnt.get(url, timeout=self.request_timeout)
+                return None
+        self.log.debug('v6 {}'.format(url))
+        return self.clnt.get(url, timeout=self.request_timeout)
 
 
     def change_control_get_all(self):
@@ -3299,16 +3266,12 @@ class CvpApi(object):
         if not self.clnt.is_cvaas:
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
-            if self.clnt.apiversion >= 6.0:
-                self.log.debug('v6 {}'.format(url))
-                response = self.clnt.get(url, timeout=self.request_timeout)
-                return response
-            elif self.clnt.apiversion < 6.0:
-                    self.log.warning('change_control_get_all: Change Control Resource APIs are supported'
+            if self.clnt.apiversion < 6.0:
+                self.log.warning('change_control_get_all: Change Control Resource APIs are supported'
                                      ' from 2021.2.0 or newer.')
-                    return None
-        else:
-            return self.clnt.get(url, timeout=self.request_timeout)
+                return None
+        self.log.debug('v6 {}'.format(url))
+        return self.clnt.get(url, timeout=self.request_timeout)
 
 
     def change_control_approval_get_one(self, cc_id, cc_time=None):
@@ -3319,6 +3282,7 @@ class CvpApi(object):
                cc_id (str): The ID of the change control.
                cc_time (str): Time indicates the time for which you are interested in the data.
                     If no time is given, the server will use the time at which it makes the request.
+                    The time format is RFC 3339, e.g.: 2021-12-24T11:30:00.00Z.
             Returns:
                response (dict): A dict that contains...
                     Ex: {'value': {'key': {'id': '<CC ID>'}, 'approve': {'value': True},
@@ -3329,24 +3293,25 @@ class CvpApi(object):
         else:
             params = 'key.id={}&time={}'.format(cc_id, cc_time)
         url = '/api/resources/changecontrol/v1/ApproveConfig?' + params
-        cc_status = self.change_control_get_one(cc_id)
-        if 'approve' in cc_status['value']:
-            # For on-prem check the version as it is only supported from 2021.2.0+
-            if not self.clnt.is_cvaas:
-                if self.clnt.apiversion is None:
-                    self.get_cvp_info()
-                if self.clnt.apiversion >= 6.0:
-                    return self.clnt.get(url, timeout=self.request_timeout)
-                elif self.clnt.apiversion < 6.0:
-                    self.log.warning('change_control_approval_get_one: Change Control Resource APIs are supported'
-                                     ' from 2021.2.0 or newer.')
-                    return None
-            else:
-                return self.clnt.get(url, timeout=self.request_timeout)
-        else:
-            self.log.warning("change_control_approval_get_one: The change has not been approved yet."
-                             " A change has to be approved at least once for the 'approve' state to be populated.")
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion < 6.0:
+                self.log.warning('change_control_approval_get_one: Change Control Resource APIs are supported'
+                                    ' from 2021.2.0 or newer.')
+                return None
+        try:
+            cc_status = self.change_control_get_one(cc_id)
+        except Exception as e:
+            self.log.warning('change_control_get_one: The change control ID does not exist.')
             return None
+        if 'approve' not in cc_status['value']:
+            self.log.warning("change_control_approval_get_one: The change has not been approved yet."
+                                " A change has to be approved at least once for the 'approve' state to be populated.")
+            return None
+        return self.clnt.get(url, timeout=self.request_timeout)
+
 
 
     def change_control_approval_get_all(self):
@@ -3362,16 +3327,12 @@ class CvpApi(object):
         if not self.clnt.is_cvaas:
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
-            if self.clnt.apiversion >= 6.0:
-                self.log.debug('v6 {}'.format(url))
-                response = self.clnt.get(url, timeout=self.request_timeout)
-                return response
-            elif self.clnt.apiversion < 6.0:
-                    self.log.warning('change_control_approval_get_all: Change Control Resource APIs are supported'
+            if self.clnt.apiversion < 6.0:
+                self.log.warning('change_control_approval_get_all: Change Control Resource APIs are supported'
                                      ' from 2021.2.0 or newer.')
-                    return None
-        else:
-            return self.clnt.get(url, timeout=self.request_timeout)
+                return None
+        self.log.debug('v6 {}'.format(url))
+        return self.clnt.get(url, timeout=self.request_timeout)
 
     def change_control_approve(self, cc_id, notes="", approve=True):
         ''' Approve/Unapprove a change control using Resource APIs.
@@ -3385,7 +3346,11 @@ class CvpApi(object):
         url = '/api/resources/changecontrol/v1/ApproveConfig'
         # For on-prem check the version as it is only supported from 2021.2.0+
         # Since the get_change_control already checks this, no need to check it again
-        version = self.change_control_get_one(cc_id)['value']['change']['time']
+        try:
+            version = self.change_control_get_one(cc_id)['value']['change']['time']
+        except Exception as e:
+            version = None
+            return None
         payload = {
             "key": {
                 "id": cc_id
@@ -3412,14 +3377,12 @@ class CvpApi(object):
         if not self.clnt.is_cvaas:
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
-            if self.clnt.apiversion >= 6.0:
-                return self.clnt.delete(url, timeout=self.request_timeout)
-            elif self.clnt.apiversion < 6.0:
-                    self.log.warning('change_control_delete: Change Control Resource APIs are supported'
+            if self.clnt.apiversion < 6.0:
+                self.log.warning('change_control_delete: Change Control Resource APIs are supported'
                                      ' from 2021.2.0 or newer.')
-                    return None
-        else:
-            return self.clnt.delete(url, timeout=self.request_timeout)
+                return None
+        self.log.debug('v6 {}'.format(url))
+        return self.clnt.delete(url, timeout=self.request_timeout)
 
 
     def change_control_create_with_custom_stages(self, custom_cc=None):
@@ -3584,16 +3547,12 @@ class CvpApi(object):
         if not self.clnt.is_cvaas:
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
-            if self.clnt.apiversion >= 6.0:
-                self.log.debug('v6 ' + str(url) + ' ' + str(payload))
-                response = self.clnt.post(url, data=payload, timeout=self.request_timeout)
-                return response
-            elif self.clnt.apiversion < 6.0:
-                    self.log.warning('change_control_create_for_tasks: Change Control Resource APIs are supported'
+            if self.clnt.apiversion < 6.0:
+                self.log.warning('change_control_create_for_tasks: Change Control Resource APIs are supported'
                                      ' from 2021.2.0 or newer.')
-                    return None
-        else:
-            return self.clnt.post(url, data=payload, timeout=self.request_timeout)
+                return None
+        self.log.debug('v6 ' + str(url) + ' ' + str(payload))
+        return self.clnt.post(url, data=payload, timeout=self.request_timeout)
 
     def change_control_start(self, cc_id, notes=""):
         ''' Start a Change Control using Resource APIs.
@@ -3620,16 +3579,12 @@ class CvpApi(object):
         if not self.clnt.is_cvaas:
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
-            if self.clnt.apiversion >= 6.0:
-                self.log.debug('v6 ' + str(url) + ' ' + str(payload))
-                response = self.clnt.post(url, data=payload, timeout=self.request_timeout)
-                return response
-            elif self.clnt.apiversion < 6.0:
-                    self.log.warning('change_control_start: Change Control Resource APIs are supported'
+            if self.clnt.apiversion < 6.0:
+                self.log.warning('change_control_start: Change Control Resource APIs are supported'
                                      ' from 2021.2.0 or newer.')
-                    return None
-        else:
-            return self.clnt.post(url, data=payload, timeout=self.request_timeout)
+                return None
+        self.log.debug('v6 ' + str(url) + ' ' + str(payload))
+        return self.clnt.post(url, data=payload, timeout=self.request_timeout)
 
 
     def change_control_stop(self, cc_id, notes=""):
@@ -3658,54 +3613,46 @@ class CvpApi(object):
         if not self.clnt.is_cvaas:
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
-            if self.clnt.apiversion >= 6.0:
-                self.log.debug('v6 ' + str(url) + ' ' + str(payload))
-                response = self.clnt.post(url, data=payload, timeout=self.request_timeout)
-                return response
-            elif self.clnt.apiversion < 6.0:
-                    self.log.warning('change_control_stop: Change Control Resource APIs are supported'
+            if self.clnt.apiversion < 6.0:
+                self.log.warning('change_control_stop: Change Control Resource APIs are supported'
                                      ' from 2021.2.0 or newer.')
-                    return None
-        else:
-            return self.clnt.post(url, data=payload, timeout=self.request_timeout)
+                return None
+        self.log.debug('v6 ' + str(url) + ' ' + str(payload))
+        return self.clnt.post(url, data=payload, timeout=self.request_timeout)
 
+# Commenting this out until it's fully supported
+    # def change_control_schedule(self, cc_id, schedule_time, notes=""):
+    #     ''' Schedule a Change Control using Resource APIs.
+    #         Supported versions: CVP 2021.3.0 or newer and CVaaS.
 
-    def change_control_schedule(self, cc_id, schedule_time, notes=""):
-        ''' Schedule a Change Control using Resource APIs.
-            Supported versions: CVP 2021.2.0 or newer and CVaaS.
-
-            Args:
-                cc_id (string): The ID for the new change control.
-                schedule_time (string): rfc3339 time format, e.g: 2021-12-23T02:07:00.0Z
-                notes (string): An optional note.
-            Returns:
-                response (dict): A dict that contains...
-                Ex: {"value":{"key":{"id":"5821c7c1-e276-4387-b60a"},
-                              "schedule":{"value":"2021-12-23T02:07:00Z",
-                                          "notes":"CC schedule via curl"}},
-                     "time":"2021-12-23T02:06:18.739965204Z"}
-        '''
-        payload = {
-                "key": {
-                    "id": cc_id
-                },
-                "schedule": {
-                    "value": schedule_time,
-                    "notes": notes
-                }
-        }
-        url = '/api/resources/changecontrol/v1/ChangeControlConfig'
-        # For on-prem check the version as it is only supported from 2021.2.0+
-        if not self.clnt.is_cvaas:
-            if self.clnt.apiversion is None:
-                self.get_cvp_info()
-            if self.clnt.apiversion >= 6.0:
-                self.log.debug('v6 ' + str(url) + ' ' + str(payload))
-                response = self.clnt.post(url, data=payload, timeout=self.request_timeout)
-                return response
-            elif self.clnt.apiversion < 6.0:
-                    self.log.warning('change_control_schedule: Change Control Resource APIs are supported'
-                                     ' from 2021.2.0 or newer.')
-                    return None
-        else:
-            return self.clnt.post(url, data=payload, timeout=self.request_timeout)
+    #         Args:
+    #             cc_id (string): The ID for the new change control.
+    #             schedule_time (string): rfc3339 time format, e.g: 2021-12-23T02:07:00.0Z
+    #             notes (string): An optional note.
+    #         Returns:
+    #             response (dict): A dict that contains...
+    #             Ex: {"value":{"key":{"id":"5821c7c1-e276-4387-b60a"},
+    #                           "schedule":{"value":"2021-12-23T02:07:00Z",
+    #                                       "notes":"CC schedule via curl"}},
+    #                  "time":"2021-12-23T02:06:18.739965204Z"}
+    #     '''
+    #     payload = {
+    #             "key": {
+    #                 "id": cc_id
+    #             },
+    #             "schedule": {
+    #                 "value": schedule_time,
+    #                 "notes": notes
+    #             }
+    #     }
+    #     url = '/api/resources/changecontrol/v1/ChangeControlConfig'
+    #     # For on-prem check the version as it is only supported from 2021.2.0+
+    #     if not self.clnt.is_cvaas:
+    #         if self.clnt.apiversion is None:
+    #             self.get_cvp_info()
+    #         if self.clnt.apiversion < 7.0:
+    #             self.log.warning('change_control_schedule: Change Control Resource APIs are supported'
+    #                                  ' from 2021.2.0 or newer.')
+    #             return None
+    #     self.log.debug('v7 ' + str(url) + ' ' + str(payload))
+    #     return self.clnt.post(url, data=payload, timeout=self.request_timeout)
