@@ -3304,7 +3304,7 @@ class CvpApi(object):
         cc_status = self.change_control_get_one(cc_id)
         if cc_status is None:
             return None
-        if 'approve' not in cc_status['value']:
+        if 'value' in cc_status and 'approve' not in cc_status['value']:
             self.log.warning("The change has not been approved yet."
                              " A change has to be approved at least once for the 'approve' state to be populated.")
             return None
@@ -3343,16 +3343,14 @@ class CvpApi(object):
         url = '/api/resources/changecontrol/v1/ApproveConfig'
         # For on-prem check the version as it is only supported from 2021.2.0+
         # Since the get_change_control already checks this, no need to check it again
-        # try:
-        #     version = self.change_control_get_one(cc_id)['value']['change']['time']
-        # except Exception as e:
-        #     version = None
-        #     return None
         cc_status = self.change_control_get_one(cc_id)
         if cc_status is None:
             return None
         if 'value' in cc_status and 'change' in cc_status['value'] and 'time' in cc_status['value']['change']:
             version = cc_status['value']['change']['time']
+        else:
+            self.log.error('The version timestamp was not found in the CC status.')
+            return None
         payload = {
             "key": {
                 "id": cc_id
