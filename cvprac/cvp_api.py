@@ -2921,6 +2921,7 @@ class CvpApi(object):
             '/api/v3/services/admin.Enrollment/AddEnrollmentToken',
             data=data, timeout=self.request_timeout)
 
+
     def get_all_tags(self, element_type='ELEMENT_TYPE_UNSPECIFIED', workspace_id=''):
         ''' Get all device and/or interface tags from the mainline workspace or all other workspaces
             Args:
@@ -2947,6 +2948,7 @@ class CvpApi(object):
                 return None
         self.log.debug('v6 {}'.format(tag_url))
         return self.clnt.post(tag_url, data=payload)
+
 
     def get_tag_edits(self, workspace_id):
         ''' Show all tags edits in a workspace
@@ -2980,6 +2982,7 @@ class CvpApi(object):
         self.log.debug('v6 ' + tag_url + ' ' + str(payload))
         return self.clnt.post(tag_url, data=payload)
 
+
     def get_tag_assignment_edits(self, workspace_id):
         ''' Show all tags assignment edits in a workspace
 
@@ -3011,6 +3014,7 @@ class CvpApi(object):
                 return None
         self.log.debug('v6 ' + tag_url + ' ' + str(payload))
         return self.clnt.post(tag_url, data=payload)
+
 
     def tag_config(self, element_type, workspace_id, tag_label, tag_value, remove=False):
         ''' Create/Delete device or interface tags.
@@ -3051,6 +3055,7 @@ class CvpApi(object):
                 return None
         self.log.debug('v6 {} '.format(tag_url) + str(payload))
         return self.clnt.post(tag_url, data=payload)
+
 
     def tag_assignment_config(self, element_type, workspace_id, tag_label,
                               tag_value, device_id, interface_id, remove=False):
@@ -3164,7 +3169,6 @@ class CvpApi(object):
                          'time': 'rfc3339 time'}
         '''
         url = '/api/resources/workspace/v1/WorkspaceConfig'
-
         payload = {
             "key": {
                 "workspaceId": workspace_id
@@ -3247,7 +3251,6 @@ class CvpApi(object):
             response = self.clnt.get(url, timeout=self.request_timeout)
         except Exception as error:
             if 'resource not found' in str(error):
-                self.log.error('Change Control ID does not exist!')
                 return None
             raise error
         return response
