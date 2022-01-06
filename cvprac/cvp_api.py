@@ -2921,7 +2921,6 @@ class CvpApi(object):
             '/api/v3/services/admin.Enrollment/AddEnrollmentToken',
             data=data, timeout=self.request_timeout)
 
-
     def get_all_tags(self, element_type='ELEMENT_TYPE_UNSPECIFIED', workspace_id=''):
         ''' Get all device and/or interface tags from the mainline workspace or all other workspaces
             Args:
@@ -2948,7 +2947,6 @@ class CvpApi(object):
                 return None
         self.log.debug('v6 {}'.format(tag_url))
         return self.clnt.post(tag_url, data=payload)
-
 
     def get_tag_edits(self, workspace_id):
         ''' Show all tags edits in a workspace
@@ -2982,7 +2980,6 @@ class CvpApi(object):
         self.log.debug('v6 ' + tag_url + ' ' + str(payload))
         return self.clnt.post(tag_url, data=payload)
 
-
     def get_tag_assignment_edits(self, workspace_id):
         ''' Show all tags assignment edits in a workspace
 
@@ -3014,7 +3011,6 @@ class CvpApi(object):
                 return None
         self.log.debug('v6 ' + tag_url + ' ' + str(payload))
         return self.clnt.post(tag_url, data=payload)
-
 
     def tag_config(self, element_type, workspace_id, tag_label, tag_value, remove=False):
         ''' Create/Delete device or interface tags.
@@ -3055,7 +3051,6 @@ class CvpApi(object):
                 return None
         self.log.debug('v6 {} '.format(tag_url) + str(payload))
         return self.clnt.post(tag_url, data=payload)
-
 
     def tag_assignment_config(self, element_type, workspace_id, tag_label,
                               tag_value, device_id, interface_id, remove=False):
@@ -3214,7 +3209,6 @@ class CvpApi(object):
         self.log.debug('v6 {}'.format(url+params))
         return self.clnt.get(url, timeout=self.request_timeout)
 
-
     def change_control_get_one(self, cc_id, cc_time=None):
         ''' Get the configuration and status of a change control using Resource APIs.
             Supported versions: CVP 2021.2.0 or newer and CVaaS.
@@ -3255,7 +3249,6 @@ class CvpApi(object):
             raise error
         return response
 
-
     def change_control_get_all(self):
         ''' Get the configuration and status of all Change Controls using Resource APIs.
             Supported versions: CVP 2021.2.0 or newer and CVaaS.
@@ -3273,7 +3266,6 @@ class CvpApi(object):
                 return None
         self.log.debug('v6 {}'.format(url))
         return self.clnt.get(url, timeout=self.request_timeout)
-
 
     def change_control_approval_get_one(self, cc_id, cc_time=None):
         ''' Get the state of a specific Change Control's approve config using Resource APIs.
@@ -3310,7 +3302,6 @@ class CvpApi(object):
             return None
         return self.clnt.get(url, timeout=self.request_timeout)
 
-
     def change_control_approval_get_all(self):
         ''' Get state information for all Change Control Approvals using Resource APIs.
             Supported versions: CVP 2021.2.0 or newer and CVaaS.
@@ -3329,7 +3320,6 @@ class CvpApi(object):
                 return None
         self.log.debug('v6 {}'.format(url))
         return self.clnt.get(url, timeout=self.request_timeout)
-
 
     def change_control_approve(self, cc_id, notes="", approve=True):
         ''' Approve/Unapprove a change control using Resource APIs.
@@ -3363,7 +3353,6 @@ class CvpApi(object):
         }
         return self.clnt.post(url, data=payload, timeout=self.request_timeout)
 
-
     def change_control_delete(self, cc_id):
         ''' Delete a pending Change Control using Resource APIs.
             Supported versions: CVP 2021.2.0 or newer and CVaaS.
@@ -3382,7 +3371,6 @@ class CvpApi(object):
                 return None
         self.log.debug('v6 {}'.format(url))
         return self.clnt.delete(url, timeout=self.request_timeout)
-
 
     def change_control_create_with_custom_stages(self, custom_cc=None):
         ''' Create a Change Control with custom stage hierarchy using Resource APIs.
@@ -3496,7 +3484,6 @@ class CvpApi(object):
         self.log.debug('v6 ' + str(url) + ' ' + str(payload))
         return self.clnt.post(url, data=payload)
 
-
     def change_control_create_for_tasks(self, cc_id, name, tasks, series=True):
         ''' Create a simple Change Control for tasks using Resource APIs.
             Supported versions: CVP 2021.2.0 or newer and CVaaS.
@@ -3548,7 +3535,6 @@ class CvpApi(object):
         self.log.debug('v6 ' + str(url) + ' ' + str(payload))
         return self.clnt.post(url, data=payload, timeout=self.request_timeout)
 
-
     def change_control_start(self, cc_id, notes=""):
         ''' Start a Change Control using Resource APIs.
             Supported versions: CVP 2021.2.0 or newer and CVaaS.
@@ -3579,7 +3565,6 @@ class CvpApi(object):
                 return None
         self.log.debug('v6 ' + str(url) + ' ' + str(payload))
         return self.clnt.post(url, data=payload, timeout=self.request_timeout)
-
 
     def change_control_stop(self, cc_id, notes=""):
         ''' Stop a Change Control using Resource APIs.
