@@ -1,3 +1,9 @@
-- node: 10.83.12.174
-  username: cvpadmin 
-  password: arastra 
+- node: cvp
+  username: CvpRacTest
+  password: AristaInnovates
+- node: cvp2
+  username: CvpRacTest
+  password: AristaInnovates
+- node: cvp3
+  username: CvpRacTest
+  password: AristaInnovates
