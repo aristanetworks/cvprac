@@ -42,6 +42,7 @@ def get_list_of_configlets():
 if __name__ == "__main__":
 
     results = get_list_of_configlets()
-    for configlet in results[0]['data']:
-        with open(configlet['name'],'w') as f:
-            f.write(configlet['config'])
+    for future in results:
+        for configlet in future['data']:
+            with open(configlet['name'],'w') as f:
+                f.write(configlet['config'])
