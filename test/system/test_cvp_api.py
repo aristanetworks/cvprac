@@ -73,54 +73,64 @@ class TestCvpClient(DutSystemTest):
     '''
     # pylint: disable=too-many-public-methods
     # pylint: disable=invalid-name
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         ''' Instantiate the CvpClient class and connect to the CVP node.
             Log messages to the /tmp/TestCvpClient.log
         '''
-        super(TestCvpClient, self).setUp()
-        self.clnt = CvpClient(filename='/tmp/TestCvpClient.log')
-        self.assertIsNotNone(self.clnt)
-        self.assertIsNone(self.clnt.last_used_node)
-        dut = self.duts[0]
+        super(TestCvpClient, cls).setUp(cls)
+        cls.clnt = CvpClient(filename='/tmp/TestCvpClient.log')
+        assert cls.clnt is not None
+        assert cls.clnt.last_used_node is None
+        dut = cls.duts[0]
         cert = False
         if 'cert' in dut:
             cert = dut['cert']
-        self.clnt.connect([dut['node']], dut['username'], dut['password'], 10,
-                          cert=cert)
-        self.api = self.clnt.api
-        self.assertIsNotNone(self.api)
+        if 'api_token' not in dut:
+            cls.clnt.connect([dut['node']], dut['username'], dut['password'], 10,
+                             cert=cert)
+        else:
+
+            cls.clnt.connect([dut['node']], "", "", is_cvaas=True, api_token=dut['api_token'])
+        cls.api = cls.clnt.api
+        assert cls.api is not None
 
         # Verify that there is at least one device in the inventory
         err_msg = 'CVP node must contain at least one device'
-        result = self.api.get_inventory()
-        self.assertIsNotNone(result)
-        self.assertGreaterEqual(len(result), 1, msg=err_msg)
-        self.device = result[0]
+        result = cls.api.get_inventory()
+        assert result is not None
+        if len(result) < 1:
+            raise AssertionError(err_msg)
+        else:
+            assert len(result) >= 1
+        cls.device = result[0]
 
         # Get the container for the device on the list and
         # use that container as the parent container.
-        result = self.api.search_topology(self.device['fqdn'])
-        self.assertIsNotNone(result)
+        result = cls.api.search_topology(cls.device['fqdn'])
+        assert result is not None
         dev_container = result['netElementContainerList']
-        self.assertGreaterEqual(len(dev_container), 1)
+        assert len(dev_container) >= 1
         info = dev_container[0]
-        result = self.api.search_topology(info['containerName'])
-        self.assertIsNotNone(result)
-        self.container = result['containerList'][0]
+        result = cls.api.search_topology(info['containerName'])
+        assert result is not None
+        cls.container = result['containerList'][0]
 
         # Get the configlets assigned to the device.  There must be at least 1.
         err_msg = 'CVP node device must have at least one configlet assigned'
         key = info['netElementKey']
-        result = self.api.get_configlets_by_device_id(key)
-        self.assertGreaterEqual(len(result), 1, msg=err_msg)
-        self.dev_configlets = result
+        result = cls.api.get_configlets_by_device_id(key)
+        if len(result) < 1:
+            raise AssertionError(err_msg)
+        cls.dev_configlets = result
 
-    def tearDown(self):
+    @classmethod
+    def tearDownClass(cls):
         ''' Destroy the CvpClient class.
         '''
-        super(TestCvpClient, self).tearDown()
-        self.api = None
-        self.clnt = None
+        super(TestCvpClient, cls).tearDown(cls)
+        cls.api = None
+        cls.clnt = None
 
     def _get_next_task_id(self):
         ''' Return the next task id.
