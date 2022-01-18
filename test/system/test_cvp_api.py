@@ -78,7 +78,7 @@ class TestCvpClient(DutSystemTest):
         ''' Instantiate the CvpClient class and connect to the CVP node.
             Log messages to the /tmp/TestCvpClient.log
         '''
-        super(TestCvpClient, cls).setUp(cls)
+        super(TestCvpClient, cls).setUpClass()
         cls.clnt = CvpClient(filename='/tmp/TestCvpClient.log')
         assert cls.clnt is not None
         assert cls.clnt.last_used_node is None
@@ -86,12 +86,9 @@ class TestCvpClient(DutSystemTest):
         cert = False
         if 'cert' in dut:
             cert = dut['cert']
-        if 'api_token' not in dut:
-            cls.clnt.connect([dut['node']], dut['username'], dut['password'], 10,
-                             cert=cert)
-        else:
+        cls.clnt.connect([dut['node']], dut['username'], dut['password'], 10,
+                          cert=cert, is_cvaas=dut['is_cvaas'], api_token=dut['api_token'])
 
-            cls.clnt.connect([dut['node']], "", "", is_cvaas=True, api_token=dut['api_token'])
         cls.api = cls.clnt.api
         assert cls.api is not None
 
@@ -128,7 +125,7 @@ class TestCvpClient(DutSystemTest):
     def tearDownClass(cls):
         ''' Destroy the CvpClient class.
         '''
-        super(TestCvpClient, cls).tearDown(cls)
+        super(TestCvpClient, cls).tearDownClass()
         cls.api = None
         cls.clnt = None
 

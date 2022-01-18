@@ -1,9 +1,15 @@
 - node: cvp
   username: CvpRacTest
   password: AristaInnovates
+  api_token: null
+  is_cvaas: False
 - node: cvp2
   username: CvpRacTest
   password: AristaInnovates
+  api_token: null
+  is_cvaas: False
 - node: cvp3
   username: CvpRacTest
   password: AristaInnovates
+  api_token: null
+  is_cvaas: False
