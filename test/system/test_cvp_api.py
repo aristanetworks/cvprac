@@ -78,7 +78,8 @@ class TestCvpClient(DutSystemTest):
         ''' Instantiate the CvpClient class and connect to the CVP node.
             Log messages to the /tmp/TestCvpClient.log
         '''
-        super(TestCvpClient, cls).setUp(cls)
+        super(TestCvpClient, cls).setUpClass()
+
         cls.clnt = CvpClient(filename='/tmp/TestCvpClient.log')
         assert cls.clnt is not None
         assert cls.clnt.last_used_node is None
@@ -86,12 +87,8 @@ class TestCvpClient(DutSystemTest):
         cert = False
         if 'cert' in dut:
             cert = dut['cert']
-        if 'cvaas' not in dut:
-            cls.clnt.connect([dut['node']], dut['username'], dut['password'], 10,
-                              cert=cert)
-        else:
-
-            cls.clnt.connect([dut['node']], "", "", is_cvaas=True, api_token=dut['api_token'])
+        cls.clnt.connect([dut['node']], dut['username'], dut['password'], 10,
+                          cert=cert, is_cvaas=dut['is_cvaas'], api_token=dut['api_token'])
         cls.api = cls.clnt.api
         assert cls.api is not None
 
@@ -128,7 +125,7 @@ class TestCvpClient(DutSystemTest):
     def tearDownClass(cls):
         ''' Destroy the CvpClient class.
         '''
-        super(TestCvpClient, cls).tearDown(cls)
+        super(TestCvpClient, cls).tearDownClass()
         cls.api = None
         cls.clnt = None
 
@@ -1920,7 +1917,7 @@ class TestCvpClient(DutSystemTest):
     #         chg_ctrl_name = 'test_api_%d' % time.time()
     #         (task_id, _) = self._create_task()
     #         chg_ctrl = self.api.create_change_control_v3(
-    #             chg_ctrl_name, chg_ctrl_name, [task_id], True)
+    #             chg_ctrl_name, chg_ctrl_name, [task_id])
     #         cc_id = ''
     #         if len(chg_ctrl) > 0:
     #             if 'id' in chg_ctrl[0]:
@@ -1929,6 +1926,7 @@ class TestCvpClient(DutSystemTest):
     #         print(chg_ctrl)
     #         print(cc_id)
     #         print('')
+    #         print('self clnt in func', self.clnt)
     #
     #         if cc_id != '':
     #             # Verify the pending change control information
@@ -2374,6 +2372,39 @@ class TestCvpClient(DutSystemTest):
 
         final_undef_devs = self.api.get_devices_in_container('Undefined')
         self.assertEqual(len(undefined_devs), len(final_undef_devs))
+
+    def test_api_change_control_create_for_tasks(self):
+        ''' Verify change_control_create_for_tasks
+        '''
+        # Set client apiversion if it is not already set
+        if self.clnt.apiversion is None:
+            self.api.get_cvp_info()
+        if self.clnt.apiversion > 3.0:
+            pprint('RUN TEST FOR V3 CHANGE CONTROL APIs')
+            cc_id = str(uuid.uuid4())
+            chg_ctrl_name = 'test_api_%d' % time.time()
+            (task_id, _) = self._create_task()
+            print('tasks...', [task_id])
+            chg_ctrl = self.api.change_control_create_for_tasks(
+                chg_ctrl_name, chg_ctrl_name, [task_id])
+            print('Change control resp', chg_ctrl)
+            # cc_id = ''
+            # if len(chg_ctrl) > 0:
+            #     if 'id' in chg_ctrl[0]:
+            #         cc_id = chg_ctrl[0]['id']
+            # if cc_id != '':
+            #     # Verify the pending change control information
+            #     status_url = '/cvpservice/changeControl/' \
+            #                  'getChangeControlInformation.do?' \
+            #                  'startIndex=0&endIndex=0&ccId={}'.format(cc_id)
+            #     chg_ctrl_pending = self.clnt.get(status_url)
+            #     print('')
+            #     print(chg_ctrl_pending)
+            #     print('')
+        else:
+            pprint('SKIPPING TEST FOR API - {0}'.format(
+                self.clnt.apiversion))
+            time.sleep(1)
 
 
 if __name__ == '__main__':
