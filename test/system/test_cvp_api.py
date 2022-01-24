@@ -84,10 +84,23 @@ class TestCvpClient(DutSystemTest):
         assert cls.clnt.last_used_node is None
         dut = cls.duts[0]
         cert = False
+        username = ""
+        password = ""
+        api_token = None
+        is_cvaas = False
         if 'cert' in dut:
             cert = dut['cert']
-        cls.clnt.connect([dut['node']], dut['username'], dut['password'], 10,
-                          cert=cert, is_cvaas=dut['is_cvaas'], api_token=dut['api_token'])
+        if 'username' in dut:
+            username = dut['username']
+        if 'password' in dut:
+            password = dut['password']
+        if 'api_token' in dut:
+            api_token = dut['api_token']
+        if 'is_cvaas' in dut:
+            is_cvaas = dut['is_cvaas']
+
+        cls.clnt.connect([dut['node']], username, password, 10,
+                          cert=cert, is_cvaas=is_cvaas, api_token=api_token)
 
         cls.api = cls.clnt.api
         assert cls.api is not None
@@ -214,13 +227,14 @@ class TestCvpClient(DutSystemTest):
         # pylint: disable=too-many-branches
         dut = self.duts[0]
         # Test Get User
-        result = self.api.get_user(dut['username'])
-        self.assertIsNotNone(result)
-        self.assertIn('user', result)
-        self.assertIn('userId', result['user'])
-        self.assertEqual(result['user']['userId'], 'cvpadmin')
-        self.assertIn('userStatus', result['user'])
-        self.assertIsNotNone(result['roles'])
+        if 'username' in dut:
+            result = self.api.get_user(dut['username'])
+            self.assertIsNotNone(result)
+            self.assertIn('user', result)
+            self.assertIn('userId', result['user'])
+            self.assertEqual(result['user']['userId'], 'cvpadmin')
+            self.assertIn('userStatus', result['user'])
+            self.assertIsNotNone(result['roles'])
 
         # Check if test user exists
         try:
