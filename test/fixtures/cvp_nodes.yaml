@@ -1,4 +1,12 @@
-- node: "www.cv-staging.corp.arista.io"
-  api_token: "<api_token>"
-  api_token_invalid: "<api_token_invalid>"
-  cvaas: true
+- node: cvp
+  username: CvpRacTest
+  password: AristaInnovates
+- node: cvp2
+  api_token: <api_token>
+  is_cvaas: True
+- node: cvp3
+  username: CvpRacTest
+  password: AristaInnovates
+  api_token: <api_token>
+
+
