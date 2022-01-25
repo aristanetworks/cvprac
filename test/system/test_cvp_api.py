@@ -83,21 +83,11 @@ class TestCvpClient(DutSystemTest):
         assert cls.clnt is not None
         assert cls.clnt.last_used_node is None
         dut = cls.duts[0]
-        cert = False
-        username = ""
-        password = ""
-        api_token = None
-        is_cvaas = False
-        if 'cert' in dut:
-            cert = dut['cert']
-        if 'username' in dut:
-            username = dut['username']
-        if 'password' in dut:
-            password = dut['password']
-        if 'api_token' in dut:
-            api_token = dut['api_token']
-        if 'is_cvaas' in dut:
-            is_cvaas = dut['is_cvaas']
+        cert = dut.get("cert", False)
+        username = dut.get("username", "")
+        password = dut.get("password", "")
+        api_token = dut.get("api_token", None)
+        is_cvaas = dut.get("is_cvaas", False)
 
         cls.clnt.connect([dut['node']], username, password, 10,
                           cert=cert, is_cvaas=is_cvaas, api_token=api_token)
