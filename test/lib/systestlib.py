@@ -54,15 +54,16 @@ class DutSystemTest(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(DutSystemTest, self).__init__(*args, **kwargs)
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         ''' Read in the list of CVP node names or IP addresses to use
             for testing.
 
             Format for duts list of dicts:
             { node: nodename, user: username, password: password }
         '''
-        self.duts = {}
+        cls.duts = {}
         filename = get_fixture('cvp_nodes.yaml')
         with open(filename, 'r') as stream:
-            self.duts = yaml.load(stream)
+            cls.duts = yaml.safe_load(stream)
             stream.close()
