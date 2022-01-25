@@ -90,7 +90,7 @@ class TestCvpClient(DutSystemTest):
         is_cvaas = dut.get("is_cvaas", False)
 
         cls.clnt.connect([dut['node']], username, password, 10,
-                          cert=cert, is_cvaas=is_cvaas, api_token=api_token)
+                         cert=cert, is_cvaas=is_cvaas, api_token=api_token)
 
         cls.api = cls.clnt.api
         assert cls.api is not None
