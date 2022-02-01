@@ -6,6 +6,7 @@ import uuid
 from pprint import pprint
 
 import urllib3
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 from cvprac.cvp_client_errors import CvpRequestError
@@ -13,18 +14,17 @@ from cvprac.cvp_client_errors import CvpRequestError
 sys.path.append(os.path.join(os.path.dirname(__file__), '../lib'))
 from test_cvp_api import TestCvpClient
 
-
 CHANGE_CONTROL_ID_INVALID = '19175756-a8c8-4b'
 RANDOM_TASK_ID = '3333'
+RANDOM_CCID = '23456dvbjjhjnm'
 APPROVE_NOTE = "Approving CC via cvprac"
 START_NOTE = "Start the CC via cvprac"
 STOP_NOTE = "stop the CC via cvprac"
 
 
 class TestCvpClientCC(TestCvpClient):
-    ''' Test cases for the CvpClientCC class.
-    '''
-    # cc_id = None
+    """ Test cases for the CvpClientCC class.
+    """
 
     @classmethod
     def setUpClass(cls):
@@ -62,13 +62,14 @@ class TestCvpClientCC(TestCvpClient):
         return response
 
     def test_api_change_control_create_for_tasks(self):
-        ''' Verify change_control_create_for_tasks
-        '''
+        """ Verify change_control_create_for_tasks
+        """
         if self.get_version():
             pprint('CREATING CHANGE CONTROL...')
+            global task_id
             (task_id, _) = self._create_task()
             chg_ctrl = self.api.change_control_create_for_tasks(
-                    self.cc_id, self.cc_name, [task_id])
+                self.cc_id, self.cc_name, [task_id])
 
             assert chg_ctrl['value']['key']['id'] == self.cc_id
             assert chg_ctrl['value']['change']['name'] == self.cc_name
@@ -83,8 +84,8 @@ class TestCvpClientCC(TestCvpClient):
             time.sleep(2)
 
     def test_api_change_control_approve(self):
-        ''' Verify change_control_approve
-        '''
+        """ Verify change_control_approve
+        """
         if self.get_version():
             pprint('APPROVING CHANGE CONTROL...')
             # Approve the change control
@@ -104,9 +105,26 @@ class TestCvpClientCC(TestCvpClient):
             assert approve_chg_ctrl['value']['approve']['notes'] == response['value']['approve']['notes']
             assert approve_chg_ctrl['value']['approve']['value'] == response['value']['approve']['value']
 
+    def test_api_change_control_approval_get_one(self):
+        """ Verify change_control_create_for_tasks
+         """
+        if self.get_version():
+            approval_get_one = self.api.change_control_approval_get_one(self.cc_id)
+            assert approval_get_one is not None
+            assert approval_get_one['value']['approve']['value'] is True
+            assert approval_get_one['value']['approve']['notes'] == APPROVE_NOTE
+            assert approval_get_one['value']['key']['id'] == self.cc_id
+
+    def test_api_change_control_approval_get_one_without_approve(self):
+        """ Verify change_control_create_for_tasks
+         """
+        if self.get_version():
+            approval_get_one = self.api.change_control_approval_get_one(self.cc_id)
+            assert approval_get_one is None
+
     def test_api_change_control_start(self):
-        ''' Verify change_control_start
-        '''
+        """ Verify change_control_start
+        """
         if self.get_version():
             pprint('STARTING CHANGE CONTROL...')
             # Start the change control
@@ -126,8 +144,8 @@ class TestCvpClientCC(TestCvpClient):
             assert start_chg_ctrl['value']['start']['notes'] == response['value']['start']['notes']
 
     def test_api_change_control_stop(self):
-        ''' Verify change_control_stop
-        '''
+        """ Verify change_control_stop
+        """
         if self.get_version():
             pprint('STOPPING CHANGE CONTROL...')
             # Stop the change control
@@ -147,19 +165,19 @@ class TestCvpClientCC(TestCvpClient):
             assert stop_chg_ctrl['value']['start']['notes'] == response['value']['start']['notes']
 
     def test_api_change_control_create_for_empty_tasks_list(self):
-        ''' Verify change_control_create_for_tasks for empty task list
-        '''
+        """ Verify change_control_create_for_tasks for empty task list
+        """
         if self.get_version():
             # Set client apiversion if it is not already set
             pprint('RUN TEST FOR V3 CHANGE CONTROL APIs')
             # cc_id = str(uuid.uuid4())
             with self.assertRaises(CvpRequestError):
                 chg_ctrl = self.api.change_control_create_for_tasks(
-                         self.cc_id, self.cc_name, [], series=False)
+                    self.cc_id, self.cc_name, [], series=False)
 
     def test_api_change_control_create_for_none_task_id_in_list(self):
-        ''' Verify change_control_create_for_tasks for none task id in list
-        '''
+        """ Verify change_control_create_for_tasks for none task id in list
+        """
         # Set client apiversion if it is not already set
         if self.get_version():
             with self.assertRaises(CvpRequestError):
@@ -167,8 +185,8 @@ class TestCvpClientCC(TestCvpClient):
                     self.cc_id, self.cc_name, [None], series=False)
 
     def test_api_change_control_create_for_none_task_ids_not_list(self):
-        ''' Verify change_control_create_for_tasks for none task ids list
-        '''
+        """ Verify change_control_create_for_tasks for none task ids list
+        """
         # Set client apiversion if it is not already set
         if self.get_version():
             with self.assertRaises(TypeError):
@@ -176,8 +194,8 @@ class TestCvpClientCC(TestCvpClient):
                     self.cc_id, self.cc_name, None, series=False)
 
     def test_api_change_control_create_for_random_task_id(self):
-        ''' Verify change_control_create_for_tasks for random task id
-        '''
+        """ Verify change_control_create_for_tasks for random task id
+        """
         # Set client apiversion if it is not already set
         if self.get_version():
             change_control_id = str(uuid.uuid4())
@@ -192,7 +210,6 @@ class TestCvpClientCC(TestCvpClient):
                 change_control_id, notes=approve_note)
             assert approve_chg_ctrl is not None
             assert approve_chg_ctrl['value']['approve']['value'] is True
-
             # Verify CC
             response = self.get_cc_status(change_control_id)
 
@@ -212,10 +229,10 @@ class TestCvpClientCC(TestCvpClient):
         if self.get_version():
             # Approve the change control
             dut = self.duts[0]
-            node = dut['node']+":443"
+            node = dut['node'] + ":443"
             start_note = "Approving CC via cvprac"
-            err_msg = 'POST: https://'+node+'/api/resources/changecontrol/v1/ChangeControlConfig ' \
-                                            ': Request Error: Bad Request - {"code":9, "message":"not approved"}'
+            err_msg = 'POST: https://' + node + '/api/resources/changecontrol/v1/ChangeControlConfig ' \
+                                                ': Request Error: Bad Request - {"code":9, "message":"not approved"}'
             with self.assertRaisesRegex(CvpRequestError, err_msg):
                 self.api.change_control_start(
                     CHANGE_CONTROL_ID_INVALID, notes=start_note)
@@ -239,7 +256,49 @@ class TestCvpClientCC(TestCvpClient):
                 self.api.change_control_delete(
                     CHANGE_CONTROL_ID_INVALID)
 
+    def test_api_change_control_get_one(self):
+        """ Verify change_control_create_for_tasks
+         """
+        if self.get_version():
+            print("----------change_control_get_one-----------")
+            chg_ctrl_get_one = self.api.change_control_get_one(self.cc_id)
+            print(task_id)
+            # print(chg_ctrl_get_one)
+            assert chg_ctrl_get_one['value']['key']['id'] == self.cc_id
+            assert chg_ctrl_get_one['value']['change']['name'] == self.cc_name
+            assert chg_ctrl_get_one['value']['change']['stages']['values']['stage0']['action']['args']['values'][
+                       'TaskID'] == task_id
+
+    def test_api_change_control_get_one_without_ccid(self):
+        """ Verify change_control_create_for_tasks
+         """
+        if self.get_version():
+            print("----------change_control_get_one_without_ccid-----------")
+            with self.assertRaises(TypeError):
+                chg_ctrl_get_one = self.api.change_control_get_one()
+
+    def test_api_change_control_get_one_with_none_ccid(self):
+        """ Verify change_control_create_for_tasks
+         """
+        if self.get_version():
+            print("----------change_control_get_one_with_none_ccid-----------")
+            chg_ctrl_get_one = self.api.change_control_get_one(None)
+            assert chg_ctrl_get_one is None
+
+    def test_api_change_control_get_one_with_random_ccid(self):
+        """ Verify change_control_create_for_tasks
+         """
+        if self.get_version():
+            print("----------change_control_get_one_with_random_ccid-----------")
+            chg_ctrl_get_one = self.api.change_control_get_one(RANDOM_CCID)
+            assert chg_ctrl_get_one is None
+
+    def test_api_change_control_get_all(self):
+        """ Verify change_control_create_for_tasks
+         """
+        if self.get_version():
+            chg_ctrl_get_all = self.api.change_control_get_all()
+
 
 if __name__ == '__main__':
     unittest.main()
-
