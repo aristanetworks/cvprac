@@ -2,9 +2,8 @@
   username: CvpRacTest
   password: AristaInnovates
 - node: cvp2
-  api_token: <api_token>
-  is_cvaas: True
+  username: CvpRacTest
+  password: AristaInnovates
 - node: cvp3
   username: CvpRacTest
   password: AristaInnovates
-  api_token: <api_token>

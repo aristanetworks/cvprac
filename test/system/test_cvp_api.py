@@ -62,8 +62,7 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 from cvprac.cvp_client import CvpClient
-from cvprac.cvp_client_errors import CvpApiError, CvpRequestError
-from parameterized import parameterized
+from cvprac.cvp_client_errors import CvpApiError
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../lib'))
 from systestlib import DutSystemTest
@@ -709,7 +708,7 @@ class TestCvpClient(DutSystemTest):
         config_lines = result.splitlines()
         for line in config_lines:
             if 'hostname' in line:
-                self.assertEqual(line, 'hostname %s' % self.device['hostname'])
+                self.assertEqual(line, 'hostname %s' % self.device['fqdn'])
 
     def test_api_get_device_by_name_bad(self):
         ''' Verify get_device_by_name with bad fqdn
@@ -1922,7 +1921,7 @@ class TestCvpClient(DutSystemTest):
     #         chg_ctrl_name = 'test_api_%d' % time.time()
     #         (task_id, _) = self._create_task()
     #         chg_ctrl = self.api.create_change_control_v3(
-    #             chg_ctrl_name, chg_ctrl_name, [task_id])
+    #             chg_ctrl_name, chg_ctrl_name, [task_id], True)
     #         cc_id = ''
     #         if len(chg_ctrl) > 0:
     #             if 'id' in chg_ctrl[0]:
@@ -1931,7 +1930,6 @@ class TestCvpClient(DutSystemTest):
     #         print(chg_ctrl)
     #         print(cc_id)
     #         print('')
-    #         print('self clnt in func', self.clnt)
     #
     #         if cc_id != '':
     #             # Verify the pending change control information
@@ -2268,115 +2266,113 @@ class TestCvpClient(DutSystemTest):
                 self.clnt.apiversion))
             time.sleep(1)
 
-    def test_api_deploy_device(self):
-        ''' Verify deploy_device
-        '''
-        device = self.api.get_inventory()[0]
-        cur_confs = self.api.get_configlets_by_netelement_id(device['key'])
-        device_configlet_keys = []
-        device_configlet_names = []
-        for confmap in cur_confs['configletMapper']:
-            if cur_confs['configletMapper'][confmap]['type'] == 'netelement':
-                device_configlet_keys.append(confmap)
-
-        for confkey in device_configlet_keys:
-            for configlet in cur_confs['configletList']:
-                if confkey == configlet['key']:
-                    device_configlet_names.append(configlet['name'])
-                    continue
-        device_configlet_objects = []
-        for devconfname in device_configlet_names:
-            result = self.api.get_configlet_by_name(devconfname)
-            if result['name'] == devconfname:
-                device_configlet_objects.append(result)
-        orig_cont = self.api.get_parent_container_for_device(device['key'])
-        undefined_devs = self.api.get_devices_in_container('Undefined')
-
-        task_id = self._get_next_task_id()
-        pprint('NEXT TASK ID - %s\n' % task_id)
-        pprint('PRE RESET')
-        resp = self.api.reset_device('TESTAPP', device, create_task=True)
-        pprint('POST RESET')
-        pprint(resp)
-        pprint('PRE RESET TASK')
-        self._execute_long_running_task(task_id)
-        pprint('POST RESET TASK')
-
-        new_undefined_devs = self.api.get_devices_in_container('Undefined')
-        self.assertEqual(len(undefined_devs) + 1, len(new_undefined_devs))
-        new_device_info = self.api.get_inventory()[0]
-        new_cont = self.api.get_parent_container_for_device(
-            new_device_info['key'])
-        self.assertEqual(new_cont['name'], 'Undefined')
-
-        task_id = self._get_next_task_id()
-        pprint('NEXT TASK ID - %s\n' % task_id)
-        pprint('PRE DEPLOY')
-        resp = self.api.deploy_device(new_device_info, orig_cont['name'],
-                                      device_configlet_objects,
-                                      image_bundle=None, create_task=True)
-        pprint('POST DEPLOY')
-        pprint(resp)
-        pprint('PRE EXECUTE DEPLOY TASK')
-        self._execute_long_running_task(task_id)
-        pprint('POST EXECUTE DEPLOY TASK')
-
-        final_undef_devs = self.api.get_devices_in_container('Undefined')
-        self.assertEqual(len(undefined_devs), len(final_undef_devs))
-
-    def test_api_reset_device(self):
-        ''' Verify reset_device
-        '''
-        device = self.api.get_inventory()[0]
-        cur_confs = self.api.get_configlets_by_netelement_id(device['key'])
-        print('in test_api_reset_device cur_confs', cur_confs)
-        device_configlet_keys = []
-        device_configlet_names = []
-        print('test_api_reset_device cur_confs configletMapper', cur_confs['configletMapper'])
-        for confmap in cur_confs['configletMapper']:
-            if cur_confs['configletMapper'][confmap]['type'] == 'netelement':
-                device_configlet_keys.append(confmap)
-
-        for confkey in device_configlet_keys:
-            for configlet in cur_confs['configletList']:
-                if confkey == configlet['key']:
-                    device_configlet_names.append(configlet['name'])
-                    continue
-        orig_cont = self.api.get_parent_container_for_device(device['key'])
-        undefined_devs = self.api.get_devices_in_container('Undefined')
-        task_id = self._get_next_task_id()
-
-        resp = self.api.reset_device('TESTAPP', device, create_task=True)
-        pprint(resp)
-        self._execute_long_running_task(task_id)
-
-        new_undefined_devs = self.api.get_devices_in_container('Undefined')
-        self.assertEqual(len(undefined_devs) + 1, len(new_undefined_devs))
-
-        new_device_info = self.api.get_inventory()[0]
-
-        new_cont = self.api.get_parent_container_for_device(
-            new_device_info['key'])
-        self.assertEqual(new_cont['name'], 'Undefined')
-
-        task_id = self._get_next_task_id()
-        resp = self.api.move_device_to_container('TESTAPP', new_device_info,
-                                                 orig_cont,
-                                                 create_task=False)
-        pprint(resp)
-        apply_confs_list = []
-        for index, confkey in enumerate(device_configlet_keys):
-            param = {'name': device_configlet_names[index], 'key': confkey}
-            apply_confs_list.append(param)
-        resp = self.api.apply_configlets_to_device('TESTAPP',
-                                                   new_device_info,
-                                                   apply_confs_list,
-                                                   create_task=True)
-        pprint(resp)
-        self._execute_long_running_task(task_id)
-
-        final_undef_devs = self.api.get_devices_in_container('Undefined')
-        self.assertEqual(len(undefined_devs), len(final_undef_devs))
+    # def test_api_deploy_device(self):
+    #     ''' Verify deploy_device
+    #     '''
+    #     device = self.api.get_inventory()[0]
+    #     cur_confs = self.api.get_configlets_by_netelement_id(device['key'])
+    #     device_configlet_keys = []
+    #     device_configlet_names = []
+    #     for confmap in cur_confs['configletMapper']:
+    #         if cur_confs['configletMapper'][confmap]['type'] == 'netelement':
+    #             device_configlet_keys.append(confmap)
+    #
+    #     for confkey in device_configlet_keys:
+    #         for configlet in cur_confs['configletList']:
+    #             if confkey == configlet['key']:
+    #                 device_configlet_names.append(configlet['name'])
+    #                 continue
+    #     device_configlet_objects = []
+    #     for devconfname in device_configlet_names:
+    #         result = self.api.get_configlet_by_name(devconfname)
+    #         if result['name'] == devconfname:
+    #             device_configlet_objects.append(result)
+    #     orig_cont = self.api.get_parent_container_for_device(device['key'])
+    #     undefined_devs = self.api.get_devices_in_container('Undefined')
+    #
+    #     task_id = self._get_next_task_id()
+    #     pprint('NEXT TASK ID - %s\n' % task_id)
+    #     pprint('PRE RESET')
+    #     resp = self.api.reset_device('TESTAPP', device, create_task=True)
+    #     pprint('POST RESET')
+    #     pprint(resp)
+    #     pprint('PRE RESET TASK')
+    #     self._execute_long_running_task(task_id)
+    #     pprint('POST RESET TASK')
+    #
+    #     new_undefined_devs = self.api.get_devices_in_container('Undefined')
+    #     self.assertEqual(len(undefined_devs) + 1, len(new_undefined_devs))
+    #     new_device_info = self.api.get_inventory()[0]
+    #     new_cont = self.api.get_parent_container_for_device(
+    #         new_device_info['key'])
+    #     self.assertEqual(new_cont['name'], 'Undefined')
+    #
+    #     task_id = self._get_next_task_id()
+    #     pprint('NEXT TASK ID - %s\n' % task_id)
+    #     pprint('PRE DEPLOY')
+    #     resp = self.api.deploy_device(new_device_info, orig_cont['name'],
+    #                                   device_configlet_objects,
+    #                                   image_bundle=None, create_task=True)
+    #     pprint('POST DEPLOY')
+    #     pprint(resp)
+    #     pprint('PRE EXECUTE DEPLOY TASK')
+    #     self._execute_long_running_task(task_id)
+    #     pprint('POST EXECUTE DEPLOY TASK')
+    #
+    #     final_undef_devs = self.api.get_devices_in_container('Undefined')
+    #     self.assertEqual(len(undefined_devs), len(final_undef_devs))
+    #
+    # def test_api_reset_device(self):
+    #     ''' Verify reset_device
+    #     '''
+    #     device = self.api.get_inventory()[0]
+    #     cur_confs = self.api.get_configlets_by_netelement_id(device['key'])
+    #     device_configlet_keys = []
+    #     device_configlet_names = []
+    #     for confmap in cur_confs['configletMapper']:
+    #         if cur_confs['configletMapper'][confmap]['type'] == 'netelement':
+    #             device_configlet_keys.append(confmap)
+    #
+    #     for confkey in device_configlet_keys:
+    #         for configlet in cur_confs['configletList']:
+    #             if confkey == configlet['key']:
+    #                 device_configlet_names.append(configlet['name'])
+    #                 continue
+    #     orig_cont = self.api.get_parent_container_for_device(device['key'])
+    #     undefined_devs = self.api.get_devices_in_container('Undefined')
+    #     task_id = self._get_next_task_id()
+    #
+    #     resp = self.api.reset_device('TESTAPP', device, create_task=True)
+    #     pprint(resp)
+    #     self._execute_long_running_task(task_id)
+    #
+    #     new_undefined_devs = self.api.get_devices_in_container('Undefined')
+    #     self.assertEqual(len(undefined_devs) + 1, len(new_undefined_devs))
+    #
+    #     new_device_info = self.api.get_inventory()[0]
+    #
+    #     new_cont = self.api.get_parent_container_for_device(
+    #         new_device_info['key'])
+    #     self.assertEqual(new_cont['name'], 'Undefined')
+    #
+    #     task_id = self._get_next_task_id()
+    #     resp = self.api.move_device_to_container('TESTAPP', new_device_info,
+    #                                              orig_cont,
+    #                                              create_task=False)
+    #     pprint(resp)
+    #     apply_confs_list = []
+    #     for index, confkey in enumerate(device_configlet_keys):
+    #         param = {'name': device_configlet_names[index], 'key': confkey}
+    #         apply_confs_list.append(param)
+    #     resp = self.api.apply_configlets_to_device('TESTAPP',
+    #                                                new_device_info,
+    #                                                apply_confs_list,
+    #                                                create_task=True)
+    #     pprint(resp)
+    #     self._execute_long_running_task(task_id)
+    #
+    #     final_undef_devs = self.api.get_devices_in_container('Undefined')
+    #     self.assertEqual(len(undefined_devs), len(final_undef_devs))
 
 
 if __name__ == '__main__':
