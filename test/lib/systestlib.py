@@ -67,3 +67,4 @@ class DutSystemTest(unittest.TestCase):
         with open(filename, 'r') as stream:
             cls.duts = yaml.safe_load(stream)
             stream.close()
+
