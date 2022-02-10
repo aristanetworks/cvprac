@@ -60,6 +60,39 @@ class TestCvpClientCC(TestCvpClient):
         response = self.clnt.get(cc_url, timeout=30)
         return response
 
+    def get_device_list(self):
+        inventory = self.api.get_inventory()
+        device_list = []
+        if len(inventory) >= 1:
+            for i in range(0, len(inventory)):
+                device_list.append(inventory[i]['serialNumber'])
+        else:
+            raise Exception("No device found")
+        return device_list
+
+    def create_snapshot(self):
+        device_list = self.get_device_list()
+        template_details = {
+         "commands": [
+         "show version"
+          ],
+         "deviceList": [
+          device_list[0]
+         ],
+        "frequency": "350",
+        "name": "show version"
+          }
+        response = self.clnt.post('/snapshot/templates/schedule?', data=template_details)
+        if response['status'] == "success":
+            template_id = response['templateKey']
+        else:
+            raise Exception("Snapshot not created")
+        return template_id
+
+    def delete_snapshot(self, snaps):
+        response = self.clnt.delete('/snapshot/templates?', data=snaps)
+        return response
+
     def test_api_change_control_create_for_tasks(self):
         """ Verify change_control_create_for_tasks
         """
@@ -281,7 +314,6 @@ class TestCvpClientCC(TestCvpClient):
         """ Verify change_control_get_one
          """
         if self.get_version():
-            print('task iddddddd in gte', task_id)
             pprint("CHANGE CONTROL GET ONE...")
             chg_ctrl_get_one = self.api.change_control_get_one(self.cc_id)
             assert chg_ctrl_get_one['value']['key']['id'] == self.cc_id
@@ -371,23 +403,20 @@ class TestCvpClientCC(TestCvpClient):
     def test_api_change_control_create_with_custom_stages(self):
         """ Verify test_api_change_control_create_with_custom_stages
         """
-        result = self.api.get_inventory()
-        if len(result) > 1:
-            DeviceID1 = result[0]['serialNumber']
-            DeviceID2 = result[1]['serialNumber']
-        elif len(result) == 1:
-            DeviceID1 = result[0]['serialNumber']
-            DeviceID2 = result[0]['serialNumber']
-        else:
-            raise Exception("No device found")
+        devices = self.get_device_list()
+        if len(devices) > 1:
+            DeviceID1 = devices[0]
+            DeviceID2 = devices[1]
+        elif len(devices) == 1:
+            DeviceID1 = devices[0]
+            DeviceID2 = devices[0]
 
-        TemplateID1 = '839d1c05-a83e-431c-89ac-fc4f339bfd16'
-        TemplateID2 = 'ffeead01-98be-4bf0-b3f2-3c29a2841cee'
-
+        TemplateID = [self.create_snapshot(), self.create_snapshot()]
+        time.sleep(1)
         custom_cc = {'key': {
             'id': self.cc_id
             },
-        'change': {
+         'change': {
             'name': self.cc_name,
             'notes': 'cvprac CC',
             'rootStageId': 'root',
@@ -408,54 +437,50 @@ class TestCvpClientCC(TestCvpClient):
                                             }
                                         },
                                   '1a': {'action': {'args': {'values': {'DeviceID': DeviceID1,
-                                                                        'TemplateID': TemplateID1}},
+                                                                        'TemplateID': TemplateID[0]}},
                                                     'name': 'snapshot',
                                                     'timeout': 3000},
                                          'name': 'stage 1a'},
                                   '1b': {'action': {'args': {'values': {'DeviceID': DeviceID1,
-                                                                        'TemplateID': TemplateID1}},
+                                                                        'TemplateID': TemplateID[0]}},
                                                     'name': 'snapshot',
                                                     'timeout': 3000},
                                          'name': 'stage 1b'},
                                   '2a': {'action': {'args': {'values': {'DeviceID': DeviceID1,
-                                                                        'TemplateID': TemplateID1}},
+                                                                        'TemplateID': TemplateID[0]}},
                                                    'name': 'snapshot',
                                                    'timeout': 3000},
                                         'name': 'stage 2a'},
                                   '2b': {'action': {'args': {'values': {'DeviceID': DeviceID2,
-                                                                        'TemplateID': TemplateID2}},
+                                                                        'TemplateID': TemplateID[1]}},
                                                    'name': 'snapshot',
                                                    'timeout': 3000},
                                         'name': 'stage 2a'},
                                   '3': {'action': {'args': {'values': {'DeviceID': DeviceID2,
-                                                                       'TemplateID': TemplateID2}},
+                                                                       'TemplateID': TemplateID[1]}},
                                                    'name': 'snapshot',
                                                    'timeout': 3000},
                                         'name': 'stage 3'},
-                }
-            }
-        }
- }
+                }}}}
 
         if self.get_version():
             pprint("CHANGE CONTROL CREATE WITH CUSTOM STAGES...")
             chg_ctrl_create_with_custom_stages = self.api.change_control_create_with_custom_stages(custom_cc)
-            print(chg_ctrl_create_with_custom_stages)
             assert chg_ctrl_create_with_custom_stages['value']['key']['id'] == self.cc_id
             assert chg_ctrl_create_with_custom_stages['value']['change']['name'] == self.cc_name
             assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['1a']['action']['args']['values']['DeviceID'] == DeviceID1
-            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['1a']['action']['args']['values']['TemplateID'] == TemplateID1
+            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['1a']['action']['args']['values']['TemplateID'] == TemplateID[0]
             assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['1b']['action']['args']['values']['DeviceID'] == DeviceID1
-            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['1b']['action']['args']['values']['TemplateID'] == TemplateID1
+            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['1b']['action']['args']['values']['TemplateID'] == TemplateID[0]
             assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['2a']['action']['args']['values']['DeviceID'] == DeviceID1
-            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['2a']['action']['args']['values']['TemplateID'] == TemplateID1
+            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['2a']['action']['args']['values']['TemplateID'] == TemplateID[0]
             assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['2b']['action']['args']['values']['DeviceID'] == DeviceID2
-            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['2b']['action']['args']['values']['TemplateID'] == TemplateID2
+            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['2b']['action']['args']['values']['TemplateID'] == TemplateID[1]
             assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['3']['action']['args']['values']['DeviceID'] == DeviceID2
-            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['3']['action']['args']['values']['TemplateID'] == TemplateID2
+            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['3']['action']['args']['values']['TemplateID'] == TemplateID[1]
 
             response = self.get_cc_status(self.cc_id)
-            print("---------------------------------------------------------------------------\n")
+
             assert chg_ctrl_create_with_custom_stages['value']['key']['id'] == response['value']['key']['id']
             assert chg_ctrl_create_with_custom_stages['value']['change']['name'] == response['value']['change']['name']
             assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['1a']['action']['args']['values']['DeviceID'] == response['value']['change']['stages']['values']['1a']['action']['args']['values']['DeviceID']
@@ -468,6 +493,17 @@ class TestCvpClientCC(TestCvpClient):
             assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['2b']['action']['args']['values']['TemplateID'] == response['value']['change']['stages']['values']['2b']['action']['args']['values']['TemplateID']
             assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['3']['action']['args']['values']['DeviceID'] == response['value']['change']['stages']['values']['3']['action']['args']['values']['DeviceID']
             assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['3']['action']['args']['values']['TemplateID'] == response['value']['change']['stages']['values']['3']['action']['args']['values']['TemplateID']
+            self.test_api_change_control_approve()
+            self.test_api_change_control_start()
+            self.test_api_change_control_get_all()
+            self.test_api_change_control_approval_get_all()
+            time.sleep(1)
+            self.test_api_change_control_stop()
+            self.test_api_change_control_delete()
+
+            delete_snap = self.delete_snapshot(TemplateID)
+            assert delete_snap['result'] == 'Success'
+
 
     def test_api_change_control_create_with_custom_stages_without_custom_cc(self):
         """ Verify test_api_change_control_create_with_custom_stages
@@ -512,11 +548,6 @@ def suite():
     suite.addTest(TestCvpClientCC('test_api_change_control_delete'))
     suite.addTest(TestCvpClientCC('test_api_change_control_create_with_custom_stages'))
     suite.addTest(TestCvpClientCC('test_api_change_control_create_with_custom_stages_with_none_custom_cc'))
-    suite.addTest(TestCvpClientCC('test_api_change_control_approve'))
-    suite.addTest(TestCvpClientCC('test_api_change_control_start'))
-    suite.addTest(TestCvpClientCC('test_api_change_control_stop'))
-    suite.addTest(TestCvpClientCC('test_api_change_control_delete'))
-    suite.addTest(TestCvpClientCC('test_api_change_control_stop'))
     suite.addTest(TestCvpClientCC('test_api_change_control_create_with_custom_stages_without_custom_cc'))
     return suite
 
