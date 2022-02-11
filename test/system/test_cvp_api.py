@@ -201,6 +201,7 @@ class TestCvpClient(DutSystemTest):
 
         return task_id, org_config
 
+   """
     def test_api_get_cvp_info(self):
         ''' Verify get_cvp_info and verify setting of client last_used_node
             parameter
@@ -2375,7 +2376,7 @@ class TestCvpClient(DutSystemTest):
     #
     #     final_undef_devs = self.api.get_devices_in_container('Undefined')
     #     self.assertEqual(len(undefined_devs), len(final_undef_devs))
-
+"""
 
 if __name__ == '__main__':
     unittest.main()
