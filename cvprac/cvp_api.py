@@ -3712,8 +3712,9 @@ class CvpApi(object):
                     Recommended to generate uuid with str(uuid.uuid4()).
             Returns:
                 response (dict): A dict that contains...
-                Ex: {"value":{"key":{"id":cc_id}, "start":{"value":false, "notes":"note"}},
-                     "time":"2021-12-14T21:02:21.830306071Z"}
+                Ex: {'value': {'key': {'requestId': '4a4ba5a2-9886-4cd5-84d6-bdaf85a9f091'},
+                     'deviceId': 'BAD032986065E8DC14CBB6472EC314A6'},
+                     'time': '2022-02-12T02:58:30.765459650Z'}
         '''
         payload = {
             "key": {
