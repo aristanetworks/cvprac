@@ -142,7 +142,9 @@ class TestCvpClient(DutSystemTest):
         # the length + 1.
         results = self.api.get_tasks()
         self.assertIsNotNone(results)
-        return str(int(results['total']) + 1)
+        latest_task = str(int(results['data'][0]['workOrderId']) + 1)
+        total_task = results['total']
+        return latest_task, total_task
 
     def _create_task(self):
         ''' Create a task by making a simple change to a configlet assigned
@@ -153,7 +155,7 @@ class TestCvpClient(DutSystemTest):
                 task_id (str): Task ID
                 config (str): Previous configlets contents
         '''
-        task_id = self._get_next_task_id()
+        task_id, total_task = self._get_next_task_id()
 
         # Update the lldp time in the first configlet in the list.
         configlet = None
