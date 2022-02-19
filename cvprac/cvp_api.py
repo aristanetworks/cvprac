@@ -3668,7 +3668,7 @@ class CvpApi(object):
 # Commenting this out until it's fully supported
     # def change_control_schedule(self, cc_id, schedule_time, notes=""):
     #     ''' Schedule a Change Control using Resource APIs.
-    #         Supported versions: CVP 2022.1.0 or newer and CVaaS.
+    #         Supported versions: CVP 2021.3.0 or newer and CVaaS.
 
     #         Args:
     #             cc_id (string): The ID for the new change control.
@@ -3691,108 +3691,13 @@ class CvpApi(object):
     #             }
     #     }
     #     cc_url = '/api/resources/changecontrol/v1/ChangeControlConfig'
-    #     # For on-prem check the version as it is only supported from 2022.1.0+
+    #     # For on-prem check the version as it is only supported from 2021.2.0+
     #     if not self.clnt.is_cvaas:
     #         if self.clnt.apiversion is None:
     #             self.get_cvp_info()
-    #         if self.clnt.apiversion < 8.0:
+    #         if self.clnt.apiversion < 7.0:
     #             self.log.warning(
-    #                  'Change Control Resource APIs are supported from 2022.1.0 or newer.')
+    #                  'Change Control Resource APIs are supported from 2021.2.0 or newer.')
     #             return None
-    #     self.log.debug('v8 ' + str(cc_url) + ' ' + str(payload))
+    #     self.log.debug('v7 ' + str(cc_url) + ' ' + str(payload))
     #     return self.clnt.post(cc_url, data=payload, timeout=self.request_timeout)
-
-    def device_decommissioning(self, device_id, request_id):
-        ''' Decommission a device using Resource APIs.
-            Supported versions: CVP 2021.3.0 or newer and CVaaS.
-
-            Args:
-                device_id (string): Serial Number of the device.
-                request_id (string): Key identifies the request to decommission the device.
-                    Recommended to generate uuid with str(uuid.uuid4()).
-            Returns:
-                response (dict): A dict that contains...
-                Ex: {'value': {'key': {'requestId': '4a4ba5a2-9886-4cd5-84d6-bdaf85a9f091'},
-                     'deviceId': 'BAD032986065E8DC14CBB6472EC314A6'},
-                     'time': '2022-02-12T02:58:30.765459650Z'}
-        '''
-        payload = {
-            "key": {
-                "request_id": request_id
-            },
-            "device_id": device_id
-        }
-        url = '/api/resources/inventory/v1/DeviceDecommissioningConfig'
-        # For on-prem check the version as it is only supported from 2021.3.0+
-        if not self.clnt.is_cvaas:
-            if self.clnt.apiversion is None:
-                self.get_cvp_info()
-            if self.clnt.apiversion < 7.0:
-                self.log.warning(
-                    'Decommissioning via Resource APIs are supported from 2021.3.0 or newer.')
-                return None
-        self.log.debug('v7 ' + str(url) + ' ' + str(payload))
-        return self.clnt.post(url, data=payload, timeout=self.request_timeout)
-
-    def device_decommissioning_status_get_one(self, request_id):
-        ''' Get the decommission status of a device using Resource APIs.
-            Supported versions: CVP 2021.3.0 or newer and CVaaS.
-
-            Args:
-                request_id (string): key identifies the request to decommission the device
-            Returns:
-                response (dict): A dict that contains...
-                Ex:{"result":{"value":{"key":{"requestId":"123456789"},
-                  "status":"DECOMMISSIONING_STATUS_IN_PROGRESS",
-                  "statusMessage":"Disabled TerminAttr, waiting for device to be marked inactive"},
-                  "time":"2022-02-04T19:41:46.376310308Z","type":"INITIAL"}}
-        '''
-        params = 'key.requestId={}'.format(request_id)
-        url = '/api/resources/inventory/v1/DeviceDecommissioning?' + params
-        # For on-prem check the version as it is only supported from 2021.3.0+
-        if not self.clnt.is_cvaas:
-            if self.clnt.apiversion is None:
-                self.get_cvp_info()
-            if self.clnt.apiversion < 7.0:
-                self.log.warning(
-                    'Decommissioning via Resource APIs are supported from 2021.3.0 or newer.')
-                return None
-        self.log.debug('v7 ' + str(url))
-        return self.clnt.get(url, timeout=self.request_timeout)
-
-    def device_decommissioning_status_get_all(self, status="DECOMMISSIONING_STATUS_UNSPECIFIED"):
-        ''' Get the decommissioning status of all devices using Resource APIs.
-            Supported versions: CVP 2021.3.0 or newer and CVaaS.
-
-            Args:
-                status (enum): By default it will get the decommissioning status for all devices.
-                    Possible values:
-                        "DECOMMISSIONING_STATUS_UNSPECIFIED" or 0,
-                        "DECOMMISSIONING_STATUS_IN_PROGRESS" or 1,
-                        "DECOMMISSIONING_STATUS_FAILURE" or 2,
-                        "DECOMMISSIONING_STATUS_SUCCESS" or 3
-            Returns:
-                response (dict): A dict that contains...
-                Ex: {"result":{"value":{"key":{"requestId":"123456789"},
-                "status":"DECOMMISSIONING_STATUS_IN_PROGRESS",
-                "statusMessage":"Disabled TerminAttr, waiting for device to be marked inactive"},
-                "time":"2022-02-04T19:41:46.376310308Z","type":"INITIAL"}}
-        '''
-        payload = {
-            "partialEqFilter": [
-                {
-                    "status": status,
-                }
-            ]
-        }
-        url = '/api/resources/inventory/v1/DeviceDecommissioning/all'
-        # For on-prem check the version as it is only supported from 2021.3.0+
-        if not self.clnt.is_cvaas:
-            if self.clnt.apiversion is None:
-                self.get_cvp_info()
-            if self.clnt.apiversion < 7.0:
-                self.log.warning(
-                    'Decommissioning via Resource APIs are supported from 2021.3.0 or newer.')
-                return None
-        self.log.debug('v7 ' + str(url))
-        return self.clnt.post(url, data=payload, timeout=self.request_timeout)
