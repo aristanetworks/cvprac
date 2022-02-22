@@ -2179,7 +2179,7 @@ class TestCvpClient(DutSystemTest):
                                                       "cvpractestdev", "TAGTESTDEV",
                                                       self.device['serialNumber'], "",
                                                       remove=False)
-            self.assertEqual(response['value']['key']['deviceId'], "veos1")
+            self.assertEqual(response['value']['key']['deviceId'], self.device['serialNumber'])
             self.assertEqual(response['value']['key']['interfaceId'], "")
 
             # Test assign tag to interface
@@ -2187,7 +2187,7 @@ class TestCvpClient(DutSystemTest):
                                                       "cvpractestint", "TAGTESTINT",
                                                       self.device['serialNumber'], "Ethernet1",
                                                       remove=False)
-            self.assertEqual(response['value']['key']['deviceId'], "veos1")
+            self.assertEqual(response['value']['key']['deviceId'], self.device['serialNumber'])
             self.assertEqual(response['value']['key']['interfaceId'], "Ethernet1")
 
             # Post tag creation and edit Get tag assignment edits
