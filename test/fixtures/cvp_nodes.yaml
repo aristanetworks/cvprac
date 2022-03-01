@@ -1,9 +1,12 @@
 - node: cvp
   username: CvpRacTest
   password: AristaInnovates
+  device: python-test-2
 - node: cvp2
   username: CvpRacTest
   password: AristaInnovates
+  device: python-test-2
 - node: cvp3
   username: CvpRacTest
   password: AristaInnovates
+  device: python-test-2
