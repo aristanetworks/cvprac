@@ -1,20 +1,28 @@
-from cvprac.cvp_client import CvpClient
+''' Base class for TestCvpClient and TestCvpClientCC class.
+'''
+from pprint import pprint
 import os
-import re
 import sys
+import re
 import time
 import uuid
-from pprint import pprint
-
 import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
+from cvprac.cvp_client import CvpClient
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../lib'))
 from systestlib import DutSystemTest
 
+
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+#
+# sys.path.append(os.path.join(os.path.dirname(__file__), '../lib'))
+# from systestlib import DutSystemTest
+
+
 class TestCvpClientBase(DutSystemTest):
-    ''' Test cases for the CvpClient class.
+    ''' Base class for TestCvpClient and TestCvpClientCC class.
     '''
     # pylint: disable=too-many-public-methods
     # pylint: disable=invalid-name
@@ -46,8 +54,7 @@ class TestCvpClientBase(DutSystemTest):
         assert result is not None
         if len(result) < 1:
             raise AssertionError(err_msg)
-        else:
-            assert len(result) >= 1
+        assert len(result) >= 1
         device = [res for res in result if res['hostname']
                   == dut.get("device", "")]
         # cls.device = result[0]
@@ -87,11 +94,19 @@ class TestCvpClientBase(DutSystemTest):
         self.clnt.post('/task/cancelTask.do', data=data)
 
     def setUp(self):
+        '''
+            Set the task_id, cc_id and cc_name. It executes before each test case
+        '''
         self.task_id = None
         self.cc_id = str(uuid.uuid4())
-        self.cc_name = 'test_api_%d' % time.time()
+        # self.cc_name = 'test_api_%d %s' % time.time()
+        self.cc_name = f'test_api_{time.time()}'
 
     def tearDown(self):
+        '''
+            Delete the change control if its present and cancel the task
+            if it exists
+        '''
         chg_ctrl_get_one = self.api.change_control_get_one(self.cc_id)
         if chg_ctrl_get_one:
             # Delete CC
@@ -113,7 +128,6 @@ class TestCvpClientBase(DutSystemTest):
         results = self.api.get_tasks()
         self.assertIsNotNone(results)
         latest_task = str(int(results['data'][0]['workOrderId']) + 1)
-        total_task = str(results['total'])
         return latest_task
 
     def _create_task(self):
@@ -141,11 +155,11 @@ class TestCvpClientBase(DutSystemTest):
         match = re.match(r'lldp timer (\d+)', config)
         if match is not None:
             value = int(match.group(1)) + 1
-            repl = 'lldp timer %d' % value
+            repl = f'lldp timer {value}'
             config = re.sub(match.group(0), repl, config)
         else:
             value = 13
-            config = ('lldp timer %d\n' % value) + config
+            config = f'lldp timer {value}\n' + config
         configlet['config'] = config
 
         # Updating the configlet will cause a task to be created to apply
@@ -165,7 +179,7 @@ class TestCvpClientBase(DutSystemTest):
             if result is not None:
                 break
             cnt -= 1
-        err_msg = 'Timeout waiting for task id %s to be created' % task_id
+        err_msg = f'Timeout waiting for task id {task_id} to be created'
         self.assertGreater(cnt, 0, msg=err_msg)
         self.task_id = task_id
         return task_id, org_config

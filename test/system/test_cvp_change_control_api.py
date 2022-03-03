@@ -1,10 +1,14 @@
+'''
+    Tests for change control apis
+'''
+from pprint import pprint
 import time
 import unittest
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-from cvprac.cvp_client_errors import CvpRequestError
 from test_cvp_base import TestCvpClientBase
-from pprint import pprint
+import urllib3
+from cvprac.cvp_client_errors import CvpRequestError
+urllib3.disable_warnings(
+    urllib3.exceptions.InsecureRequestWarning)
 
 
 CHANGE_CONTROL_ID_INVALID = '19175756-a8c8-4b'
@@ -19,7 +23,6 @@ TASK_ID = None
 class TestCvpClientCC(TestCvpClientBase):
     """ Test cases for the CvpClientCC class.
     """
-
     @classmethod
     def setUpClass(cls):
         """ Initialize variables
@@ -30,7 +33,8 @@ class TestCvpClientCC(TestCvpClientBase):
     def tearDownClass(cls):
         """ Reset variables value to None
         """
-        super(TestCvpClientCC, cls).tearDownClass()
+        super(TestCvpClientCC,
+              cls).tearDownClass()
 
     def get_version(self):
         """ Get api version
@@ -38,19 +42,19 @@ class TestCvpClientCC(TestCvpClientBase):
         if self.clnt.apiversion is None:
             self.api.get_cvp_info()
         if self.clnt.apiversion > 3.0:
-            pprint('RUN TEST FOR V3 CHANGE CONTROL APIs')
+            pprint(
+                'RUN TEST FOR V3 CHANGE CONTROL APIs')
             return True
-        else:
-            pprint('SKIPPING TEST FOR API - {0}'.format(
-                self.clnt.apiversion))
-            return False
+        pprint(f'SKIPPING TEST FOR API - {self.clnt.apiversion}')
+        return False
 
     def get_cc_status(self, cc_id):
         """ Get change control status
         """
-        params = 'key.id={}'.format(cc_id)
-        cc_url = '/api/resources/changecontrol/v1/ChangeControl?' + params
-        response = self.clnt.get(cc_url, timeout=30)
+        params = f'key.id={cc_id}'
+        cc_url = f'/api/resources/changecontrol/v1/ChangeControl?{params}'
+        response = self.clnt.get(
+            cc_url, timeout=30)
         return response
 
     def get_device_list(self):
@@ -59,8 +63,10 @@ class TestCvpClientCC(TestCvpClientBase):
         inventory = self.api.get_inventory()
         device_list = []
         if len(inventory) >= 1:
-            for i in range(0, len(inventory)):
-                device_list.append(inventory[i]['serialNumber'])
+            # for i in range(0, len(inventory)):
+            #     device_list.append(
+            #         inventory[i]['serialNumber'])
+            device_list = [inventory[i]['serialNumber'] for i in range(len(inventory))]
         else:
             raise Exception("No device found")
         return device_list
@@ -85,14 +91,16 @@ class TestCvpClientCC(TestCvpClientBase):
         if response['status'] == "success":
             template_id = response['templateKey']
         else:
-            raise Exception("Snapshot not created")
+            raise Exception(
+                "Snapshot not created")
         return template_id
 
     def delete_snapshot(self, snaps):
         """ Delete snapshot
         """
         pprint('DELETING SNAPSHOT...')
-        response = self.clnt.delete('/snapshot/templates?', data=snaps)
+        response = self.clnt.delete(
+            '/snapshot/templates?', data=snaps)
         return response
 
     def create_task(self):
@@ -167,7 +175,8 @@ class TestCvpClientCC(TestCvpClientBase):
     def change_control_get_one(self, cc_id):
         """ Change control get one
         """
-        chg_ctrl_get_one = self.api.change_control_get_one(cc_id)
+        chg_ctrl_get_one = self.api.change_control_get_one(
+            cc_id)
         return chg_ctrl_get_one
 
     def cancel_task(self, task_id):
@@ -175,22 +184,26 @@ class TestCvpClientCC(TestCvpClientBase):
         """
         pprint('CANCELING TASK...')
         data = {'data': [task_id]}
-        self.clnt.post('/task/cancelTask.do', data=data)
+        self.clnt.post(
+            '/task/cancelTask.do', data=data)
 
     def test_api_change_control_create_for_tasks(self):
         """ Verify change_control_create_for_tasks
         """
-        pprint("test_api_change_control_create_for_tasks")
+        pprint(
+            "test_api_change_control_create_for_tasks")
         if self.get_version():
             # Create Task
             task_id = self.create_task()
 
             # Create change control;
-            chg_ctrl = self.create_change_control_for_tasks(task_id)
+            chg_ctrl = self.create_change_control_for_tasks(
+                task_id)
             time.sleep(1)
 
             # Verify CC
-            response = self.get_cc_status(self.cc_id)
+            response = self.get_cc_status(
+                self.cc_id)
 
             assert response is not None
             assert chg_ctrl['value']['key']['id'] == response['value']['key']['id']
@@ -200,10 +213,12 @@ class TestCvpClientCC(TestCvpClientBase):
             approve_chg_ctrl = self.approve_change_control()
 
             # Start change control
-            start_chg_ctrl = self.start_change_control(self.cc_id)
+            start_chg_ctrl = self.start_change_control(
+                self.cc_id)
 
             # Verify start CC
-            response = self.get_cc_status(self.cc_id)
+            response = self.get_cc_status(
+                self.cc_id)
 
             # Verify create CC
             assert response is not None
@@ -213,8 +228,10 @@ class TestCvpClientCC(TestCvpClientBase):
 
             # Verify approve CC
             assert approve_chg_ctrl['value']['key']['id'] == response['value']['key']['id']
-            assert approve_chg_ctrl['value']['approve']['notes'] == response['value']['approve']['notes']
-            assert approve_chg_ctrl['value']['approve']['value'] == response['value']['approve']['value']
+            assert approve_chg_ctrl['value']['approve'][
+                'notes'] == response['value']['approve']['notes']
+            assert approve_chg_ctrl['value']['approve'][
+                'value'] == response['value']['approve']['value']
 
             # Verify Start CC
             assert start_chg_ctrl['value']['key']['id'] == response['value']['key']['id']
@@ -225,7 +242,8 @@ class TestCvpClientCC(TestCvpClientBase):
             stop_chg_ctrl = self.stop_change_control()
 
             # Verify stop CC
-            response = self.get_cc_status(self.cc_id)
+            response = self.get_cc_status(
+                self.cc_id)
 
             assert response is not None
             assert stop_chg_ctrl['value']['key']['id'] == response['value']['key']['id']
@@ -243,13 +261,15 @@ class TestCvpClientCC(TestCvpClientBase):
     def test_api_change_control_approval_get_one(self):
         """ Verify change_control_approval_get_one
          """
-        pprint("test_api_change_control_approval_get_one")
+        pprint(
+            "test_api_change_control_approval_get_one")
         if self.get_version():
             # Create task
             task_id = self.create_task()
 
             # Create change control
-            self.create_change_control_for_tasks(task_id)
+            self.create_change_control_for_tasks(
+                task_id)
 
             # Approve change control
             self.approve_change_control()
@@ -265,12 +285,15 @@ class TestCvpClientCC(TestCvpClientBase):
 
             # verify with actual api output
 
-            response = self.get_cc_status(self.cc_id)
+            response = self.get_cc_status(
+                self.cc_id)
 
             assert response is not None
             assert approval_get_one['value']['key']['id'] == response['value']['key']['id']
-            assert approval_get_one['value']['approve']['notes'] == response['value']['approve']['notes']
-            assert approval_get_one['value']['approve']['value'] == response['value']['approve']['value']
+            assert approval_get_one['value']['approve'][
+                'notes'] == response['value']['approve']['notes']
+            assert approval_get_one['value']['approve'][
+                'value'] == response['value']['approve']['value']
 
             # Delete change control
             self.delete_change_control(self.cc_id)
@@ -281,15 +304,18 @@ class TestCvpClientCC(TestCvpClientBase):
     def test_api_change_control_approval_get_one_without_approve(self):
         """ Verify change_control_approval_get_one_without_approve
          """
-        pprint("test_api_change_control_approval_get_one_without_approve")
+        pprint(
+            "test_api_change_control_approval_get_one_without_approve")
         if self.get_version():
             # Create task
             task_id = self.create_task()
 
             # Create CC
-            self.create_change_control_for_tasks(task_id)
+            self.create_change_control_for_tasks(
+                task_id)
 
-            pprint('APPROVAL GET ONE WITHOUT APPROVE...')
+            pprint(
+                'APPROVAL GET ONE WITHOUT APPROVE...')
             approval_get_one = self.api.change_control_approval_get_one(
                 self.cc_id)
             assert approval_get_one is None
@@ -303,49 +329,62 @@ class TestCvpClientCC(TestCvpClientBase):
     def test_api_change_control_create_for_empty_tasks_list(self):
         """ Verify change_control_create_for_tasks for empty task list
         """
-        pprint("test_api_change_control_create_for_empty_tasks_list")
+        pprint(
+            "test_api_change_control_create_for_empty_tasks_list")
         if self.get_version():
             # Set client apiversion if it is not already set
-            pprint('RUN TEST FOR V3 CHANGE CONTROL APIs')
+            pprint(
+                'RUN TEST FOR V3 CHANGE CONTROL APIs')
             with self.assertRaises(CvpRequestError):
-                self.create_change_control_for_tasks([])
+                self.create_change_control_for_tasks(
+                    [])
 
     def test_api_change_control_create_for_none_task_id_in_list(self):
         """ Verify change_control_create_for_tasks for none task id in list
         """
         # Set client apiversion if it is not already set
-        pprint("test_api_change_control_create_for_none_task_id_in_list")
+        pprint(
+            "test_api_change_control_create_for_none_task_id_in_list")
         if self.get_version():
-            pprint('CREATE CHANGE CONTROL FOR LIST OF NONE TASK IDs...')
+            pprint(
+                'CREATE CHANGE CONTROL FOR LIST OF NONE TASK IDs...')
             with self.assertRaises(CvpRequestError):
-                self.create_change_control_for_tasks([None])
+                self.create_change_control_for_tasks([
+                                                     None])
 
     def test_api_change_control_create_for_none_task_ids_not_list(self):
         """ Verify change_control_create_for_tasks for none task ids list
         """
         # Set client apiversion if it is not already set
-        pprint("test_api_change_control_create_for_none_task_ids_not_list")
+        pprint(
+            "test_api_change_control_create_for_none_task_ids_not_list")
         if self.get_version():
-            pprint('CREATE CHANGE CONTROL FOR NONE TASK IDs...')
+            pprint(
+                'CREATE CHANGE CONTROL FOR NONE TASK IDs...')
             with self.assertRaises(CvpRequestError):
-                self.create_change_control_for_tasks(None)
+                self.create_change_control_for_tasks(
+                    None)
 
     def test_api_change_control_create_for_random_task_id(self):
         """ Verify change_control_create_for_tasks for random task id
         """
-        pprint("test_api_change_control_create_for_random_task_id")
+        pprint(
+            "test_api_change_control_create_for_random_task_id")
         # Set client apiversion if it is not already set
         if self.get_version():
-            pprint('CREATING CHANGE CONTROL FOR RANDOM TASK IDs...')
+            pprint(
+                'CREATING CHANGE CONTROL FOR RANDOM TASK IDs...')
 
             # Create change control for random task
-            chg_ctrl = self.create_change_control_for_tasks(RANDOM_TASK_ID)
+            chg_ctrl = self.create_change_control_for_tasks(
+                RANDOM_TASK_ID)
 
             # Approve the change control
             self.approve_change_control()
 
             # Verify CC
-            response = self.get_cc_status(self.cc_id)
+            response = self.get_cc_status(
+                self.cc_id)
 
             assert response is not None
             assert chg_ctrl['value']['key']['id'] == response['value']['key']['id']
@@ -357,9 +396,11 @@ class TestCvpClientCC(TestCvpClientBase):
     def test_api_change_control_approve_invalid_tasks(self):
         """ Verify test_api_change_control_approve_invalid_tasks
                 """
-        pprint("test_api_change_control_approve_invalid_tasks")
+        pprint(
+            "test_api_change_control_approve_invalid_tasks")
         if self.get_version():
-            pprint('APPROVING CHANGE CONTROL FOR INVALID TASKS...')
+            pprint(
+                'APPROVING CHANGE CONTROL FOR INVALID TASKS...')
             # Approve the change control
             approve_chg_ctrl = self.api.change_control_approve(
                 CHANGE_CONTROL_ID_INVALID, notes=APPROVE_NOTE)
@@ -368,25 +409,31 @@ class TestCvpClientCC(TestCvpClientBase):
     def test_api_change_control_start_invalid_tasks(self):
         """ Verify test_api_change_control_start_invalid_tasks
         """
-        pprint("test_api_change_control_start_invalid_tasks")
+        pprint(
+            "test_api_change_control_start_invalid_tasks")
         if self.get_version():
-            pprint('STARTING CHANGE CONTROL FOR INVALID TASKS...')
+            pprint(
+                'STARTING CHANGE CONTROL FOR INVALID TASKS...')
             # Start the change control
             dut = self.duts[0]
             node = dut['node'] + ":443"
-            err_msg = 'POST: https://' + node + '/api/resources/changecontrol/v1/ChangeControlConfig ' \
-                                                ': Request Error: Bad Request - {"code":9, "message":"not approved"}'
+            err_msg = 'POST: https://' + node + '/api/resources/changecontrol/v1/' \
+                                                'ChangeControlConfig : Request Error: ' \
+                                                'Bad Request - {"code":9, "message":"not approved"}'
             with self.assertRaisesRegex(CvpRequestError, err_msg):
-                self.start_change_control(CHANGE_CONTROL_ID_INVALID)
+                self.start_change_control(
+                    CHANGE_CONTROL_ID_INVALID)
 
     def test_api_change_control_delete_invalid_cc(self):
         """ Verify test_api_change_control_delete_invalid_cc
                  """
-        pprint("test_api_change_control_delete_invalid_cc")
+        pprint(
+            "test_api_change_control_delete_invalid_cc")
         if self.get_version():
             pprint('DELETING CHANGE CONTROL...')
             with self.assertRaises(CvpRequestError):
-                self.delete_change_control(CHANGE_CONTROL_ID_INVALID)
+                self.delete_change_control(
+                    CHANGE_CONTROL_ID_INVALID)
 
     def test_api_change_control_get_one(self):
         """ Verify change_control_get_one
@@ -397,23 +444,27 @@ class TestCvpClientCC(TestCvpClientBase):
             task_id = self.create_task()
 
             # Create CC
-            self.create_change_control_for_tasks(task_id)
+            self.create_change_control_for_tasks(
+                task_id)
 
             pprint("CHANGE CONTROL GET ONE...")
             # chg_ctrl_get_one = self.api.change_control_get_one(self.cc_id)
-            chg_ctrl_get_one = self.change_control_get_one(self.cc_id)
+            chg_ctrl_get_one = self.change_control_get_one(
+                self.cc_id)
             assert chg_ctrl_get_one is not None
             assert chg_ctrl_get_one['value']['key']['id'] == self.cc_id
             assert chg_ctrl_get_one['value']['change']['name'] == self.cc_name
-            assert chg_ctrl_get_one['value']['change']['stages']['values']['stage0']['action']['args']['values'][
-                'TaskID'] == task_id
-
+            assert chg_ctrl_get_one['value']['change']['stages']['values']['stage0'] \
+                ['action']['args']['values']['TaskID'] == task_id
             # verify with actual api output
-            response = self.get_cc_status(self.cc_id)
+            response = self.get_cc_status(
+                self.cc_id)
             assert chg_ctrl_get_one['value']['key']['id'] == response['value']['key']['id']
-            assert chg_ctrl_get_one['value']['change']['name'] == response['value']['change']['name']
-            assert chg_ctrl_get_one['value']['change']['stages']['values']['stage0']['action']['args']['values'][
-                'TaskID'] == response['value']['change']['stages']['values']['stage0']['action']['args']['values']['TaskID']
+            assert chg_ctrl_get_one['value']['change']['name'] == response['value']['change'][
+                'name']
+            assert chg_ctrl_get_one['value']['change']['stages']['values']['stage0']['action'] \
+                ['args']['values']['TaskID'] == response['value']['change']['stages']['values'] \
+                ['stage0']['action']['args']['values']['TaskID']
 
             # Delete CC
             self.delete_change_control(self.cc_id)
@@ -424,50 +475,60 @@ class TestCvpClientCC(TestCvpClientBase):
     def test_api_change_control_get_one_without_ccid(self):
         """ Verify change_control_get_one_without_ccid
          """
-        pprint("test_api_change_control_get_one_without_ccid")
+        pprint(
+            "test_api_change_control_get_one_without_ccid")
         if self.get_version():
-            pprint("CHANGE CONTROL GET ONE WITHOUT CC_ID...")
+            pprint(
+                "CHANGE CONTROL GET ONE WITHOUT CC_ID...")
             err_msg = "change_control_get_one() missing 1 required positional argument: 'cc_id'"
             with self.assertRaises(TypeError) as ex:
                 self.change_control_get_one()
-                self.assertEqual(err_msg, ex.exception)
+                self.assertEqual(
+                    err_msg, ex.exception)
 
     def test_api_change_control_get_one_with_none_ccid(self):
         """ Verify change_control_get_one_with_none_ccid
          """
-        pprint("test_api_change_control_get_one_with_none_ccid")
+        pprint(
+            "test_api_change_control_get_one_with_none_ccid")
         if self.get_version():
-            pprint("CHANGE CONTROL GET WITH NONE CC_ID...")
-            chg_ctrl_get_one = self.change_control_get_one(None)
+            pprint(
+                "CHANGE CONTROL GET WITH NONE CC_ID...")
+            chg_ctrl_get_one = self.change_control_get_one(
+                None)
             assert chg_ctrl_get_one is None
 
     def test_api_change_control_get_one_with_random_ccid(self):
         """ Verify change_control_get_one_with_random_ccid
          """
-        pprint("test_api_change_control_get_one_with_random_ccid")
+        pprint(
+            "test_api_change_control_get_one_with_random_ccid")
         if self.get_version():
-            pprint("CHANGE CONTROL GET WITH RANDOM CC_ID...")
-            chg_ctrl_get_one = self.change_control_get_one(RANDOM_CCID)
+            pprint(
+                "CHANGE CONTROL GET WITH RANDOM CC_ID...")
+            chg_ctrl_get_one = self.change_control_get_one(
+                RANDOM_CCID)
             assert chg_ctrl_get_one is None
 
     def test_api_change_control_get_all(self):
         """ Verify change_control_get_all
          """
         pprint("test_api_change_control_get_all")
-        id = []
+        ids = []
         if self.get_version():
             pprint("CHANGE CONTROL GET ALL...")
             # Create task
             task_id = self.create_task()
 
             # Create CC
-            self.create_change_control_for_tasks(task_id)
+            self.create_change_control_for_tasks(
+                task_id)
 
             chg_ctrl_get_all = self.api.change_control_get_all()
             for i in range(len(chg_ctrl_get_all['data'])):
-                id.append(chg_ctrl_get_all['data'][i]
-                          ['result']['value']['key']['id'])
-            assert self.cc_id in id
+                ids.append(chg_ctrl_get_all['data'][i]
+                           ['result']['value']['key']['id'])
+            assert self.cc_id in ids
 
             # Delete CC
             self.delete_change_control(self.cc_id)
@@ -478,40 +539,47 @@ class TestCvpClientCC(TestCvpClientBase):
     def test_api_change_control_get_all_without_create_chg_ctrl(self):
         """ Verify change_control_get_all_without_create_chg_ctrl
          """
-        pprint("test_api_change_control_get_all_without_create_chg_ctrl")
-        id = []
+        pprint(
+            "test_api_change_control_get_all_without_create_chg_ctrl")
+        ids = []
         if self.get_version():
-            pprint("CHANGE CONTROL GET ALL WITHOUT CHANGE CONTROL CREATION...")
+            pprint(
+                "CHANGE CONTROL GET ALL WITHOUT CHANGE CONTROL CREATION...")
             chg_ctrl_get_all = self.api.change_control_get_all()
             for i in range(len(chg_ctrl_get_all['data'])):
-                id.append(chg_ctrl_get_all['data'][i]
-                          ['result']['value']['key']['id'])
-            assert self.cc_id not in id
+                ids.append(chg_ctrl_get_all['data'][i]
+                           ['result']['value']['key']['id'])
+            assert self.cc_id not in ids
 
     def test_api_change_control_approval_get_all(self):
         """ Verify change_control_approval_get_all
          """
-        pprint("test_api_change_control_approval_get_all")
-        id = []
+        pprint(
+            "test_api_change_control_approval_get_all")
+        ids = []
         if self.get_version():
             # Create task
             task_id = self.create_task()
 
             # Create CC
-            self.create_change_control_for_tasks(task_id)
+            self.create_change_control_for_tasks(
+                task_id)
 
             # Approve CC
             self.approve_change_control()
 
-            pprint("CHANGE CONTROL APPROVAL GET ALL...")
+            pprint(
+                "CHANGE CONTROL APPROVAL GET ALL...")
             chg_ctrl_approval_get_all = self.api.change_control_approval_get_all()
             for i in range(len(chg_ctrl_approval_get_all['data'])):
-                id.append(
+                ids.append(
                     chg_ctrl_approval_get_all['data'][i]['result']['value']['key']['id'])
-                if chg_ctrl_approval_get_all['data'][i]['result']['value']['key']['id'] == self.cc_id:
+                if chg_ctrl_approval_get_all['data'][i]['result']['value']['key']['id'] \
+                        == self.cc_id:
                     check_index = i
-            assert self.cc_id in id
-            assert chg_ctrl_approval_get_all['data'][check_index]['result']['value']['approve']['value'] is True
+            assert self.cc_id in ids
+            assert chg_ctrl_approval_get_all['data'][check_index][
+                'result']['value']['approve']['value'] is True
 
             # Delete CC
             self.delete_change_control(self.cc_id)
@@ -522,21 +590,24 @@ class TestCvpClientCC(TestCvpClientBase):
     def test_api_change_control_approval_get_all_without_approve(self):
         """ Verify change_control_approval_get_all_without_approve
          """
-        pprint("test_api_change_control_approval_get_all_without_approve")
+        pprint(
+            "test_api_change_control_approval_get_all_without_approve")
         # Create task
         task_id = self.create_task()
 
         # Create CC
-        self.create_change_control_for_tasks(task_id)
+        self.create_change_control_for_tasks(
+            task_id)
 
-        id = []
+        ids = []
         if self.get_version():
-            pprint("CHANGE CONTROL APPROVAL GET ALL WITHOUT APPROVE...")
+            pprint(
+                "CHANGE CONTROL APPROVAL GET ALL WITHOUT APPROVE...")
             chg_ctrl_approval_get_all = self.api.change_control_approval_get_all()
             for i in range(len(chg_ctrl_approval_get_all['data'])):
-                id.append(
+                ids.append(
                     chg_ctrl_approval_get_all['data'][i]['result']['value']['key']['id'])
-            assert self.cc_id not in id
+            assert self.cc_id not in ids
 
         # Delete CC
         self.delete_change_control(self.cc_id)
@@ -546,7 +617,8 @@ class TestCvpClientCC(TestCvpClientBase):
     def test_api_change_control_create_with_custom_stages(self):
         """ Verify test_api_change_control_create_with_custom_stages
         """
-        pprint("test_api_change_control_create_with_custom_stages")
+        pprint(
+            "test_api_change_control_create_with_custom_stages")
         devices = self.get_device_list()
         if len(devices) > 1:
             device_id_1 = devices[0]
@@ -555,7 +627,8 @@ class TestCvpClientCC(TestCvpClientBase):
             device_id_1 = devices[0]
             device_id_2 = devices[0]
 
-        template_id = [self.create_snapshot(), self.create_snapshot()]
+        template_id = [
+            self.create_snapshot(), self.create_snapshot()]
         time.sleep(1)
         custom_cc = {'key': {
             'id': self.cc_id
@@ -581,38 +654,41 @@ class TestCvpClientCC(TestCvpClientBase):
                                                  }
                                         },
                                   '1a': {'action': {'args': {'values': {'DeviceID': device_id_1,
-                                                                        'TemplateID': template_id[0]}},
+                                                                    'TemplateID': template_id[0]}},
                                                     'name': 'snapshot',
                                                     'timeout': 3000},
                                          'name': 'stage 1a'},
                                   '1b': {'action': {'args': {'values': {'DeviceID': device_id_1,
-                                                                        'TemplateID': template_id[0]}},
+                                                                    'TemplateID': template_id[0]}},
                                                     'name': 'snapshot',
                                                     'timeout': 3000},
                                          'name': 'stage 1b'},
                                   '2a': {'action': {'args': {'values': {'DeviceID': device_id_1,
-                                                                        'TemplateID': template_id[0]}},
+                                                                    'TemplateID': template_id[0]}},
                                                     'name': 'snapshot',
                                                     'timeout': 3000},
                                          'name': 'stage 2a'},
                                   '2b': {'action': {'args': {'values': {'DeviceID': device_id_2,
-                                                                        'TemplateID': template_id[1]}},
+                                                                    'TemplateID': template_id[1]}},
                                                     'name': 'snapshot',
                                                     'timeout': 3000},
                                          'name': 'stage 2a'},
                                   '3': {'action': {'args': {'values': {'DeviceID': device_id_2,
-                                                                       'TemplateID': template_id[1]}},
+                                                                    'TemplateID': template_id[1]}},
                                                    'name': 'snapshot',
                                                    'timeout': 3000},
                                         'name': 'stage 3'},
                                   }}}}
 
         if self.get_version():
-            pprint("CHANGE CONTROL CREATE WITH CUSTOM STAGES...")
+            pprint(
+                "CHANGE CONTROL CREATE WITH CUSTOM STAGES...")
             chg_ctrl_create_with_custom_stages = self.api.change_control_create_with_custom_stages(
                 custom_cc)
-            assert chg_ctrl_create_with_custom_stages['value']['key']['id'] == self.cc_id
-            assert chg_ctrl_create_with_custom_stages['value']['change']['name'] == self.cc_name
+            assert chg_ctrl_create_with_custom_stages[
+                'value']['key']['id'] == self.cc_id
+            assert chg_ctrl_create_with_custom_stages[
+                'value']['change']['name'] == self.cc_name
             assert chg_ctrl_create_with_custom_stages['value']['change']['stages'][
                 'values']['1a']['action']['args']['values']['DeviceID'] == device_id_1
             assert chg_ctrl_create_with_custom_stages['value']['change']['stages'][
@@ -634,56 +710,74 @@ class TestCvpClientCC(TestCvpClientBase):
             assert chg_ctrl_create_with_custom_stages['value']['change']['stages'][
                 'values']['3']['action']['args']['values']['TemplateID'] == template_id[1]
 
-            response = self.get_cc_status(self.cc_id)
+            response = self.get_cc_status(
+                self.cc_id)
 
-            assert chg_ctrl_create_with_custom_stages['value']['key']['id'] == response['value']['key']['id']
+            assert chg_ctrl_create_with_custom_stages['value'][
+                'key']['id'] == response['value']['key']['id']
             assert chg_ctrl_create_with_custom_stages['value'][
                 'change']['name'] == response['value']['change']['name']
-            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['1a']['action']['args']['values'][
-                'DeviceID'] == response['value']['change']['stages']['values']['1a']['action']['args']['values']['DeviceID']
-            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['1a']['action']['args']['values'][
-                'TemplateID'] == response['value']['change']['stages']['values']['1a']['action']['args']['values']['TemplateID']
-            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['1b']['action']['args']['values'][
-                'DeviceID'] == response['value']['change']['stages']['values']['1b']['action']['args']['values']['DeviceID']
-            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['1b']['action']['args']['values'][
-                'TemplateID'] == response['value']['change']['stages']['values']['1b']['action']['args']['values']['TemplateID']
-            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['2a']['action']['args']['values'][
-                'DeviceID'] == response['value']['change']['stages']['values']['2a']['action']['args']['values']['DeviceID']
-            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['2a']['action']['args']['values'][
-                'TemplateID'] == response['value']['change']['stages']['values']['2a']['action']['args']['values']['TemplateID']
-            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['2b']['action']['args']['values'][
-                'DeviceID'] == response['value']['change']['stages']['values']['2b']['action']['args']['values']['DeviceID']
-            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['2b']['action']['args']['values'][
-                'TemplateID'] == response['value']['change']['stages']['values']['2b']['action']['args']['values']['TemplateID']
-            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['3']['action']['args']['values'][
-                'DeviceID'] == response['value']['change']['stages']['values']['3']['action']['args']['values']['DeviceID']
-            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values']['3']['action']['args']['values'][
-                'TemplateID'] == response['value']['change']['stages']['values']['3']['action']['args']['values']['TemplateID']
+            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values'][
+                '1a']['action']['args']['values']['DeviceID'] == response['value']['change'][
+                'stages']['values']['1a']['action']['args']['values']['DeviceID']
+            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values'][
+                '1a']['action']['args']['values']['TemplateID'] == response['value']['change'][
+                'stages']['values']['1a']['action']['args']['values']['TemplateID']
+            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values'][
+                '1b']['action']['args']['values']['DeviceID'] == response['value']['change'][
+                'stages']['values']['1b']['action']['args']['values']['DeviceID']
+            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values'][
+                '1b']['action']['args']['values']['TemplateID'] == response['value']['change'][
+                'stages']['values']['1b']['action']['args']['values']['TemplateID']
+            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values'][
+                '2a']['action']['args']['values']['DeviceID'] == response['value']['change'][
+                'stages']['values']['2a']['action']['args']['values']['DeviceID']
+            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values'][
+                '2a']['action']['args']['values']['TemplateID'] == response['value']['change'][
+                'stages']['values']['2a']['action']['args']['values']['TemplateID']
+            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values'][
+                '2b']['action']['args']['values']['DeviceID'] == response['value']['change'][
+                'stages']['values']['2b']['action']['args']['values']['DeviceID']
+            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values'][
+                '2b']['action']['args']['values']['TemplateID'] == response['value']['change'][
+                'stages']['values']['2b']['action']['args']['values']['TemplateID']
+            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values'][
+                '3']['action']['args']['values']['DeviceID'] == response['value']['change'][
+                'stages']['values']['3']['action']['args']['values']['DeviceID']
+            assert chg_ctrl_create_with_custom_stages['value']['change']['stages']['values'][
+                '3']['action']['args']['values']['TemplateID'] == response['value']['change'][
+                'stages']['values']['3']['action']['args']['values']['TemplateID']
             self.approve_change_control()
             self.start_change_control(self.cc_id)
             time.sleep(1)
             self.stop_change_control()
             self.delete_change_control(self.cc_id)
-            delete_snap = self.delete_snapshot(template_id)
+            delete_snap = self.delete_snapshot(
+                template_id)
             assert delete_snap['result'] == 'Success'
 
     def test_api_change_control_create_with_custom_stages_without_custom_cc(self):
         """ Verify test_api_change_control_create_with_custom_stages
         """
-        pprint("test_api_change_control_create_with_custom_stages_without_custom_cc")
+        pprint(
+            "test_api_change_control_create_with_custom_stages_without_custom_cc")
         if self.get_version():
-            pprint("CHANGE CONTROL CREATE WITH CUSTOM STAGES WITHOUT CUSTOM CC...")
+            pprint(
+                "CHANGE CONTROL CREATE WITH CUSTOM STAGES WITHOUT CUSTOM CC...")
             with self.assertRaises(CvpRequestError):
                 self.api.change_control_create_with_custom_stages()
 
     def test_api_change_control_create_with_custom_stages_with_none_custom_cc(self):
         """ Verify test_api_change_control_create_with_custom_stages
         """
-        pprint("test_api_change_control_create_with_custom_stages_with_none_custom_cc")
+        pprint(
+            "test_api_change_control_create_with_custom_stages_with_none_custom_cc")
         if self.get_version():
-            pprint("CHANGE CONTROL CREATE WITH CUSTOM STAGES WITH NONE CUSTOM CC...")
+            pprint(
+                "CHANGE CONTROL CREATE WITH CUSTOM STAGES WITH NONE CUSTOM CC...")
             with self.assertRaises(CvpRequestError):
-                self.api.change_control_create_with_custom_stages(None)
+                self.api.change_control_create_with_custom_stages(
+                    None)
 
 
 if __name__ == '__main__':
