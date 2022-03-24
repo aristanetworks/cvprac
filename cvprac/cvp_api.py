@@ -3667,7 +3667,7 @@ class CvpApi(object):
 
     def change_control_schedule(self, cc_id, schedule_time, notes=""):
         ''' Schedule a Change Control using Resource APIs.
-            Supported versions: CVP 2021.3.0 or newer and CVaaS.
+            Supported versions: CVP 2022.1.0 or newer and CVaaS.
 
             Args:
                 cc_id (string): The ID for the new change control.
@@ -3690,15 +3690,15 @@ class CvpApi(object):
                 }
         }
         cc_url = '/api/resources/changecontrol/v1/ChangeControlConfig'
-        # For on-prem check the version as it is only supported from 2021.2.0+
+        # For on-prem check the version as it is only supported from 2022.1.0+
         if not self.clnt.is_cvaas:
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
-            if self.clnt.apiversion < 7.0:
+            if self.clnt.apiversion < 8.0:
                 self.log.warning(
-                     'Change Control Resource APIs are supported from 2021.2.0 or newer.')
+                     'Change Control Scheduling via Resource APIs are supported from 2022.1.0 or newer.')
                 return None
-        self.log.debug('v7 ' + str(cc_url) + ' ' + str(payload))
+        self.log.debug('v8 ' + str(cc_url) + ' ' + str(payload))
         return self.clnt.post(cc_url, data=payload, timeout=self.request_timeout)
 
     def device_decommissioning(self, device_id, request_id):
