@@ -3681,13 +3681,13 @@ class CvpApi(object):
                      "time":"2021-12-23T02:06:18.739965204Z"}
         '''
         payload = {
-                "key": {
-                    "id": cc_id
-                },
-                "schedule": {
-                    "value": schedule_time,
-                    "notes": notes
-                }
+            "key": {
+                "id": cc_id
+            },
+            "schedule": {
+                "value": schedule_time,
+                "notes": notes
+            }
         }
         cc_url = '/api/resources/changecontrol/v1/ChangeControlConfig'
         # For on-prem check the version as it is only supported from 2022.1.0+
@@ -3696,7 +3696,7 @@ class CvpApi(object):
                 self.get_cvp_info()
             if self.clnt.apiversion < 8.0:
                 self.log.warning(
-                     'Change Control Scheduling via Resource APIs are supported from 2022.1.0 or newer.')
+                    'Change Control Scheduling via Resource APIs are supported from 2022.1.0 or newer.')
                 return None
         self.log.debug('v8 ' + str(cc_url) + ' ' + str(payload))
         return self.clnt.post(cc_url, data=payload, timeout=self.request_timeout)
@@ -3714,23 +3714,28 @@ class CvpApi(object):
                      'deviceId': 'BAD032986065E8DC14CBB6472EC314A6'},
                      'time': '2022-02-12T02:58:30.765459650Z'}
         '''
-        payload = {
-            "key": {
-                "request_id": request_id
-            },
-            "device_id": device_id
-        }
-        url = '/api/resources/inventory/v1/DeviceDecommissioningConfig'
-        # For on-prem check the version as it is only supported from 2021.3.0+
-        if not self.clnt.is_cvaas:
-            if self.clnt.apiversion is None:
-                self.get_cvp_info()
-            if self.clnt.apiversion < 7.0:
-                self.log.warning(
-                    'Decommissioning via Resource APIs are supported from 2021.3.0 or newer.')
-                return None
-        self.log.debug('v7 ' + str(url) + ' ' + str(payload))
-        return self.clnt.post(url, data=payload, timeout=self.request_timeout)
+        device_info = self.get_device_by_serial(device_id)
+        if device_info is not None and 'serialNumber' in device_info:
+            payload = {
+                "key": {
+                    "request_id": request_id
+                },
+                "device_id": device_id
+            }
+            url = '/api/resources/inventory/v1/DeviceDecommissioningConfig'
+            # For on-prem check the version as it is only supported from 2021.3.0+
+            if not self.clnt.is_cvaas:
+                if self.clnt.apiversion is None:
+                    self.get_cvp_info()
+                if self.clnt.apiversion < 7.0:
+                    self.log.warning(
+                        'Decommissioning via Resource APIs are supported from 2021.3.0 or newer.')
+                    return None
+            self.log.debug('v7 ' + str(url) + ' ' + str(payload))
+            return self.clnt.post(url, data=payload, timeout=self.request_timeout)
+        else:
+            self.log.warning('Device with %s serial number does not exist' % device_id)
+            return None
 
     def device_decommissioning_status_get_one(self, request_id):
         ''' Get the decommission status of a device using Resource APIs.
