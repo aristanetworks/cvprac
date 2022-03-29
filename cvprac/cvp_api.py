@@ -3734,7 +3734,7 @@ class CvpApi(object):
             self.log.debug('v7 ' + str(url) + ' ' + str(payload))
             return self.clnt.post(url, data=payload, timeout=self.request_timeout)
         else:
-            self.log.warning('Device with %s serial number does not exist' % device_id)
+            self.log.warning('Device with %s serial number does not exist (or is not registered) to decommission' % device_id)
             return None
 
     def device_decommissioning_status_get_one(self, request_id):
