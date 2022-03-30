@@ -3709,7 +3709,7 @@ class CvpApi(object):
                 request_id (string): Key identifies the request to decommission the device.
                     Recommended to generate uuid with str(uuid.uuid4()).
             Returns:
-                response (dict): A dict that contains...
+                response (dict): Returns None if the device is not found else returns A dict that contains...
                 Ex: {'value': {'key': {'requestId': '4a4ba5a2-9886-4cd5-84d6-bdaf85a9f091'},
                      'deviceId': 'BAD032986065E8DC14CBB6472EC314A6'},
                      'time': '2022-02-12T02:58:30.765459650Z'}
