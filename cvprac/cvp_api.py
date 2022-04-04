@@ -367,8 +367,8 @@ class CvpApi(object):
         configlets = self.clnt.get('/configlet/getConfiglets.do?'
                                    'startIndex=%d&endIndex=%d' % (start, end),
                                    timeout=self.request_timeout)
-        if self.clnt.apiversion == 1.0:
-            self.log.debug('v1 Inventory API Call')
+        if self.clnt.apiversion == 1.0 or self.clnt.apiversion >= 4.0:
+            self.log.debug('v1/v4+ Inventory API Call')
             return configlets
         else:
             self.log.debug('v2 Inventory API Call')
