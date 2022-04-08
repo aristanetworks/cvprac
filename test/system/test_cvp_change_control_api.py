@@ -11,12 +11,12 @@ urllib3.disable_warnings(
     urllib3.exceptions.InsecureRequestWarning)
 
 
-CHANGE_CONTROL_ID_INVALID = '19175756-a8c8-4b'
-RANDOM_TASK_ID = '3333'
-RANDOM_CCID = '23456dvbjjhjnm'
-APPROVE_NOTE = "Approving CC via cvprac"
-START_NOTE = "Start the CC via cvprac"
-STOP_NOTE = "Stop the CC via cvprac"
+CHANGE_CONTROL_ID_INVALID = 'InvalidCVPRACSystestCCID'
+RANDOM_TASK_ID = 'InvalidCVPRACSystestTASKID'
+RANDOM_CCID = 'InvalidCVPRACSystestCCID'
+APPROVE_NOTE = "Approving CC via cvprac cc system tests"
+START_NOTE = "Start the CC via cvprac cc system tests"
+STOP_NOTE = "Stop the CC via cvprac cc system tests"
 TASK_ID = None
 
 
