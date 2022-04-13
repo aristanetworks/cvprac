@@ -463,9 +463,9 @@ class TestCvpClient(TestCvpClientBase):
         }
         # Handle unicode type for Python 2 vs Python 3
         if sys.version_info.major < 3:
-            exp_data['name'] = str
+            exp_data[u'name'] = (unicode, str)
         else:
-            exp_data['name'] = str
+            exp_data[u'name'] = str
         for key in list(exp_data.keys()):
             self.assertIn(key, result['data'])
             self.assertIsInstance(result['data'][key], exp_data[key])

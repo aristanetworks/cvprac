@@ -12,8 +12,8 @@ urllib3.disable_warnings(
 
 
 CHANGE_CONTROL_ID_INVALID = 'InvalidCVPRACSystestCCID'
-RANDOM_TASK_ID = 'InvalidCVPRACSystestTASKID'
-RANDOM_CCID = 'InvalidCVPRACSystestCCID'
+INVALID_TASK_ID = 'InvalidCVPRACSystestTASKID'
+INVALID_CCID = 'InvalidCVPRACSystestCCID'
 APPROVE_NOTE = "Approving CC via cvprac cc system tests"
 START_NOTE = "Start the CC via cvprac cc system tests"
 STOP_NOTE = "Stop the CC via cvprac cc system tests"
@@ -112,7 +112,7 @@ class TestCvpClientCC(TestCvpClientBase):
         self.task_id = task_id
         return task_id
 
-    def create_change_control_for_tasks(self, task_id):
+    def create_change_control_for_task(self, task_id):
         """ Create change control for tasks
         """
         pprint('CREATING CHANGE CONTROL...')
@@ -187,7 +187,7 @@ class TestCvpClientCC(TestCvpClientBase):
         self.clnt.post(
             '/task/cancelTask.do', data=data)
 
-    def test_api_change_control_create_for_tasks(self):
+    def test_api_change_control_create_for_task(self):
         """ Verify change_control_create_for_tasks
         """
         pprint(
@@ -197,7 +197,7 @@ class TestCvpClientCC(TestCvpClientBase):
             task_id = self.create_task()
 
             # Create change control;
-            chg_ctrl = self.create_change_control_for_tasks(
+            chg_ctrl = self.create_change_control_for_task(
                 task_id)
             time.sleep(1)
 
@@ -268,7 +268,7 @@ class TestCvpClientCC(TestCvpClientBase):
             task_id = self.create_task()
 
             # Create change control
-            self.create_change_control_for_tasks(
+            self.create_change_control_for_task(
                 task_id)
 
             # Approve change control
@@ -311,7 +311,7 @@ class TestCvpClientCC(TestCvpClientBase):
             task_id = self.create_task()
 
             # Create CC
-            self.create_change_control_for_tasks(
+            self.create_change_control_for_task(
                 task_id)
 
             pprint(
@@ -336,7 +336,7 @@ class TestCvpClientCC(TestCvpClientBase):
             pprint(
                 'RUN TEST FOR V3 CHANGE CONTROL APIs')
             with self.assertRaises(CvpRequestError):
-                self.create_change_control_for_tasks(
+                self.create_change_control_for_task(
                     [])
 
     def test_api_change_control_create_for_none_task_id_in_list(self):
@@ -349,7 +349,7 @@ class TestCvpClientCC(TestCvpClientBase):
             pprint(
                 'CREATE CHANGE CONTROL FOR LIST OF NONE TASK IDs...')
             with self.assertRaises(CvpRequestError):
-                self.create_change_control_for_tasks([
+                self.create_change_control_for_task([
                                                      None])
 
     def test_api_change_control_create_for_none_task_ids_not_list(self):
@@ -362,22 +362,22 @@ class TestCvpClientCC(TestCvpClientBase):
             pprint(
                 'CREATE CHANGE CONTROL FOR NONE TASK IDs...')
             with self.assertRaises(CvpRequestError):
-                self.create_change_control_for_tasks(
+                self.create_change_control_for_task(
                     None)
 
-    def test_api_change_control_create_for_random_task_id(self):
-        """ Verify change_control_create_for_tasks for random task id
+    def test_api_change_control_create_for_invalid_task_id(self):
+        """ Verify change_control_create_for_tasks for invalid task id
         """
         pprint(
-            "test_api_change_control_create_for_random_task_id")
+            "test_api_change_control_create_for_invalid_task_id")
         # Set client apiversion if it is not already set
         if self.get_version():
             pprint(
-                'CREATING CHANGE CONTROL FOR RANDOM TASK IDs...')
+                'CREATING CHANGE CONTROL FOR INVALID TASK IDs...')
 
             # Create change control for random task
-            chg_ctrl = self.create_change_control_for_tasks(
-                RANDOM_TASK_ID)
+            chg_ctrl = self.create_change_control_for_task(
+                INVALID_TASK_ID)
 
             # Approve the change control
             self.approve_change_control()
@@ -444,7 +444,7 @@ class TestCvpClientCC(TestCvpClientBase):
             task_id = self.create_task()
 
             # Create CC
-            self.create_change_control_for_tasks(
+            self.create_change_control_for_task(
                 task_id)
 
             pprint("CHANGE CONTROL GET ONE...")
@@ -498,16 +498,16 @@ class TestCvpClientCC(TestCvpClientBase):
                 None)
             assert chg_ctrl_get_one is None
 
-    def test_api_change_control_get_one_with_random_ccid(self):
-        """ Verify change_control_get_one_with_random_ccid
+    def test_api_change_control_get_one_with_invalid_ccid(self):
+        """ Verify change_control_get_one_with_invalid_ccid
          """
         pprint(
-            "test_api_change_control_get_one_with_random_ccid")
+            "test_api_change_control_get_one_with_invalid_ccid")
         if self.get_version():
             pprint(
-                "CHANGE CONTROL GET WITH RANDOM CC_ID...")
+                "CHANGE CONTROL GET WITH INVALID CC_ID...")
             chg_ctrl_get_one = self.change_control_get_one(
-                RANDOM_CCID)
+                INVALID_CCID)
             assert chg_ctrl_get_one is None
 
     def test_api_change_control_get_all(self):
@@ -521,7 +521,7 @@ class TestCvpClientCC(TestCvpClientBase):
             task_id = self.create_task()
 
             # Create CC
-            self.create_change_control_for_tasks(
+            self.create_change_control_for_task(
                 task_id)
 
             chg_ctrl_get_all = self.api.change_control_get_all()
@@ -562,7 +562,7 @@ class TestCvpClientCC(TestCvpClientBase):
             task_id = self.create_task()
 
             # Create CC
-            self.create_change_control_for_tasks(
+            self.create_change_control_for_task(
                 task_id)
 
             # Approve CC
@@ -596,7 +596,7 @@ class TestCvpClientCC(TestCvpClientBase):
         task_id = self.create_task()
 
         # Create CC
-        self.create_change_control_for_tasks(
+        self.create_change_control_for_task(
             task_id)
 
         ids = []
