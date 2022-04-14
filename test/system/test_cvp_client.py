@@ -45,13 +45,12 @@ import os
 import sys
 import unittest
 from requests.exceptions import Timeout
-
+sys.path.append(os.path.join(os.path.dirname(__file__), '../lib'))
+from systestlib import DutSystemTest
 from cvprac.cvp_client import CvpClient
 from cvprac.cvp_client_errors import CvpApiError, CvpLoginError, \
     CvpRequestError, CvpSessionLogOutError
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '../lib'))
-from systestlib import DutSystemTest
 
 
 class TestCvpClient(DutSystemTest):
@@ -92,7 +91,7 @@ class TestCvpClient(DutSystemTest):
                 'network-admin'
             ]
         }
-        result = clnt.post("/user/updateUser.do?userId=%s" % username, data)
+        result = clnt.post(f"/user/updateUser.do?userId={username}", data)
         self.assertEqual('success', result['data'])
 
     def test_clnt_init(self):
@@ -327,7 +326,7 @@ class TestCvpClient(DutSystemTest):
         try:
             # Try a get request and expect a CvpSessionLogOutError
             result = self.clnt.get('/cvpInfo/getCvpInfo.do')
-        except (CvpSessionLogOutError, CvpApiError) as error:
+        except (CvpSessionLogOutError, CvpApiError):
             pass
         except Exception as error:
             # Unexpected error, restore password and re-raise the error.
@@ -433,7 +432,7 @@ class TestCvpClient(DutSystemTest):
         try:
             # Try a post request and expect a CvpSessionLogOutError
             result = self.clnt.post('/login/logout.do', None)
-        except (CvpSessionLogOutError, CvpApiError) as error:
+        except (CvpSessionLogOutError, CvpApiError):
             pass
         except Exception as error:
             # Unexpected error, restore password and re-raise the error.

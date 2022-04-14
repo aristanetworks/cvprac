@@ -49,155 +49,25 @@
          Failure response received from the netElement : ' Unauthorized User '
 '''
 import os
-import re
 import shutil
 import sys
 import time
 import unittest
 import uuid
 from pprint import pprint
-from requests.exceptions import Timeout
-
 import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-from cvprac.cvp_client import CvpClient
+from test_cvp_base import TestCvpClientBase
+from requests.exceptions import Timeout
 from cvprac.cvp_client_errors import CvpApiError
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '../lib'))
-from systestlib import DutSystemTest
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
-class TestCvpClient(DutSystemTest):
+class TestCvpClient(TestCvpClientBase):
     ''' Test cases for the CvpClient class.
     '''
     # pylint: disable=too-many-public-methods
     # pylint: disable=invalid-name
-    @classmethod
-    def setUpClass(cls):
-        ''' Instantiate the CvpClient class and connect to the CVP node.
-            Log messages to the /tmp/TestCvpClient.log
-        '''
-        super(TestCvpClient, cls).setUpClass()
-        cls.clnt = CvpClient(filename='/tmp/TestCvpClient.log')
-        assert cls.clnt is not None
-        assert cls.clnt.last_used_node is None
-        dut = cls.duts[0]
-        cert = dut.get("cert", False)
-        username = dut.get("username", "")
-        password = dut.get("password", "")
-        api_token = dut.get("api_token", None)
-        is_cvaas = dut.get("is_cvaas", False)
-
-        cls.clnt.connect([dut['node']], username, password, 10,
-                         cert=cert, is_cvaas=is_cvaas, api_token=api_token)
-
-        cls.api = cls.clnt.api
-        assert cls.api is not None
-
-        # Verify that there is at least one device in the inventory
-        err_msg = 'CVP node must contain at least one device'
-        result = cls.api.get_inventory()
-        assert result is not None
-        if len(result) < 1:
-            raise AssertionError(err_msg)
-        else:
-            assert len(result) >= 1
-        cls.device = result[0]
-
-        # Get the container for the device on the list and
-        # use that container as the parent container.
-        result = cls.api.search_topology(cls.device['fqdn'])
-        assert result is not None
-        dev_container = result['netElementContainerList']
-        assert len(dev_container) >= 1
-        info = dev_container[0]
-        result = cls.api.search_topology(info['containerName'])
-        assert result is not None
-        cls.container = result['containerList'][0]
-
-        # Get the configlets assigned to the device.  There must be at least 1.
-        err_msg = 'CVP node device must have at least one configlet assigned'
-        key = info['netElementKey']
-        result = cls.api.get_configlets_by_device_id(key)
-        if len(result) < 1:
-            raise AssertionError(err_msg)
-        cls.dev_configlets = result
-
-    @classmethod
-    def tearDownClass(cls):
-        ''' Destroy the CvpClient class.
-        '''
-        super(TestCvpClient, cls).tearDownClass()
-        cls.api = None
-        cls.clnt = None
-
-    def _get_next_task_id(self):
-        ''' Return the next task id.
-
-            Returns:
-                task_id (str): Task ID
-        '''
-        # Get all the tasks and the task id of the next task created is
-        # the length + 1.
-        results = self.api.get_tasks()
-        self.assertIsNotNone(results)
-        return str(int(results['total']) + 1)
-
-    def _create_task(self):
-        ''' Create a task by making a simple change to a configlet assigned
-            to the device.
-
-            Returns:
-                (task_id, config)
-                task_id (str): Task ID
-                config (str): Previous configlets contents
-        '''
-        task_id = self._get_next_task_id()
-
-        # Update the lldp time in the first configlet in the list.
-        configlet = None
-        for conf in self.dev_configlets:
-            if conf['netElementCount'] == 1:
-                configlet = conf
-                break
-        if configlet is None:
-            configlet = self.dev_configlets[0]
-
-        config = configlet['config']
-        org_config = config
-
-        match = re.match(r'lldp timer (\d+)', config)
-        if match is not None:
-            value = int(match.group(1)) + 1
-            repl = 'lldp timer %d' % value
-            config = re.sub(match.group(0), repl, config)
-        else:
-            value = 13
-            config = ('lldp timer %d\n' % value) + config
-        configlet['config'] = config
-
-        # Updating the configlet will cause a task to be created to apply
-        # the change to the device.
-        self.api.update_configlet(config, configlet['key'], configlet['name'])
-
-        # Wait 30 seconds for task to get created
-        cnt = 30
-        if self.clnt.apiversion is None:
-            self.api.get_cvp_info()
-        if self.clnt.apiversion >= 2.0:
-            # Increase timeout by 30 sec for CVP 2018.2 and beyond
-            cnt += 30
-        while cnt > 0:
-            time.sleep(1)
-            result = self.api.get_task_by_id(task_id)
-            if result is not None:
-                break
-            cnt -= 1
-        err_msg = 'Timeout waiting for task id %s to be created' % task_id
-        self.assertGreater(cnt, 0, msg=err_msg)
-
-        return task_id, org_config
 
     def test_api_get_cvp_info(self):
         ''' Verify get_cvp_info and verify setting of client last_used_node
@@ -352,11 +222,10 @@ class TestCvpClient(DutSystemTest):
                 self.assertIn('complianceIndication', result)
                 self.assertEqual(result['complianceIndication'], 'NONE')
                 break
-            else:
-                # Wait for CVP to get back into compliance.
-                # Starting around CVP 2020 it takes a bit for CVP to get
-                # back into compliance after previous tests.
-                time.sleep(10)
+            # Wait for CVP to get back into compliance.
+            # Starting around CVP 2020 it takes a bit for CVP to get
+            # back into compliance after previous tests.
+            time.sleep(10)
         if self.clnt.apiversion >= 4.0:
             self.api.request_timeout = orig_timeout
 
@@ -380,7 +249,7 @@ class TestCvpClient(DutSystemTest):
             if actual_task_id == task_id:
                 found = True
                 break
-        err_msg = 'Task id: %s not in list of PENDING tasks' % task_id
+        err_msg = f'Task id: {task_id} not in list of PENDING tasks'
         self.assertTrue(found, msg=err_msg)
 
         # Test add_note_to_task
@@ -536,7 +405,10 @@ class TestCvpClient(DutSystemTest):
 
         # Make sure the device configlets are all returned by the
         # get_configlets call
-        for cfglt_name in dev_cfglts:
+
+        for cfglt_name in list(dev_cfglts.keys()):
+            del dev_cfglts[cfglt_name]['dateTimeInLongFormat']
+            del rslt_cfglts[cfglt_name]['dateTimeInLongFormat']
             self.assertIn(cfglt_name, rslt_cfglts)
             self.assertDictEqual(dev_cfglts[cfglt_name],
                                  rslt_cfglts[cfglt_name])
@@ -585,16 +457,16 @@ class TestCvpClient(DutSystemTest):
         # Verify the following keys and types are
         # returned by the request
         exp_data = {
-            u'isAssigned': bool,
-            u'formList': list,
-            u'main_script': dict,
+            'isAssigned': bool,
+            'formList': list,
+            'main_script': dict,
         }
         # Handle unicode type for Python 2 vs Python 3
         if sys.version_info.major < 3:
             exp_data[u'name'] = (unicode, str)
         else:
             exp_data[u'name'] = str
-        for key in exp_data:
+        for key in list(exp_data.keys()):
             self.assertIn(key, result['data'])
             self.assertIsInstance(result['data'][key], exp_data[key])
 
@@ -624,7 +496,7 @@ class TestCvpClient(DutSystemTest):
             'total': int,
             'configletMapper': dict,
         }
-        for key in exp_data:
+        for key in list(exp_data.keys()):
             self.assertIn(key, result)
             self.assertIsInstance(result[key], exp_data[key])
 
@@ -639,7 +511,7 @@ class TestCvpClient(DutSystemTest):
             'total': int,
             'configletMapper': dict,
         }
-        for key in exp_data:
+        for key in list(exp_data.keys()):
             self.assertIn(key, result)
             self.assertIsInstance(result[key], exp_data[key])
 
@@ -655,7 +527,7 @@ class TestCvpClient(DutSystemTest):
                 'data': list,
                 'total': int,
             }
-            for key in exp_data:
+            for key in list(exp_data.keys()):
                 self.assertIn(key, result)
                 self.assertIsInstance(result[key], exp_data[key])
 
@@ -671,7 +543,7 @@ class TestCvpClient(DutSystemTest):
                 'data': list,
                 'total': int,
             }
-            for key in exp_data:
+            for key in list(exp_data.keys()):
                 self.assertIn(key, result)
                 self.assertIsInstance(result[key], exp_data[key])
 
@@ -708,7 +580,7 @@ class TestCvpClient(DutSystemTest):
         config_lines = result.splitlines()
         for line in config_lines:
             if 'hostname' in line:
-                self.assertEqual(line, 'hostname %s' % self.device['fqdn'])
+                self.assertEqual(line, f"hostname {self.device['fqdn']}")
 
     def test_api_get_device_by_name_bad(self):
         ''' Verify get_device_by_name with bad fqdn
@@ -853,7 +725,7 @@ class TestCvpClient(DutSystemTest):
     def test_api_update_reconcile_configlet(self):
         ''' Verify update_reconcile_configlet
         '''
-        rec_configlet_name = 'RECONCILE_{}'.format(self.device['ipAddress'])
+        rec_configlet_name = f"RECONCILE_{self.device['ipAddress']}"
         # Verify this reconcile configlet doesn't already exist
         with self.assertRaises(CvpApiError):
             self.api.get_configlet_by_name(rec_configlet_name)
@@ -926,7 +798,7 @@ class TestCvpClient(DutSystemTest):
     def test_api_add_note_to_configlet(self):
         ''' Verify add_note_to_configlet
         '''
-        name = 'test_configlet_with_note_%d' % time.time()
+        name = f'test_configlet_with_note_{time.time()}'
         config = 'lldp timer 9'
 
         # Add the configlet
@@ -960,12 +832,13 @@ class TestCvpClient(DutSystemTest):
             time.sleep(1)
             result = self.api.get_task_by_id(task_id)
             status = result['workOrderUserDefinedStatus']
-            if status == 'Completed' or status == 'Failed':
+            if status in ['Completed', 'Failed']:
+                # if status == 'Completed' or status == 'Failed':
                 break
             cnt -= 1
-        err_msg = 'Execution for task id %s failed' % task_id
+        err_msg = f'Execution for task id {task_id} failed'
         self.assertNotEqual(status, 'Failed', msg=err_msg)
-        err_msg = 'Timeout waiting for task id %s to execute' % task_id
+        err_msg = f'Timeout waiting for task id {task_id} to execute'
         self.assertGreater(cnt, 0, msg=err_msg)
 
     def _execute_long_running_task(self, task_id):
@@ -982,13 +855,13 @@ class TestCvpClient(DutSystemTest):
             time.sleep(10)
             result = self.api.get_task_by_id(task_id)
             status = result['workOrderUserDefinedStatus']
-            if status == 'Completed' or status == 'Failed':
+            if status in ['Completed', 'Failed']:
+                # if status == 'Completed' or status == 'Failed':
                 break
             cnt -= 1
-        err_msg = 'Execution for task id %s failed' % task_id
+        err_msg = f'Execution for task id {task_id} failed'
         self.assertNotEqual(status, 'Failed', msg=err_msg)
-        err_msg = ('Timeout waiting for long running task id %s to execute'
-                   % task_id)
+        err_msg = f'Timeout waiting for long running task id {task_id} to execute'
         self.assertGreater(cnt, 0, msg=err_msg)
 
     def test_api_execute_task(self):
@@ -1144,13 +1017,11 @@ class TestCvpClient(DutSystemTest):
                                       parent['name'], parent['key'])
         except CvpApiError as error:
             if 'Only empty container can be deleted' in error.msg:
-                pprint('CVP Version {} raises error when attempting to'
-                       ' delete container with'
-                       ' children'.format(self.clnt.apiversion))
+                pprint(f'CVP Version {self.clnt.apiversion} raises error when attempting to'
+                       ' delete container with children')
             elif 'Container was not deleted. Check for children' in error.msg:
-                pprint('CVP Version {} does not raise error when attempting to'
-                       ' delete container with'
-                       ' children'.format(self.clnt.apiversion))
+                pprint(f'CVP Version {self.clnt.apiversion} does not raise error when attempting to'
+                       ' delete container with children')
 
         # Delete child container first
         resp = self.api.delete_container(new_child_container['name'],
@@ -1483,9 +1354,9 @@ class TestCvpClient(DutSystemTest):
                 'configletNamesList': [test_configlet_name],
                 'ignoreConfigletList': [],
                 'ignoreConfigletNamesList': [],
-                'configletBuilderList' : [],
-                'configletBuilderNamesList' : [],
-                'ignoreConfigletBuilderList' : [],
+                'configletBuilderList': [],
+                'configletBuilderNamesList': [],
+                'ignoreConfigletBuilderList': [],
                 'ignoreConfigletBuilderNamesList': [],
             }]
         }
@@ -1531,17 +1402,17 @@ class TestCvpClient(DutSystemTest):
         result = self.api.get_default_snapshot_template()
         if result is not None:
             expected = {
-                u'ccTasksTagged': 0,
-                u'classId': 63,
-                u'commandCount': 1,
-                u'createdBy': u'System',
-                u'default': True,
-                u'factoryId': 1,
-                u'id': 63,
-                u'isDefault': True,
-                u'key': u'Initial_Template',
-                u'name': u'Show_Inventory',
-                u'note': u'',
+                'ccTasksTagged': 0,
+                'classId': 63,
+                'commandCount': 1,
+                'createdBy': 'System',
+                'default': True,
+                'factoryId': 1,
+                'id': 63,
+                'isDefault': True,
+                'key': 'Initial_Template',
+                'name': 'Show_Inventory',
+                'note': '',
             }
 
             # Remove the snapshotCount, totalSnapshotCount and
@@ -1574,8 +1445,8 @@ class TestCvpClient(DutSystemTest):
         orig_images = self.api.get_images()
 
         # Copy the test image file with a timestamp appended
-        image_file_name = 'image-file-%s.swix' % time.time()
-        image_file = 'test/fixtures/%s' % image_file_name
+        image_file_name = f'image-file-{time.time()}.swix'
+        image_file = f'test/fixtures/{image_file_name}'
         shutil.copyfile('test/fixtures/image-file.swix', image_file)
 
         # Upload the image to the cluster
@@ -1643,7 +1514,7 @@ class TestCvpClient(DutSystemTest):
                 image.pop(key, None)
 
         # Create a new bundle with the same images
-        original_name = 'test_image_bundle_%d' % time.time()
+        original_name = f'test_image_bundle_{time.time()}'
         result = self.api.save_image_bundle(original_name, images)
         expected = r'Bundle\s*:\s+%s successfully created' % original_name
         self.assertRegexpMatches(result['data'], expected)
@@ -1869,7 +1740,7 @@ class TestCvpClient(DutSystemTest):
         if self.clnt.apiversion is None:
             self.api.get_cvp_info()
         if self.clnt.apiversion < 3.0:
-            chg_ctrl_name = 'test_api_%d' % time.time()
+            chg_ctrl_name = f'test_api_{time.time()}'
             (task_id, _) = self._create_task()
             chg_ctrl_tasks = [{
                 'taskId': task_id,
@@ -1897,8 +1768,7 @@ class TestCvpClient(DutSystemTest):
                 chg_ctrl_executed = self.api.get_change_control_info(cc_id)
                 if chg_ctrl_executed['status'] == 'Completed':
                     break
-                else:
-                    time.sleep(2)
+                time.sleep(2)
             # For 2018.2 give a few extra seconds for device status to get
             # back in compliance.
             if self.clnt.apiversion >= 2.0:
@@ -1906,8 +1776,7 @@ class TestCvpClient(DutSystemTest):
             else:
                 time.sleep(2)
         else:
-            pprint('SKIPPING TEST FOR API - {0}'.format(
-                self.clnt.apiversion))
+            pprint(f'SKIPPING TEST FOR API - {self.clnt.apiversion}')
             time.sleep(1)
 
     # def test_api_change_control_v3(self):
@@ -1952,7 +1821,7 @@ class TestCvpClient(DutSystemTest):
         if self.clnt.apiversion is None:
             self.api.get_cvp_info()
         if self.clnt.apiversion < 3.0:
-            chg_ctrl_name = 'test_api_%d' % time.time()
+            chg_ctrl_name = f'test_api_{time.time()}'
             (task_id, _) = self._create_task()
             chg_ctrl_tasks = [{
                 'taskId': task_id,
@@ -1975,8 +1844,7 @@ class TestCvpClient(DutSystemTest):
             chg_ctrl_cancelled = self.api.get_change_control_info(cc_id)
             self.assertEqual(chg_ctrl_cancelled['status'], 'Cancelled')
         else:
-            pprint('SKIPPING TEST FOR API - {0}'.format(
-                self.clnt.apiversion))
+            pprint(f'SKIPPING TEST FOR API - {self.clnt.apiversion}')
             time.sleep(1)
 
     def test_api_delete_change_control(self):
@@ -1986,7 +1854,7 @@ class TestCvpClient(DutSystemTest):
         if self.clnt.apiversion is None:
             self.api.get_cvp_info()
         if self.clnt.apiversion < 3.0:
-            chg_ctrl_name = 'test_api_%d' % time.time()
+            chg_ctrl_name = f'test_api_{time.time()}'
             (task_id, _) = self._create_task()
             chg_ctrl_tasks = [{
                 'taskId': task_id,
@@ -2014,8 +1882,7 @@ class TestCvpClient(DutSystemTest):
             time.sleep(1)
             self.assertIsNotNone(cancel_task_resp)
         else:
-            pprint('SKIPPING TEST FOR API - {0}'.format(
-                self.clnt.apiversion))
+            pprint(f'SKIPPING TEST FOR API - {self.clnt.apiversion}')
             time.sleep(1)
 
     def test_api_filter_topology(self):
@@ -2082,8 +1949,7 @@ class TestCvpClient(DutSystemTest):
                 gen_token = self.api.create_enroll_token("24h")
                 self.assertEqual(list(gen_token[0].keys()), "enrollmentToken")
         else:
-            pprint('SKIPPING TEST (test_api_create_enroll_token) FOR API - {0}'.format(
-                self.clnt.apiversion))
+            pprint(f'SKIPPING TEST (test_api_create_enroll_token) FOR API - {self.clnt.apiversion}')
             time.sleep(1)
 
     def test_api_tags(self):
@@ -2112,8 +1978,10 @@ class TestCvpClient(DutSystemTest):
                                                  "REQUEST_UNSPECIFIED")
             self.assertIn('value', response)
             self.assertIn('key', response['value'])
-            self.assertEqual(new_workspace_id, response['value']['key']['workspaceId'])
-            self.assertEqual(response['value']['displayName'], "CVPRAC_TEST_NAME")
+            self.assertEqual(new_workspace_id,
+                             response['value']['key']['workspaceId'])
+            self.assertEqual(response['value']
+                             ['displayName'], "CVPRAC_TEST_NAME")
 
             # Test getting all tags for new workspace. Should be None.
             new_workspace_tags = self.api.get_all_tags(element_type='ELEMENT_TYPE_UNSPECIFIED',
@@ -2126,7 +1994,8 @@ class TestCvpClient(DutSystemTest):
             result = self.api.get_workspace(new_workspace_id)
             self.assertIn('value', result)
             self.assertIn('key', result['value'])
-            self.assertEqual(new_workspace_id, result['value']['key']['workspaceId'])
+            self.assertEqual(new_workspace_id,
+                             result['value']['key']['workspaceId'])
 
             # Pre tag creation and edit Get tag assignment edits
             response = self.api.get_tag_assignment_edits(new_workspace_id)
@@ -2143,20 +2012,26 @@ class TestCvpClient(DutSystemTest):
                                            "cvpractestint", "TAGTESTINT", remove=False)
             self.assertIn('value', response)
             self.assertIn('key', response['value'])
-            self.assertEqual(new_workspace_id, response['value']['key']['workspaceId'])
-            self.assertEqual("cvpractestint", response['value']['key']['label'])
+            self.assertEqual(new_workspace_id,
+                             response['value']['key']['workspaceId'])
+            self.assertEqual(
+                "cvpractestint", response['value']['key']['label'])
             self.assertEqual("TAGTESTINT", response['value']['key']['value'])
-            self.assertEqual("ELEMENT_TYPE_INTERFACE", response['value']['key']['elementType'])
+            self.assertEqual("ELEMENT_TYPE_INTERFACE",
+                             response['value']['key']['elementType'])
 
             # Test config of new tag for Device
             response = self.api.tag_config("ELEMENT_TYPE_DEVICE", new_workspace_id,
                                            "cvpractestdev", "TAGTESTDEV", remove=False)
             self.assertIn('value', response)
             self.assertIn('key', response['value'])
-            self.assertEqual(new_workspace_id, response['value']['key']['workspaceId'])
-            self.assertEqual("cvpractestdev", response['value']['key']['label'])
+            self.assertEqual(new_workspace_id,
+                             response['value']['key']['workspaceId'])
+            self.assertEqual(
+                "cvpractestdev", response['value']['key']['label'])
             self.assertEqual("TAGTESTDEV", response['value']['key']['value'])
-            self.assertEqual("ELEMENT_TYPE_DEVICE", response['value']['key']['elementType'])
+            self.assertEqual("ELEMENT_TYPE_DEVICE",
+                             response['value']['key']['elementType'])
 
             # Test getting all tags for workspace again
             result = self.api.get_all_tags(element_type="ELEMENT_TYPE_UNSPECIFIED",
@@ -2177,7 +2052,8 @@ class TestCvpClient(DutSystemTest):
                                                       "cvpractestdev", "TAGTESTDEV",
                                                       self.device['serialNumber'], "",
                                                       remove=False)
-            self.assertEqual(response['value']['key']['deviceId'], "veos1")
+            self.assertEqual(response['value']['key']
+                             ['deviceId'], self.device['serialNumber'])
             self.assertEqual(response['value']['key']['interfaceId'], "")
 
             # Test assign tag to interface
@@ -2185,8 +2061,10 @@ class TestCvpClient(DutSystemTest):
                                                       "cvpractestint", "TAGTESTINT",
                                                       self.device['serialNumber'], "Ethernet1",
                                                       remove=False)
-            self.assertEqual(response['value']['key']['deviceId'], "veos1")
-            self.assertEqual(response['value']['key']['interfaceId'], "Ethernet1")
+            self.assertEqual(response['value']['key']
+                             ['deviceId'], self.device['serialNumber'])
+            self.assertEqual(response['value']['key']
+                             ['interfaceId'], "Ethernet1")
 
             # Post tag creation and edit Get tag assignment edits
             response = self.api.get_tag_assignment_edits(new_workspace_id)
@@ -2206,20 +2084,26 @@ class TestCvpClient(DutSystemTest):
                                                  'REQUEST_START_BUILD',
                                                  new_build_id)
             self.assertIn('value', response)
-            self.assertEqual(response['value']['key']['workspaceId'], new_workspace_id)
-            self.assertEqual(response['value']['request'], 'REQUEST_START_BUILD')
-            self.assertEqual(response['value']['requestParams']['requestId'], new_build_id)
+            self.assertEqual(response['value']['key']
+                             ['workspaceId'], new_workspace_id)
+            self.assertEqual(response['value']
+                             ['request'], 'REQUEST_START_BUILD')
+            self.assertEqual(
+                response['value']['requestParams']['requestId'], new_build_id)
 
             # Test getting new workspace post build
             result = self.api.get_workspace(new_workspace_id)
             self.assertIn('value', result)
             self.assertIn('key', result['value'])
-            self.assertEqual(new_workspace_id, result['value']['key']['workspaceId'])
-            self.assertEqual('WORKSPACE_STATE_PENDING', result['value']['state'])
+            self.assertEqual(new_workspace_id,
+                             result['value']['key']['workspaceId'])
+            self.assertEqual('WORKSPACE_STATE_PENDING',
+                             result['value']['state'])
             last_build_id = result['value']['lastBuildId']
 
             # Test checking build status
-            response = self.api.workspace_build_status(new_workspace_id, last_build_id)
+            response = self.api.workspace_build_status(
+                new_workspace_id, last_build_id)
             self.assertIn('value', response)
             build_state_options = {
                 'BUILD_STATE_SUCCESS': 'BUILD_STATE_SUCCESS',
@@ -2251,19 +2135,22 @@ class TestCvpClient(DutSystemTest):
                                                  'CVPRAC TEST',
                                                  'REQUEST_SUBMIT',
                                                  new_submit_id)
-            self.assertEqual(response['value']['key']['workspaceId'], new_workspace_id)
+            self.assertEqual(response['value']['key']
+                             ['workspaceId'], new_workspace_id)
             self.assertEqual(response['value']['request'], 'REQUEST_SUBMIT')
-            self.assertEqual(response['value']['requestParams']['requestId'], new_submit_id)
+            self.assertEqual(
+                response['value']['requestParams']['requestId'], new_submit_id)
 
             # Test getting new workspace post submit
             result = self.api.get_workspace(new_workspace_id)
             self.assertIn('value', result)
             self.assertIn('key', result['value'])
-            self.assertEqual(new_workspace_id, result['value']['key']['workspaceId'])
-            self.assertEqual('WORKSPACE_STATE_SUBMITTED', result['value']['state'])
+            self.assertEqual(new_workspace_id,
+                             result['value']['key']['workspaceId'])
+            self.assertEqual('WORKSPACE_STATE_SUBMITTED',
+                             result['value']['state'])
         else:
-            pprint('SKIPPING TEST (test_api_tags) FOR API - {0}'.format(
-                self.clnt.apiversion))
+            pprint(f'SKIPPING TEST (test_api_tags) FOR API - {self.clnt.apiversion}')
             time.sleep(1)
 
     # def test_api_deploy_device(self):
