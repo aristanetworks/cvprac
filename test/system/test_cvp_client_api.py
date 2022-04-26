@@ -1669,9 +1669,20 @@ class TestCvpClient(TestCvpClientBase):
         # Get devices current configlets
         orig_configlets = self.api.get_configlets_by_device_id(device['key'])
         # delete from inventory
-        self.api.delete_device(device['systemMacAddress'])
-        # sleep to allow delete to complete
-        time.sleep(1)
+        if self.clnt.apiversion <= 7.0:
+            self.api.delete_device(device['systemMacAddress'])
+            # sleep to allow delete to complete
+            time.sleep(1)
+        else:
+            req_id = str(uuid.uuid4())
+            self.api.device_decommissioning(device['serialNumber'], req_id)
+            decomm_status = "DECOMMISSIONING_STATUS_SUCCESS"
+            decomm = ""
+            decomm_timer = 0
+            while decomm != decomm_status or decomm_timer < 600:
+                decomm = self.api.device_decommissioning_status_get_one(req_id)['value']['status']
+                time.sleep(10)
+                decomm_timer += 10
         # verify not found in inventory
         res = self.api.get_device_by_name(device['fqdn'])
         self.assertEqual(res, {})
