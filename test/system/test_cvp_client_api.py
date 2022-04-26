@@ -1678,9 +1678,11 @@ class TestCvpClient(TestCvpClientBase):
             self.api.device_decommissioning(device['serialNumber'], request_id)
             decomm_status = "DECOMMISSIONING_STATUS_SUCCESS"
             decomm_result = ""
-            while decomm_result != decomm_status:
+            decomm_timer = 0
+            while decomm_result != decomm_status or decomm_timer < 600:
                 decomm_result = self.api.device_decommissioning_status_get_one(request_id)['value']['status']          
                 time.sleep(10)
+                decomm_timer += 10
         # verify not found in inventory
         res = self.api.get_device_by_name(device['fqdn'])
         self.assertEqual(res, {})
