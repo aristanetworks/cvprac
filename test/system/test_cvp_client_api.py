@@ -1674,13 +1674,13 @@ class TestCvpClient(TestCvpClientBase):
             # sleep to allow delete to complete
             time.sleep(1)
         else:
-            request_id = str(uuid.uuid4())
-            self.api.device_decommissioning(device['serialNumber'], request_id)
+            req_id = str(uuid.uuid4())
+            self.api.device_decommissioning(device['serialNumber'], req_id)
             decomm_status = "DECOMMISSIONING_STATUS_SUCCESS"
-            decomm_result = ""
+            decomm = ""
             decomm_timer = 0
-            while decomm_result != decomm_status or decomm_timer < 600:
-                decomm_result = self.api.device_decommissioning_status_get_one(request_id)['value']['status']          
+            while decomm != decomm_status or decomm_timer < 600:
+                decomm = self.api.device_decommissioning_status_get_one(req_id)['value']['status']
                 time.sleep(10)
                 decomm_timer += 10
         # verify not found in inventory
