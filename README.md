@@ -1,6 +1,6 @@
 # Arista Cloudvision® Portal RESTful API Client
 
-[![pypi\_version\_badge](https://img.shields.io/pypi/v/cvprac.svg)](https://pypi.python.org/pypi/cvprac)
+[![pypi](https://img.shields.io/pypi/v/cvprac.svg)](https://pypi.python.org/pypi/cvprac)
 
 ## Table of Contents
 
@@ -21,7 +21,7 @@
 1. [Contributing](#contributing)
     - [Working With Git](#working-with-git)
     - [Submitting Pull Requests](#submitting-pull-requests)
-    - [PR Semantics](#pr-semantics)
+    - [Pull Request Semantics](#pull-request-semantics)
 1. [License](#license)
 
 ## Overview
@@ -355,7 +355,7 @@ It is recommended to fork the project and then start development on the forked r
 
 - When submitting a pull request, please be sure to work off of the **develop** branch and not from other branches. The **develop** branch is used for ongoing development, while the **master** will hold the last stable version.
 
-- To automate release-notes creation and make filtering process easier, it is strongly recommended to use [conventional commit](https://www.conventionalcommits.org/en/v1.0.0/#summary) syntax at least for PR title.
+- To automate release-notes creation and make filtering process easier, it is strongly recommended to use [conventional commit](https://www.conventionalcommits.org/en/v1.0.0/#summary) syntax at least for Pull Request (PR) title.
 
 - All code submissions must follow the below criteria:
 
@@ -363,7 +363,7 @@ It is recommended to fork the project and then start development on the forked r
   - All the tests are updated and are passed successfully
   - Python syntax is valid
 
-### PR Semantics
+### Pull Request Semantics
 
 The Pull Request title should start with one of the below to easily segregate if its a feature add or a bug or something related documentation etc.
 
