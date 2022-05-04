@@ -3,13 +3,21 @@
 The following lab examples will walk through the most commonly used REST API calls using cvprac
 to help users interact with Arista CloudVision easily and automate the provisioning of network devices.
 
+## Table of Contents
+
+1. [Authentication](#authentication)
+    - [Password Authentication](#password-authentication)
+    - [Service Account Token Authentication](#service-account-token-authentication)
+1. [Known Limitations](#known-limitations)
+
 ## Authentication
 
 There are two ways to authenticate using the REST APIs:
+
 - user/password (on-prem only)
 - service account token (available on CVP 2020.3.0+ and CVaaS)
 
-### User/password authentication
+### Password Authentication
 
 ```python
 from cvprac.cvp_client import CvpClient
@@ -17,9 +25,9 @@ clnt = CvpClient()
 clnt.connect(['10.83.13.33'],'cvpadmin', 'arastra')
 ```
 
-### Service account token authentication
+### Service Account Token Authentication
 
-To access the CloudVision as-a-Service and send API requests, “Service Account Token” is needed.
+To access the CloudVision as-a-Service and send API requests, "Service Account Token" is needed.
 After obtaining the service account token, it can be used for authentication when sending API requests.
 
 Service accounts can be created from the Settings page where a service token can be generated as seen below:
@@ -52,7 +60,7 @@ clnt = CvpClient()
 clnt.connect(nodes=['10.83.13.33'], username='',password='',api_token=token)
 ```
 
-#### Known Limitations
+## Known Limitations
 
 - for any APIs that interact with EOS devices, the service account name must match the name of the username
   configured on EOS and CVP
