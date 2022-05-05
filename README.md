@@ -342,7 +342,7 @@ It is recommended to fork the project and then start development on the forked r
 
         git push origin <topic-branch-name>
 
-- [Open a Pull Request](https://github.com/aristanetworks/ansible-avd/pulls)
+- [Open a Pull Request](https://github.com/aristanetworks/cvprac/pulls)
     with a clear title, description and explain how to test the feature.
 
 ### Submitting Pull Requests
@@ -359,7 +359,7 @@ It is recommended to fork the project and then start development on the forked r
 
 - All code submissions must follow the below criteria:
 
-  - The issue/PR title should follow the semantic as described [here](#pr-semantics)
+  - The issue/PR title should follow the semantic as described [here](#pull-request-semantics)
   - All the tests are updated and are passed successfully
   - Python syntax is valid
 
