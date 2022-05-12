@@ -41,9 +41,8 @@ class TestCvpClientCC(TestCvpClientBase):
         """
         if self.clnt.apiversion is None:
             self.api.get_cvp_info()
-        if self.clnt.apiversion > 3.0:
-            pprint(
-                'RUN TEST FOR V3 CHANGE CONTROL APIs')
+        if self.clnt.apiversion >= 6.0:
+            pprint('RUN TEST FOR V6 (2021.2.0+) CHANGE CONTROL RESOURCE APIs')
             return True
         pprint(f'SKIPPING TEST FOR API - {self.clnt.apiversion}')
         return False
@@ -409,20 +408,22 @@ class TestCvpClientCC(TestCvpClientBase):
     def test_api_change_control_start_invalid_tasks(self):
         """ Verify test_api_change_control_start_invalid_tasks
         """
-        pprint(
-            "test_api_change_control_start_invalid_tasks")
+        pprint("test_api_change_control_start_invalid_tasks")
         if self.get_version():
-            pprint(
-                'STARTING CHANGE CONTROL FOR INVALID TASKS...')
+            pprint('STARTING CHANGE CONTROL FOR INVALID TASKS...')
             # Start the change control
             dut = self.duts[0]
             node = dut['node'] + ":443"
+            # CVP 2021.2.0 format
             err_msg = 'POST: https://' + node + '/api/resources/changecontrol/v1/' \
                                                 'ChangeControlConfig : Request Error: ' \
-                                                'Bad Request - {"code":9, "message":"not approved"}'
+                                                'Bad Request - {"code":9,"message":"not approved"}'
+            # CVP 2021.3.0 format?
+            # err_msg = 'POST: https://' + node + '/api/resources/changecontrol/v1/' \
+            #                                     'ChangeControlConfig : Request Error: ' \
+            #                                     'Bad Request - {"code":9, "message":"not approved"}'
             with self.assertRaisesRegex(CvpRequestError, err_msg):
-                self.start_change_control(
-                    CHANGE_CONTROL_ID_INVALID)
+                self.start_change_control(CHANGE_CONTROL_ID_INVALID)
 
     def test_api_change_control_delete_invalid_cc(self):
         """ Verify test_api_change_control_delete_invalid_cc
@@ -554,8 +555,7 @@ class TestCvpClientCC(TestCvpClientBase):
     def test_api_change_control_approval_get_all(self):
         """ Verify change_control_approval_get_all
          """
-        pprint(
-            "test_api_change_control_approval_get_all")
+        pprint("test_api_change_control_approval_get_all")
         ids = []
         if self.get_version():
             # Create task
@@ -590,29 +590,27 @@ class TestCvpClientCC(TestCvpClientBase):
     def test_api_change_control_approval_get_all_without_approve(self):
         """ Verify change_control_approval_get_all_without_approve
          """
-        pprint(
-            "test_api_change_control_approval_get_all_without_approve")
-        # Create task
-        task_id = self.create_task()
-
-        # Create CC
-        self.create_change_control_for_task(
-            task_id)
-
-        ids = []
+        pprint("test_api_change_control_approval_get_all_without_approve")
         if self.get_version():
-            pprint(
-                "CHANGE CONTROL APPROVAL GET ALL WITHOUT APPROVE...")
+            # Create task
+            task_id = self.create_task()
+
+            # Create CC
+            self.create_change_control_for_task(
+                task_id)
+
+            ids = []
+            pprint("CHANGE CONTROL APPROVAL GET ALL WITHOUT APPROVE...")
             chg_ctrl_approval_get_all = self.api.change_control_approval_get_all()
             for i in range(len(chg_ctrl_approval_get_all['data'])):
                 ids.append(
                     chg_ctrl_approval_get_all['data'][i]['result']['value']['key']['id'])
             assert self.cc_id not in ids
 
-        # Delete CC
-        self.delete_change_control(self.cc_id)
-        # Cancel Task
-        self.cancel_task(task_id)
+            # Delete CC
+            self.delete_change_control(self.cc_id)
+            # Cancel Task
+            self.cancel_task(task_id)
 
     def test_api_change_control_create_with_custom_stages(self):
         """ Verify test_api_change_control_create_with_custom_stages
