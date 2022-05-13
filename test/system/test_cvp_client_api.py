@@ -264,7 +264,12 @@ class TestCvpClient(TestCvpClientBase):
 
         result = self.api.check_compliance(self.device['key'],
                                            self.device['type'])
-        self.assertEqual(result['complianceCode'], '0001')
+        if self.clnt.apiversion < 8.0:
+            # Compliance code changes prior to CVP 2022.1.0
+            self.assertEqual(result['complianceCode'], '0001')
+        else:
+            # Compliance code DOES NOT changes for CVP 2022.1.0
+            self.assertEqual(result['complianceCode'], '0000')
 
         # Test cancel_task
         self.api.cancel_task(task_id)
@@ -275,7 +280,12 @@ class TestCvpClient(TestCvpClientBase):
 
         result = self.api.check_compliance(self.device['key'],
                                            self.device['type'])
-        self.assertEqual(result['complianceCode'], '0001')
+        if self.clnt.apiversion < 8.0:
+            # Compliance code changes prior to CVP 2022.1.0
+            self.assertEqual(result['complianceCode'], '0001')
+        else:
+            # Compliance code DOES NOT changes for CVP 2022.1.0
+            self.assertEqual(result['complianceCode'], '0000')
 
         # Get the task logs
         result = self.api.get_logs_by_id(task_id)
@@ -283,7 +293,12 @@ class TestCvpClient(TestCvpClientBase):
 
         result = self.api.check_compliance(self.device['key'],
                                            self.device['type'])
-        self.assertEqual(result['complianceCode'], '0001')
+        if self.clnt.apiversion < 8.0:
+            # Compliance code changes prior to CVP 2022.1.0
+            self.assertEqual(result['complianceCode'], '0001')
+        else:
+            # Compliance code DOES NOT changes for CVP 2022.1.0
+            self.assertEqual(result['complianceCode'], '0000')
 
         # Restore the configlet to what it was before the task was created.
         task_id = self._get_next_task_id()
@@ -897,8 +912,12 @@ class TestCvpClient(TestCvpClientBase):
         all_devices = self.api.get_inventory()
 
         # Grab key of container to test from first device in inventory
-        device = all_devices[0]
-        parent_cont = device['parentContainerId']
+        test_dev = all_devices[0]
+        for dev in all_devices:
+            # If device provided in cvp_nodes.yaml is in inventory use it for the test
+            if dev['fqdn'] == self.device['fqdn']:
+                test_dev = dev
+        parent_cont = test_dev['parentContainerId']
 
         # Make list of all devices from full inventory that are in the
         # same container as the first device
@@ -1580,11 +1599,16 @@ class TestCvpClient(TestCvpClientBase):
         '''
         bundles = self.api.get_image_bundles()
         devices = self.api.get_inventory()
+        test_dev = devices[0]
+        for dev in devices:
+            # If device provided in cvp_nodes.yaml is in inventory use it for the test
+            if dev['fqdn'] == self.device['fqdn']:
+                test_dev = dev
         # Verify at least one image bundle and device exist
         if bundles['total'] > 0 and devices:
             # Get device and image bundle
             b = self.api.get_image_bundle_by_name(bundles['data'][0]['name'])
-            d = self.api.get_device_by_name(devices[0]['fqdn'])
+            d = self.api.get_device_by_name(test_dev['fqdn'])
             applied_devices_count = b['appliedDevicesCount']
 
             # Apply image and verify at least one task id was created
@@ -1659,23 +1683,27 @@ class TestCvpClient(TestCvpClientBase):
         ''' Verify add_device_to_inventory and delete_device(s)
         '''
         # pylint: disable=too-many-locals
-        # Get a device
+        # Get a test device
         full_inv = self.api.get_inventory()
-        device = full_inv[0]
+        test_dev = full_inv[0]
+        for dev in full_inv:
+            # If device provided in cvp_nodes.yaml is in inventory use it for the test
+            if dev['fqdn'] == self.device['fqdn']:
+                test_dev = dev
         # Record number of current/original non connected devices
         orig_non_connect_count = self.api.get_non_connected_device_count()
-        # Get devices current container assigned
-        orig_cont = self.api.get_parent_container_for_device(device['key'])
-        # Get devices current configlets
-        orig_configlets = self.api.get_configlets_by_device_id(device['key'])
+        # Get test devices current container assigned
+        orig_cont = self.api.get_parent_container_for_device(test_dev['key'])
+        # Get test devices current configlets
+        orig_configlets = self.api.get_configlets_by_device_id(test_dev['key'])
         # delete from inventory
         if self.clnt.apiversion <= 7.0:
-            self.api.delete_device(device['systemMacAddress'])
+            self.api.delete_device(test_dev['systemMacAddress'])
             # sleep to allow delete to complete
             time.sleep(1)
         else:
             req_id = str(uuid.uuid4())
-            self.api.device_decommissioning(device['serialNumber'], req_id)
+            self.api.device_decommissioning(test_dev['serialNumber'], req_id)
             decomm_status = "DECOMMISSIONING_STATUS_SUCCESS"
             decomm = ""
             decomm_timer = 0
@@ -1684,16 +1712,16 @@ class TestCvpClient(TestCvpClientBase):
                 time.sleep(10)
                 decomm_timer += 10
         # verify not found in inventory
-        res = self.api.get_device_by_name(device['fqdn'])
+        res = self.api.get_device_by_name(test_dev['fqdn'])
         self.assertEqual(res, {})
         # add back to inventory
-        # Adding device back to inv started timing out in CVP2021.2.0
+        # Adding test device back to inv started timing out in CVP2021.2.0
         orig_timeout = self.api.request_timeout
         if not self.clnt.apiversion:
             self.api.get_cvp_info()
         if self.clnt.apiversion >= 6.0:
             self.api.request_timeout = orig_timeout * 3
-        self.api.add_device_to_inventory(device['ipAddress'],
+        self.api.add_device_to_inventory(test_dev['ipAddress'],
                                          orig_cont['name'],
                                          orig_cont['key'], True)
         # get non connected device count until it is back to equal or less
@@ -1716,12 +1744,12 @@ class TestCvpClient(TestCvpClientBase):
         post_save_inv = self.api.get_inventory()
         self.assertEqual(len(post_save_inv), len(full_inv))
         # verify device is found in inventory again
-        re_added_dev = self.api.get_device_by_name(device['fqdn'])
+        re_added_dev = self.api.get_device_by_name(test_dev['fqdn'])
         self.assertEqual(re_added_dev['systemMacAddress'],
-                         device['systemMacAddress'])
+                         test_dev['systemMacAddress'])
         # apply original configlets back to device
         results = self.api.apply_configlets_to_device("test_api_inventory",
-                                                      device, orig_configlets,
+                                                      test_dev, orig_configlets,
                                                       create_task=True)
         # execute returned task and wait for it to complete
         task_res = self.api.execute_task(results['data']['taskIds'][0])
@@ -1735,14 +1763,14 @@ class TestCvpClient(TestCvpClientBase):
             self.api.request_timeout = orig_timeout
 
         # delete from inventory
-        # self.api.delete_device(device['systemMacAddress'])
+        # self.api.delete_device(test_dev['systemMacAddress'])
         # verify not found in inventory
-        # res = self.api.get_device_by_name(device['fqdn'])
+        # res = self.api.get_device_by_name(test_dev['fqdn'])
         # self.assertEqual(res, {})
         # dut = self.duts[0]
-        # self.api.retry_add_to_inventory(device['ipAddress'],
-        #                                device['systemMacAddress'],
-        #                                dut['username'], dut['password'])
+        # self.api.retry_add_to_inventory(test_dev['ipAddress'],
+        #                                 test_dev['systemMacAddress'],
+        #                                 dut['username'], dut['password'])
 
     def test_api_change_control(self):
         ''' Verify get_change_control_info and execute_change_control.
@@ -2151,6 +2179,30 @@ class TestCvpClient(TestCvpClientBase):
                                            workspace_id=new_workspace_id)
             self.assertIn('data', result)
             self.assertEqual(len(result['data']), 0)
+
+            # Rebuild workspace after changes. As of CVP 2022.1.0 the submit
+            # of the workspace will fail it if hasn't been built.
+            if self.clnt.apiversion > 7.0:
+                # Test Second Workspace Build
+                second_build_id = new_workspace_id + '_BUILD2_' + str(new_uuid)
+                response = self.api.workspace_config(new_workspace_id,
+                                                     "CVPRAC_TEST_NAME",
+                                                     'CVPRAC TEST',
+                                                     'REQUEST_START_BUILD',
+                                                     second_build_id)
+                self.assertIn('value', response)
+                self.assertEqual(response['value']['key']
+                                 ['workspaceId'], new_workspace_id)
+                self.assertEqual(response['value']
+                                 ['request'], 'REQUEST_START_BUILD')
+                self.assertEqual(
+                    response['value']['requestParams']['requestId'], second_build_id)
+
+                # Test getting new workspace post second build
+                result = self.api.get_workspace(new_workspace_id)
+                self.assertIn('value', result)
+                self.assertIn('needsBuild', result['value'])
+                self.assertEqual(result['value']['needsBuild'], False)
 
             # Test Submit Workspace
             new_submit_id = new_workspace_id + '_SUBMIT_' + str(new_uuid)

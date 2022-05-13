@@ -414,14 +414,28 @@ class TestCvpClientCC(TestCvpClientBase):
             # Start the change control
             dut = self.duts[0]
             node = dut['node'] + ":443"
-            # CVP 2021.2.0 format
+            # CVP 2022.1.0 format The forward slashes in the error string are likely a bug
+            pprint('SETTING DEFAULT ERROR MESSAGE FORMAT FOR CVP 2022.1.0')
             err_msg = 'POST: https://' + node + '/api/resources/changecontrol/v1/' \
-                                                'ChangeControlConfig : Request Error: ' \
-                                                'Bad Request - {"code":9,"message":"not approved"}'
-            # CVP 2021.3.0 format?
-            # err_msg = 'POST: https://' + node + '/api/resources/changecontrol/v1/' \
-            #                                     'ChangeControlConfig : Request Error: ' \
-            #                                     'Bad Request - {"code":9, "message":"not approved"}'
+                                                'ChangeControlConfig : Request Error:' \
+                                                ' Not Found - {"code":5, "message":"change' \
+                                                ' control with ID' \
+                                                ' \\\\"InvalidCVPRACSystestCCID\\\\"' \
+                                                ' does not exist"}'
+            if self.clnt.apiversion < 8.0:
+                # CVP 2021.3.0 format
+                pprint('USING ERROR MESSAGE FORMAT FOR CVP 2021.3.X')
+                err_msg = 'POST: https://' + node + '/api/resources/changecontrol/v1/' \
+                                                    'ChangeControlConfig : Request Error: ' \
+                                                    'Bad Request -' \
+                                                    ' {"code":9, "message":"not approved"}'
+            if self.clnt.apiversion < 7.0:
+                # CVP 2021.2.0 format
+                pprint('USING ERROR MESSAGE FORMAT FOR CVP 2021.2.X')
+                err_msg = 'POST: https://' + node + '/api/resources/changecontrol/v1/' \
+                                                    'ChangeControlConfig : Request Error: ' \
+                                                    'Bad Request -' \
+                                                    ' {"code":9,"message":"not approved"}'
             with self.assertRaisesRegex(CvpRequestError, err_msg):
                 self.start_change_control(CHANGE_CONTROL_ID_INVALID)
 
