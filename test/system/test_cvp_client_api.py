@@ -1943,7 +1943,7 @@ class TestCvpClient(TestCvpClientBase):
         # As of CVP 2021.2.0 we are seeing the complianceCode and
         # complianceIndication not matching the results of checkCompliance.
         # Remove fields.
-        if self.clnt.apiversion == 6.0:
+        if self.clnt.apiversion >= 6.0:
             if (topo_dev_data['complianceCode'] !=
                     known_dev_data['complianceCode']):
                 pprint(f"\ncomplianceCode in filter data hasn't settled yet."
