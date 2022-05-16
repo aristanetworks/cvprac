@@ -264,12 +264,8 @@ class TestCvpClient(TestCvpClientBase):
 
         result = self.api.check_compliance(self.device['key'],
                                            self.device['type'])
-        if self.clnt.apiversion < 8.0:
-            # Compliance code changes prior to CVP 2022.1.0
-            self.assertEqual(result['complianceCode'], '0001')
-        else:
-            # Compliance code DOES NOT changes for CVP 2022.1.0
-            self.assertEqual(result['complianceCode'], '0000')
+
+        self.assertEqual(result['complianceCode'], '0001')
 
         # Test cancel_task
         self.api.cancel_task(task_id)
@@ -280,12 +276,8 @@ class TestCvpClient(TestCvpClientBase):
 
         result = self.api.check_compliance(self.device['key'],
                                            self.device['type'])
-        if self.clnt.apiversion < 8.0:
-            # Compliance code changes prior to CVP 2022.1.0
-            self.assertEqual(result['complianceCode'], '0001')
-        else:
-            # Compliance code DOES NOT changes for CVP 2022.1.0
-            self.assertEqual(result['complianceCode'], '0000')
+
+        self.assertEqual(result['complianceCode'], '0001')
 
         # Get the task logs
         result = self.api.get_logs_by_id(task_id)
@@ -293,12 +285,8 @@ class TestCvpClient(TestCvpClientBase):
 
         result = self.api.check_compliance(self.device['key'],
                                            self.device['type'])
-        if self.clnt.apiversion < 8.0:
-            # Compliance code changes prior to CVP 2022.1.0
-            self.assertEqual(result['complianceCode'], '0001')
-        else:
-            # Compliance code DOES NOT changes for CVP 2022.1.0
-            self.assertEqual(result['complianceCode'], '0000')
+
+        self.assertEqual(result['complianceCode'], '0001')
 
         # Restore the configlet to what it was before the task was created.
         task_id = self._get_next_task_id()
