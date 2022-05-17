@@ -2168,9 +2168,9 @@ class TestCvpClient(TestCvpClientBase):
             self.assertIn('data', result)
             self.assertEqual(len(result['data']), 0)
 
-            # Rebuild workspace after changes. As of CVP 2022.1.0 the submit
+            # Rebuild workspace after changes. As of CVP 2021.3.1 the submit
             # of the workspace will fail it if hasn't been built.
-            if self.clnt.apiversion > 7.0:
+            if self.clnt.apiversion >= 7.0:
                 # Test Second Workspace Build
                 second_build_id = new_workspace_id + '_BUILD2_' + str(new_uuid)
                 response = self.api.workspace_config(new_workspace_id,
@@ -2189,8 +2189,10 @@ class TestCvpClient(TestCvpClientBase):
                 # Test getting new workspace post second build
                 result = self.api.get_workspace(new_workspace_id)
                 self.assertIn('value', result)
-                self.assertIn('needsBuild', result['value'])
-                self.assertEqual(result['value']['needsBuild'], False)
+                # check needsBuild parameter added in CVP 2022.1.0
+                if self.clnt.apiversion > 7.0:
+                    self.assertIn('needsBuild', result['value'])
+                    self.assertEqual(result['value']['needsBuild'], False)
 
             # Test Submit Workspace
             new_submit_id = new_workspace_id + '_SUBMIT_' + str(new_uuid)
