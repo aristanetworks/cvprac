@@ -547,16 +547,14 @@ class TestCvpClientCC(TestCvpClientBase):
     def test_api_change_control_get_all_without_create_chg_ctrl(self):
         """ Verify change_control_get_all_without_create_chg_ctrl
          """
-        pprint(
-            "test_api_change_control_get_all_without_create_chg_ctrl")
+        pprint("test_api_change_control_get_all_without_create_chg_ctrl")
         ids = []
         if self.get_version():
-            pprint(
-                "CHANGE CONTROL GET ALL WITHOUT CHANGE CONTROL CREATION...")
-            chg_ctrl_get_all = self.api.change_control_get_all()
-            for i in range(len(chg_ctrl_get_all['data'])):
-                ids.append(chg_ctrl_get_all['data'][i]
-                           ['result']['value']['key']['id'])
+            pprint("CHANGE CONTROL GET ALL WITHOUT CHANGE CONTROL CREATION...")
+            resp = self.api.change_control_get_all()
+            if 'data' in resp:
+                for i in range(len(resp['data'])):
+                    ids.append(resp['data'][i]['result']['value']['key']['id'])
             assert self.cc_id not in ids
 
     def test_api_change_control_approval_get_all(self):
@@ -608,10 +606,10 @@ class TestCvpClientCC(TestCvpClientBase):
 
             ids = []
             pprint("CHANGE CONTROL APPROVAL GET ALL WITHOUT APPROVE...")
-            chg_ctrl_approval_get_all = self.api.change_control_approval_get_all()
-            for i in range(len(chg_ctrl_approval_get_all['data'])):
-                ids.append(
-                    chg_ctrl_approval_get_all['data'][i]['result']['value']['key']['id'])
+            resp = self.api.change_control_approval_get_all()
+            if 'data' in resp:
+                for i in range(len(resp['data'])):
+                    ids.append(resp['data'][i]['result']['value']['key']['id'])
             assert self.cc_id not in ids
 
             # Delete CC

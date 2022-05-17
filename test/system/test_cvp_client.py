@@ -44,13 +44,13 @@ import logging
 import os
 import sys
 import unittest
+from pprint import pprint
 from requests.exceptions import Timeout
 sys.path.append(os.path.join(os.path.dirname(__file__), '../lib'))
 from systestlib import DutSystemTest
 from cvprac.cvp_client import CvpClient
 from cvprac.cvp_client_errors import CvpApiError, CvpLoginError, \
     CvpRequestError, CvpSessionLogOutError
-
 
 
 class TestCvpClient(DutSystemTest):
@@ -305,6 +305,13 @@ class TestCvpClient(DutSystemTest):
         dut = self.duts[0]
         nodes = ['bogus', dut['node']]
         self.clnt.connect(nodes, dut['username'], dut['password'])
+
+        if self.clnt.apiversion is None:
+            self.clnt.api.get_cvp_info()
+        if self.clnt.apiversion == 7.0:
+            pprint("Skip test case for issue in CVP 2021.3.1")
+            self.skipTest("Skip test case for issue in CVP 2021.3.1")
+
         # Change the password for the CVP user so that a session reconnect
         # to any node will fail
         self._change_passwd(nodes, dut['username'], dut['password'],
@@ -411,6 +418,13 @@ class TestCvpClient(DutSystemTest):
         dut = self.duts[0]
         nodes = ['bogus', dut['node']]
         self.clnt.connect(nodes, dut['username'], dut['password'])
+
+        if self.clnt.apiversion is None:
+            self.clnt.api.get_cvp_info()
+        if self.clnt.apiversion == 7.0:
+            pprint("Skip test case for issue in CVP 2021.3.1")
+            self.skipTest("Skip test case for issue in CVP 2021.3.1")
+
         # Change the password for the CVP user so that a session reconnect
         # to any node will fail
         self._change_passwd(nodes, dut['username'], dut['password'],
