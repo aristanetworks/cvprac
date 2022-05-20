@@ -44,14 +44,13 @@ import logging
 import os
 import sys
 import unittest
+from pprint import pprint
 from requests.exceptions import Timeout
-
+sys.path.append(os.path.join(os.path.dirname(__file__), '../lib'))
+from systestlib import DutSystemTest
 from cvprac.cvp_client import CvpClient
 from cvprac.cvp_client_errors import CvpApiError, CvpLoginError, \
     CvpRequestError, CvpSessionLogOutError
-
-sys.path.append(os.path.join(os.path.dirname(__file__), '../lib'))
-from systestlib import DutSystemTest
 
 
 class TestCvpClient(DutSystemTest):
@@ -92,7 +91,7 @@ class TestCvpClient(DutSystemTest):
                 'network-admin'
             ]
         }
-        result = clnt.post("/user/updateUser.do?userId=%s" % username, data)
+        result = clnt.post(f"/user/updateUser.do?userId={username}", data)
         self.assertEqual('success', result['data'])
 
     def test_clnt_init(self):
@@ -281,8 +280,15 @@ class TestCvpClient(DutSystemTest):
         '''
         dut = self.duts[0]
         self.clnt.connect([dut['node']], dut['username'], dut['password'])
-        with self.assertRaises(CvpApiError):
-            self.clnt.get('/aaa/bogus.do')
+        # Error raised changes in CVP 2021.2.0
+        if not self.clnt.apiversion:
+            self.clnt.api.get_cvp_info()
+        if self.clnt.apiversion < 6.0:
+            with self.assertRaises(CvpApiError):
+                self.clnt.get('/aaa/bogus.do')
+        else:
+            with self.assertRaises(CvpRequestError):
+                self.clnt.get('/aaa/bogus.do')
 
     def test_get_handle_timeout(self):
         ''' Verify get with bad URL returns an error
@@ -299,6 +305,13 @@ class TestCvpClient(DutSystemTest):
         dut = self.duts[0]
         nodes = ['bogus', dut['node']]
         self.clnt.connect(nodes, dut['username'], dut['password'])
+
+        if self.clnt.apiversion is None:
+            self.clnt.api.get_cvp_info()
+        if self.clnt.apiversion == 7.0:
+            pprint("Skip test case for issue in CVP 2021.3.1")
+            self.skipTest("Skip test case for issue in CVP 2021.3.1")
+
         # Change the password for the CVP user so that a session reconnect
         # to any node will fail
         self._change_passwd(nodes, dut['username'], dut['password'],
@@ -320,7 +333,7 @@ class TestCvpClient(DutSystemTest):
         try:
             # Try a get request and expect a CvpSessionLogOutError
             result = self.clnt.get('/cvpInfo/getCvpInfo.do')
-        except (CvpSessionLogOutError, CvpApiError) as error:
+        except (CvpSessionLogOutError, CvpApiError):
             pass
         except Exception as error:
             # Unexpected error, restore password and re-raise the error.
@@ -388,8 +401,15 @@ class TestCvpClient(DutSystemTest):
         '''
         dut = self.duts[0]
         self.clnt.connect([dut['node']], dut['username'], dut['password'])
-        with self.assertRaises(CvpApiError):
-            self.clnt.post('/aaa/bogus.do', None)
+        # Error raised changes in CVP 2021.2.0
+        if not self.clnt.apiversion:
+            self.clnt.api.get_cvp_info()
+        if self.clnt.apiversion < 6.0:
+            with self.assertRaises(CvpApiError):
+                self.clnt.post('/aaa/bogus.do', None)
+        else:
+            with self.assertRaises(CvpRequestError):
+                self.clnt.post('/aaa/bogus.do', None)
 
     def test_post_except_fail_reconn(self):
         ''' Verify exception raised if session fails and cannot be
@@ -398,6 +418,13 @@ class TestCvpClient(DutSystemTest):
         dut = self.duts[0]
         nodes = ['bogus', dut['node']]
         self.clnt.connect(nodes, dut['username'], dut['password'])
+
+        if self.clnt.apiversion is None:
+            self.clnt.api.get_cvp_info()
+        if self.clnt.apiversion == 7.0:
+            pprint("Skip test case for issue in CVP 2021.3.1")
+            self.skipTest("Skip test case for issue in CVP 2021.3.1")
+
         # Change the password for the CVP user so that a session reconnect
         # to any node will fail
         self._change_passwd(nodes, dut['username'], dut['password'],
@@ -419,7 +446,7 @@ class TestCvpClient(DutSystemTest):
         try:
             # Try a post request and expect a CvpSessionLogOutError
             result = self.clnt.post('/login/logout.do', None)
-        except (CvpSessionLogOutError, CvpApiError) as error:
+        except (CvpSessionLogOutError, CvpApiError):
             pass
         except Exception as error:
             # Unexpected error, restore password and re-raise the error.

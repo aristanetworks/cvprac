@@ -367,8 +367,8 @@ class CvpApi(object):
         configlets = self.clnt.get('/configlet/getConfiglets.do?'
                                    'startIndex=%d&endIndex=%d' % (start, end),
                                    timeout=self.request_timeout)
-        if self.clnt.apiversion == 1.0:
-            self.log.debug('v1 Inventory API Call')
+        if self.clnt.apiversion == 1.0 or self.clnt.apiversion >= 4.0:
+            self.log.debug('v1/v4+ Inventory API Call')
             return configlets
         else:
             self.log.debug('v2 Inventory API Call')
@@ -1231,7 +1231,7 @@ class CvpApi(object):
         return self.clnt.post('/configlet/addNoteToConfiglet.do',
                               data=data, timeout=self.request_timeout)
 
-    def validate_config(self, device_mac, config):
+    def validate_config_for_device(self, device_mac, config):
         ''' Validate a config against a device
 
             Args:
@@ -1242,12 +1242,27 @@ class CvpApi(object):
                 response (dict): A dict that contains the result of the
                     validation operation
         '''
-        self.log.debug('validate_config: name: %s config: %s'
+        self.log.debug('validate_config_for_device: device_mac: %s config: %s'
                        % (device_mac, config))
         body = {'netElementId': device_mac, 'config': config}
-        # Invoke the validate API call
-        result = self.clnt.post('/configlet/validateConfig.do', data=body,
-                                timeout=self.request_timeout)
+        return self.clnt.post('/configlet/validateConfig.do', data=body,
+                              timeout=self.request_timeout)
+
+    def validate_config(self, device_mac, config):
+        ''' Validate a config against a device and parse response to
+            produce log messages are return a flag for the config validity.
+
+            Args:
+                device_mac (str): Device MAC address
+                config (str): Switch config statements
+
+            Returns:
+                response (boolean): A flag signifying if the config is valid or
+                    not.
+        '''
+        self.log.debug('validate_config: device_mac: %s config: %s'
+                       % (device_mac, config))
+        result = self.validate_config_for_device(device_mac, config)
         validated = True
         if 'warningCount' in result and result['warnings']:
             for warning in result['warnings']:
@@ -2446,7 +2461,7 @@ class CvpApi(object):
         return self.clnt.post('/changeControl/addOrUpdateChangeControl.do',
                               data=data, timeout=self.request_timeout)
 
-    def create_change_control_v3(self, cc_id, name, tasks):
+    def create_change_control_v3(self, cc_id, name, tasks, sequential=True):
         ''' Create change control with provided information and return
             change control ID.
 
@@ -2455,6 +2470,8 @@ class CvpApi(object):
                 name (string): The name for the new change control.
                 tasks (list): A list of Task IDs as strings
                     Ex: ['10', '11', '12']
+                sequential (bool): A flag for running tasks sequentially or
+                    in parallel. Defaults to True for running sequentially.
 
             Returns:
                 response (dict): A dict that contains...
@@ -2475,18 +2492,34 @@ class CvpApi(object):
 
         self.log.debug('v3 Update change control API Call')
         stages = []
-        for index, task in enumerate(tasks):
-            stage_id = 'stage%d' % index
-            stage = {'stage': [{
-                'id': stage_id,
-                'action': {
-                    'name': 'task',
-                    'args': {
-                        'TaskID': task,
+        if sequential:
+            for index, task in enumerate(tasks):
+                stage_id = 'stage%d' % index
+                stage = {'stage': [{
+                    'id': stage_id,
+                    'action': {
+                        'name': 'task',
+                        'args': {
+                            'TaskID': task,
+                        }
+                    }
+                }]}
+                stages.append(stage)
+        else:
+            stage_rows = []
+            for index, task in enumerate(tasks):
+                stage_id = 'stage%d' % index
+                stage_row = {
+                    'id': stage_id,
+                    'action': {
+                        'name': 'task',
+                        'args': {
+                            'TaskID': task,
+                        }
                     }
                 }
-            }]}
-            stages.append(stage)
+                stage_rows.append(stage_row)
+            stages.append({'stage': stage_rows})
         data = {'config': {
             'id': cc_id,
             'name': name,
@@ -2553,14 +2586,15 @@ class CvpApi(object):
         return self.clnt.post('/changeControl/executeCC.do', data=data,
                               timeout=self.request_timeout)
 
-    def approve_change_control(self, cc_id,
-                               timestamp=datetime.utcnow().isoformat() + 'Z'):
+    def approve_change_control(self, cc_id, timestamp=None):
         ''' Cancel the provided change controls.
 
             Args:
                 cc_id (string): The change control IDs to be approved.
                 timestamp(string): The change controls timestamp.
         '''
+        if not timestamp:
+            timestamp = datetime.utcnow().isoformat() + 'Z'
         self.log.debug('approve_change_control')
         if self.clnt.apiversion is None:
             self.get_cvp_info()
@@ -2843,3 +2877,923 @@ class CvpApi(object):
         if create_task:
             return self._save_topology_v2([])
         return None
+
+    def create_enroll_token(self, duration, devices=None):
+        ''' Create TerminAttr enrollment token for device authentication
+            via certificates.
+
+            Args:
+               devices (list): list of device Serial Numbers for which the
+                   token should be generated. The default is all devices.
+               duration (string): the token's validity time (max 1 month),
+                  accepted formats are: "24h", "86400s", "60m"
+            Returns:
+                response (list) on CVaaS: A list that contains the generated
+                    enrollment token.
+
+                    Ex: [{'enrollmentToken':{'token': <token>, 'groups': [],
+                    'reenrollDevices': <devices list>,
+                    'validFor': <duration e.g 24h>, 'field_mask': None}}]
+                response (dict) on CV on-prem: A dictionary that contains the
+                    generated enrollment token.
+
+                    Ex: {'data': <token>}
+        '''
+        if not devices:
+            devices = ["*"]
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion >= 6.0:
+                self.log.debug('v6 /cvpservice/enroll/createToken')
+                data = {"reenrollDevices": devices, "duration": duration}
+                return self.clnt.post('/cvpservice/enroll/createToken',
+                                      data=data, timeout=self.request_timeout)
+            self.log.warning(
+                'Enrollment Tokens only supported on CVP 2021.2.0+')
+            return None
+        data = {
+            "enrollmentToken": {"reenrollDevices": devices,
+                                "validFor": duration}
+        }
+        return self.clnt.post(
+            '/api/v3/services/admin.Enrollment/AddEnrollmentToken',
+            data=data, timeout=self.request_timeout)
+
+    def get_all_tags(self, element_type='ELEMENT_TYPE_UNSPECIFIED', workspace_id=''):
+        ''' Get all device and/or interface tags from the mainline workspace or all other workspaces
+            Args:
+               element_type (str): Can be ELEMENT_TYPE_DEVICE, ELEMENT_TYPE_INTERFACE and
+                  ELEMENT_TYPE_UNSPECIFIED
+                  set to ELEMENT_TYPE_UNSPECIFIED by default which fetches all tags
+               workspace_id (str): The ID of the workspace, by default it is set to an empty string
+                  which will use the mainline workspace
+            Returns:
+               response (dict): A dict that contains a list of key-value tags
+        '''
+        tag_url = '/api/resources/tag/v2/Tag/all'
+        payload = {
+            "partialEqFilter": [
+                {"key": {"elementType": element_type, "workspaceId": workspace_id}}
+            ]
+        }
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion < 6.0:
+                self.log.warning('Tag.V2 Resource APIs are supported from 2021.2.0 or newer.')
+                return None
+        self.log.debug('v6 {}'.format(tag_url))
+        return self.clnt.post(tag_url, data=payload)
+
+    def get_tag_edits(self, workspace_id):
+        ''' Show all tags edits in a workspace
+
+            Args:
+                workspace_id: The ID of the workspace
+
+            Returns:
+               response (dict): A dict that contains...
+                    Ex.: {'data': [{'result': {'value': {'key': {'workspaceId': 'testget',
+                          'elementType': 'string', 'label': 'string', 'value': 'string'},
+                          'remove': False}, 'time': 'rfc3339 time', 'type': 'INITIAL'}}]}
+        '''
+        tag_url = '/api/resources/tag/v2/TagConfig/all'
+        payload = {
+            "partialEqFilter": [
+                {
+                    "key": {
+                        "workspace_id": workspace_id
+                    }
+                }
+            ]
+        }
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion < 6.0:
+                self.log.warning('Tag.V2 Resource APIs are supported from 2021.2.0 or newer.')
+                return None
+        self.log.debug('v6 ' + tag_url + ' ' + str(payload))
+        return self.clnt.post(tag_url, data=payload)
+
+    def get_tag_assignment_edits(self, workspace_id):
+        ''' Show all tags assignment edits in a workspace
+
+            Args:
+                workspace_id: The ID of the workspace
+
+            Returns:
+               response (dict): A dict that contains...
+                Ex: {'result': {'value': {'key': {'workspaceId': 'string', 'elementType': 'string',
+                'label': 'string', 'value': 'string', 'deviceId': 'string'},
+                'remove': False}, 'time': 'rfc3339', 'type': 'INITIAL'}}
+        '''
+        tag_url = '/api/resources/tag/v2/TagAssignmentConfig/all'
+        payload = {
+            "partialEqFilter": [
+                {
+                    "key": {
+                        "workspace_id": workspace_id
+                    }
+                }
+            ]
+        }
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion < 6.0:
+                self.log.warning('Tag.V2 Resource APIs are supported from 2021.2.0 or newer.')
+                return None
+        self.log.debug('v6 ' + tag_url + ' ' + str(payload))
+        return self.clnt.post(tag_url, data=payload)
+
+    def tag_config(self, element_type, workspace_id, tag_label, tag_value, remove=False):
+        ''' Create/Delete device or interface tags.
+            Tag creation with the tag.v2 resource API has to be done within a workspace.
+
+            Args:
+               element_type (str): Can be ELEMENT_TYPE_DEVICE or ELEMENT_TYPE_INTERFACE to
+                    create device and interface tag respectively.
+               workspace_id(str): The ID of the workspace.
+                    This should be generated by the create_workspace() API call.
+               tag_label(str): the label of the desired tag
+               tag_value(str): the value of the desired tag
+               remove (Boolean): When set to True it will remove the device/interface tag.
+                    When set to False (default) it will create the device/interface tag.
+
+            Returns:
+                response (dict): A dict that contains...
+                    Ex: {'value': {'key': {'workspaceId': 'string', 'elementType': 'string',
+                                        'label': 'string', 'value': 'string'}},
+                         'time': 'rfc3339 time'}
+        '''
+        tag_url = '/api/resources/tag/v2/TagConfig'
+        payload = {
+            "key": {
+                "elementType": element_type,
+                "workspaceId": workspace_id,
+                "label": tag_label,
+                "value": tag_value
+            },
+            "remove": remove
+        }
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion < 6.0:
+                self.log.warning('Tag.V2 Resource APIs are supported from 2021.2.0 or newer.')
+                return None
+        self.log.debug('v6 {} '.format(tag_url) + str(payload))
+        return self.clnt.post(tag_url, data=payload)
+
+    def tag_assignment_config(self, element_type, workspace_id, tag_label,
+                              tag_value, device_id, interface_id, remove=False):
+        ''' Assign/Unassign device or interface tags.
+            Tag assignment with the tag.v2 resource API has to be done within a workspace.
+
+            Args:
+               element_type (str): can be ELEMENT_TYPE_DEVICE or ELEMENT_TYPE_INTERFACE to
+                    create device and interface tag respectively
+               workspace_id(str): the ID of the workspace. This should be generated by
+                    the create_workspace() API call.
+               tag_label(str): the label of the desired tag
+               tag_value(str): the value of the desired tag
+               device_id (str): the Serial Number of the device
+               interface_id (str): the interface name of the device, e.g.: Ethernet1
+               remove (Boolean): When set to True it will remove the device/interface
+                    tag assignment.
+                    When set to False (default) it will create the device/interface tag assignment.
+            Returns:
+               response (dict): A dict that contains...
+
+                    Ex: {'value': {'key': {'workspaceId': 'string', 'elementType': 'string',
+                                           'label': 'string', 'value': 'string',
+                                           'deviceId': 'string', 'interfaceId': 'string'},
+                                   'remove': Boolean},'time': 'rfc3339 time'}
+
+        '''
+        tag_url = '/api/resources/tag/v2/TagAssignmentConfig'
+        payload = {
+            "key": {
+                "elementType": element_type,
+                "workspaceId": workspace_id,
+                "label": tag_label,
+                "value": tag_value,
+                "deviceId": device_id,
+                "interfaceId": interface_id
+            },
+            "remove": remove
+        }
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion < 6.0:
+                self.log.warning('Tag.V2 Resource APIs are supported from 2021.2.0 or newer.')
+                return None
+        self.log.debug('v6 {} '.format(tag_url) + str(payload))
+        return self.clnt.post(tag_url, data=payload)
+
+    def get_all_workspaces(self):
+        ''' Get state information for all workspaces
+
+            Returns:
+               response (dict): A dict that contains a list of key-values for workspaces
+        '''
+        workspace_url = '/api/resources/workspace/v1/Workspace/all'
+        payload = {}
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion < 6.0:
+                self.log.warning('Workspace Resource APIs are supported from 2021.2.0 or newer.')
+                return None
+        self.log.debug('v6 {}'.format(workspace_url))
+        return self.clnt.post(workspace_url, data=payload)
+
+    def get_workspace(self, workspace_id):
+        ''' Get state information for all workspaces
+
+            Returns:
+               response (dict): A dict that contains a list of key-values for workspaces
+        '''
+        workspace_url = '/api/resources/workspace/v1/Workspace?key.workspaceId={}'.format(
+            workspace_id)
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion < 6.0:
+                self.log.warning('Workspace Resource APIs are supported from 2021.2.0 or newer.')
+                return None
+        self.log.debug('v6 {}'.format(workspace_url))
+        return self.clnt.get(workspace_url)
+
+    def workspace_config(self, workspace_id, display_name,
+                         description='', request='REQUEST_UNSPECIFIED',
+                         request_id=''):
+        ''' Create, Build and Submit workspaces.
+
+            Args:
+                workspace_id (str): The (unique) name of the workspace.
+                    Previously used names cannot be used if the workspace was closed or abandoned.
+                display_name (str): The display name of the workspace.
+                description (str): The description of the workspace.
+                request (string): Can have the following values:
+                    - REQUEST_UNSPECIFIED
+                    - REQUEST_START_BUILD
+                    - REQUEST_CANCEL_BUILD
+                    - REQUEST_SUBMIT
+                    - REQUEST_ABANDON
+                    - REQUEST_ROLLBACK
+                request_id (str): An arbitrary requestId that is required for the
+                    build and submit process.
+
+            Returns:
+               response (dict): A dict that contains...
+                    Ex: {'value': {'key': {'workspaceId': 'string'},
+                                'displayName': 'string','description': 'string',
+                                'requestParams': {'requestId': 'string'}
+                                },
+                         'time': 'rfc3339 time'}
+        '''
+        workspace_url = '/api/resources/workspace/v1/WorkspaceConfig'
+        payload = {
+            "key": {
+                "workspaceId": workspace_id
+            },
+            "displayName": display_name,
+            "description": description,
+            "request": request,
+            "requestParams": {
+                "requestId": request_id
+            }
+        }
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion < 6.0:
+                self.log.warning('Workspace Resource APIs are supported from 2021.2.0 or newer.')
+                return None
+        self.log.debug('v6 ' + str(workspace_url) + ' ' + str(payload))
+        return self.clnt.post(workspace_url, data=payload)
+
+    def workspace_build_status(self, workspace_id, build_id):
+        ''' Verify the state of the workspace build process.
+
+            Args:
+                workspace_id (str): The (unique) name of the workspace.
+                build_id (str): The buildId of the workspace for which the
+                    build process was requested.
+            Returns:
+                response (dict): A dict that contains...
+                    Ex: {'value': {'key': {'workspaceId': 'string', 'buildId': 'string'},
+                         'state': 'BUILD_STATE_SUCCESS', 'buildResults': {'values': ...
+        '''
+        params = 'key.workspaceId={}&key.buildId={}'.format(workspace_id, build_id)
+        workspace_url = '/api/resources/workspace/v1/WorkspaceBuild?' + params
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion < 6.0:
+                self.log.warning('Workspace Resource APIs are supported from 2021.2.0 or newer.')
+                return None
+        self.log.debug('v6 {}'.format(workspace_url + params))
+        return self.clnt.get(workspace_url, timeout=self.request_timeout)
+
+    def change_control_get_one(self, cc_id, cc_time=None):
+        ''' Get the configuration and status of a change control using Resource APIs.
+            Supported versions: CVP 2021.2.0 or newer and CVaaS.
+
+            Args:
+               cc_id (str): The ID of the change control.
+               cc_time (str): Time indicates the time for which you are interested in the data.
+                    If no time is given, the server will use the time at which it makes the request.
+                    The time format is RFC 3339, e.g.: 2021-12-24T11:30:00.00Z.
+            Returns:
+               response (dict): A dict that contains...
+                  Ex: {"value":{"key":{"id":"rL6Tog6UU"}, "change":{"name":"Change 20211213_210554",
+                       "rootStageId":"kZUWqyIArD",
+                       "stages":{"values":{"kZUWqyIArD":{"name":"Change 20211213_210554 Root",
+                       "rows":{"values":[{"values":["vazWhKyVRR"]}]}},
+                       "vazWhKyVRR":{"name":"Update Config",
+                       "action":{"name":"task", "timeout":3000,
+                       "args":{"values":{"TaskID":"538"}}}}}},
+                       "notes":"", "time":"2021-12-13T21:05:58.813750128Z", "user":"cvpadmin"},
+                       "approve":{"value":true, "time":"2021-12-13T21:11:26.788753264Z",
+                       "user":"cvpadmin"}}, "time":"2021-12-13T21:11:26.788753264Z"}%
+        '''
+        if cc_time is None:
+            params = 'key.id={}'.format(cc_id)
+        else:
+            params = 'key.id={}&time={}'.format(cc_id, cc_time)
+        cc_url = '/api/resources/changecontrol/v1/ChangeControl?' + params
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion < 6.0:
+                self.log.warning(
+                    'Change Control Resource APIs are supported from 2021.2.0 or newer.')
+                return None
+        self.log.debug('v6 {}'.format(cc_url))
+        try:
+            response = self.clnt.get(cc_url, timeout=self.request_timeout)
+        except Exception as error:
+            if 'resource not found' in str(error):
+                return None
+            raise error
+        return response
+
+    def change_control_get_all(self):
+        ''' Get the configuration and status of all Change Controls using Resource APIs.
+            Supported versions: CVP 2021.2.0 or newer and CVaaS.
+
+            Returns:
+               response (dict): A dict that contains a list of all Change Controls.
+        '''
+        cc_url = '/api/resources/changecontrol/v1/ChangeControl/all'
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion < 6.0:
+                self.log.warning(
+                    'Change Control Resource APIs are supported from 2021.2.0 or newer.')
+                return None
+        self.log.debug('v6 {}'.format(cc_url))
+        return self.clnt.get(cc_url, timeout=self.request_timeout)
+
+    def change_control_approval_get_one(self, cc_id, cc_time=None):
+        ''' Get the state of a specific Change Control's approve config using Resource APIs.
+            Supported versions: CVP 2021.2.0 or newer and CVaaS.
+
+            Args:
+               cc_id (str): The ID of the change control.
+               cc_time (str): Time indicates the time for which you are interested in the data.
+                    If no time is given, the server will use the time at which it makes the request.
+                    The time format is RFC 3339, e.g.: 2021-12-24T11:30:00.00Z.
+            Returns:
+               response (dict): A dict that contains...
+                    Ex: {'value': {'key': {'id': '<CC ID>'}, 'approve': {'value': True},
+                         'version': '2021-12-13T21:05:58.813750128Z'},
+                         'time': '2021-12-13T21:11:26.788753264Z'}
+        '''
+        if cc_time is None:
+            params = 'key.id={}'.format(cc_id)
+        else:
+            params = 'key.id={}&time={}'.format(cc_id, cc_time)
+        cc_url = '/api/resources/changecontrol/v1/ApproveConfig?' + params
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion < 6.0:
+                self.log.warning(
+                    'Change Control Resource APIs are supported from 2021.2.0 or newer.')
+                return None
+        cc_status = self.change_control_get_one(cc_id)
+        if cc_status is None:
+            return None
+        if 'value' in cc_status and 'approve' not in cc_status['value']:
+            self.log.warning("The change has not been approved yet."
+                             " A change has to be approved at least once for the 'approve'"
+                             " state to be populated.")
+            return None
+        return self.clnt.get(cc_url, timeout=self.request_timeout)
+
+    def change_control_approval_get_all(self):
+        ''' Get state information for all Change Control Approvals using Resource APIs.
+            Supported versions: CVP 2021.2.0 or newer and CVaaS.
+
+            Returns:
+               response (dict): A dict that contains a list of all Change Control Approval Configs.
+        '''
+        cc_url = '/api/resources/changecontrol/v1/ApproveConfig/all'
+        # For on-prem check the version as it is only supported from 2021.2.0+
+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion < 6.0:
+                self.log.warning(
+                    'Change Control Resource APIs are supported from 2021.2.0 or newer.')
+                return None
+        self.log.debug('v6 {}'.format(cc_url))
+        return self.clnt.get(cc_url, timeout=self.request_timeout)
+
+    def change_control_approve(self, cc_id, notes="", approve=True):
+        ''' Approve/Unapprove a change control using Resource APIs.
+            Supported versions: CVP 2021.2.0 or newer and CVaaS.
+
+            Args:
+              cc_id (str): The ID of the change control.
+              notes (str): An optional approval note.
+              approve (bool): Set to True to approve a change and to False to unapprove a change.
+              The default is True.
+        '''
+        cc_url = '/api/resources/changecontrol/v1/ApproveConfig'
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        # Since the get_change_control already checks this, no need to check it again
+        cc_status = self.change_control_get_one(cc_id)
+        if cc_status is None:
+            return None
+        if ('value' in cc_status and 'change' in cc_status['value'] and
+                'time' in cc_status['value']['change']):
+            version = cc_status['value']['change']['time']
+        else:
+            self.log.error('The version timestamp was not found in the CC status.')
+            return None
+        payload = {
+            "key": {
+                "id": cc_id
+            },
+            "approve": {
+                "value": approve,
+                "notes": notes
+            },
+            "version": version
+        }
+        return self.clnt.post(cc_url, data=payload, timeout=self.request_timeout)
+
+    def change_control_delete(self, cc_id):
+        ''' Delete a pending Change Control using Resource APIs.
+            Supported versions: CVP 2021.2.0 or newer and CVaaS.
+
+            Args:
+              cc_id (str): The ID of the change control.
+        '''
+        params = 'key.id={}'.format(cc_id)
+        cc_url = '/api/resources/changecontrol/v1/ChangeControlConfig?' + params
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion < 6.0:
+                self.log.warning(
+                    'Change Control Resource APIs are supported from 2021.2.0 or newer.')
+                return None
+        self.log.debug('v6 {}'.format(cc_url))
+        return self.clnt.delete(cc_url, timeout=self.request_timeout)
+
+    def change_control_create_with_custom_stages(self, custom_cc=None):
+        ''' Create a Change Control with custom stage hierarchy using Resource APIs.
+            Supported versions: CVP 2021.2.0 or newer and CVaaS.
+
+            Args:
+                custom_cc (dict): A dictionary with the entire stage hierarchy.
+                Ex1: {'key': {'id': '409b94d1-c0cb-4d74-8f88-89f66f13f109'},
+                     'change': {'name': 'Change_20211217_034338',
+                     'notes': 'cvprac CC',
+                     'rootStageId': 'root',
+                     'stages': {'values': {'root': {'name': 'root',
+                                                'rows': {'values': [{'values': ['1-2']},
+                                                                    {'values': ['3']}]}},
+                                        '1-2': {'name': 'stages 1-2',
+                                                'rows': {'values': [{'values': ['1ab']},
+                                                                    {'values': ['2']}]}},
+                                        '1a': {'action': {'args': {'values': {'TaskID': '1242'}},
+                                                            'name': 'task',
+                                                            'timeout': 3000},
+                                                'name': 'stage 1a'},
+                                        '1ab': {'name': 'stage 1ab',
+                                                'rows': {'values': [{'values': ['1a',
+                                                                                '1b']}]}},
+                                        '1b': {'action': {'args': {'values': {'TaskID': '1243'}},
+                                                            'timeout': 3000},
+                                                'name': 'stage 1b'},
+                                        '2': {'action': {'args': {'values': {'TaskID': '1240'}},
+                                                        'name': 'task',
+                                                        'timeout': 3000},
+                                                'name': 'stage 2'},
+                                        '3': {'action': {'args': {'values': {'TaskID': '1241'}},
+                                                        'name': 'task',
+                                                        'timeout': 3000},
+                                                'name': 'stage 3'},
+                                        }}}}
+                The above would result in the following hierarchy:
+                    root (series)
+                    |- stages 1-2 (series)
+                    |  |- stage 1ab (parallel)
+                    |  |    |- stage 1a
+                    |  |    |- stage 1b
+                    |  |- stage 2
+                    |- stage 3
+
+                Ex2 (MLAG ISSU):
+                    {'key': {'id': 'PXs9cKimC'},
+                     'change': {'name': 'Change 20211217_040530',
+                     'notes': '',
+                     'rootStageId': 'root',
+                     'stages': {'values': { 'root': {'name': 'Change 20211217_040530 Root',
+                                                     'rows': {
+                                                         'values': [{'values': ['left-leafs']}],
+                                                     }},
+                                            'upgrade1': {'action': {
+                                                             'args': {'values': {'TaskID': '1242'}},
+                                                             'name': 'task',
+                                                             'timeout': 3000},
+                                                         'name': 'Image Upgrade'},
+                                            'pre-mlag-check-l2': {'action': {
+                                                                      'args': {
+                                                                          'values': {
+                                                                              'DeviceID': 'SN2'}},
+                                                                      'name': 'mlaghealthcheck'},
+                                                          'name': 'Check MLAG Health'},
+                                            'left-leafs': {'name': 'left-leafs',
+                                                          'rows': {
+                                                              'values': [{'values': ['leaf1']},
+                                                                         {'values': ['leaf2']}]}},
+                                            'upgrade2': {'action': {'args': {
+                                                                      'values': {'TaskID': '1243'}},
+                                                                      'name': 'task',
+                                                                      'timeout': 3000},
+                                                           'name': 'Image Upgrade'},
+                                            'pre-mlag-check-l1': {'action': {
+                                                                      'args': {
+                                                                          'values': {
+                                                                              'DeviceID': 'SN1'}},
+                                                                      'name': 'mlaghealthcheck'},
+                                                          'name': 'Check MLAG Health'},
+                                            'post-mlag-check-l2': {'action': {
+                                                                       'args': {
+                                                                           'values': {
+                                                                               'DeviceID': 'SN1'}},
+                                                                       'name': 'mlaghealthcheck'},
+                                                           'name': 'Check MLAG Health'},
+                                            'leaf1': {'name': 'leaf1',
+                                                          'rows': {
+                                                              'values': [{'values': [
+                                                                              'pre-mlag-check-l1']},
+                                                                         {'values': [
+                                                                              'upgrade1']},
+                                                                         {'values': [
+                                                                              'post-mlag-check-l1'],
+                                                                         }]}},
+                                            'post-mlag-check-l1': {'action': {
+                                                                       'args': {
+                                                                           'values': {
+                                                                               'DeviceID': 'SN2'}},
+                                                                      'name': 'mlaghealthcheck'},
+                                                           'name': 'Check MLAG Health'},
+                                            'leaf2': {'name': 'leaf2',
+                                                      'rows': {'values': [{'values': [
+                                                                              'pre-mlag-check-l2']},
+                                                                          {'values': [
+                                                                               'upgrade2']},
+                                                                          {'values': [
+                                                                              'post-mlag-check-l2'],
+                                                                          }]}}}}}
+                    }
+                    The above would result in the following hierarchy:
+                    root (series)
+                    |- left-leafs (series)
+                       |- leaf1 (series)
+                       |    |- pre-mlag-check-l1
+                       |    |- upgrade1
+                       |    |- post-mlag-check-l1
+                       |- leaf2 (series)
+                            |- pre-mlag-check-l1
+                            |- upgrade1
+                            |- post-mlag-check-l1
+
+            Returns:
+                response (dict): A dict that contains...
+                Ex: {'value': {'key': {'id':cc_id,
+                      'time': '...'}
+        '''
+        payload = custom_cc
+        cc_url = '/api/resources/changecontrol/v1/ChangeControlConfig'
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion < 6.0:
+                self.log.warning(
+                    'Change Control Resource APIs are supported from 2021.2.0 or newer.')
+                return None
+        self.log.debug('v6 ' + str(cc_url) + ' ' + str(payload))
+        return self.clnt.post(cc_url, data=payload)
+
+    def change_control_create_for_tasks(self, cc_id, name, tasks, series=True):
+        ''' Create a simple Change Control for tasks using Resource APIs.
+            Supported versions: CVP 2021.2.0 or newer and CVaaS.
+
+            This function will create a change with either all Task actions in series or parallel.
+            For custom stage hierarchy the change_control_create_with_custom_stages()
+            should be used.
+            Args:
+                cc_id (string): The ID for the new change control.
+                name (string): The name for the new change control.
+                tasks (list): A list of Task IDs as strings
+                    Ex: ['10', '11', '12']
+                series (bool): A flag for running tasks in series or
+                    in parallel. Defaults to True for running in series.
+            Returns:
+                response (dict): A dict that contains...
+                Ex: {'value': {'key': {'id':cc_id,
+                      'time': '...'}
+        '''
+        stages = {'values': {'root': {'name': 'root', 'rows': {'values': []}}}}
+        if series:
+            for index, task in enumerate(tasks):
+                stage_id = 'stage%d' % index
+                stages['values']['root']['rows']['values'].append({'values': [stage_id]})
+                stages['values'][stage_id] = {
+                    'action': {
+                        'args': {
+                            'values': {
+                                'TaskID': task,
+                            },
+                        },
+                        'name': 'task',
+                        'timeout': 3000,
+                    },
+                    'name': stage_id,
+                }
+        else:
+            stages['values']['root']['rows']['values'].append({'values': []})
+            for index, task in enumerate(tasks):
+                stage_id = 'stage%d' % index
+                stages['values']['root']['rows']['values'][0]['values'].append(stage_id)
+                stages['values'][stage_id] = {
+                    'action': {
+                        'args': {
+                            'values': {
+                                'TaskID': task,
+                            },
+                        },
+                        'name': 'task',
+                        'timeout': 3000,
+                    },
+                    'name': stage_id,
+                }
+        payload = {
+            'key': {
+                'id': cc_id
+            },
+            'change': {
+                'name': name,
+                'rootStageId': 'root',
+                'notes': 'randomString',
+                'stages': stages
+            }
+        }
+        cc_url = '/api/resources/changecontrol/v1/ChangeControlConfig'
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion < 6.0:
+                self.log.warning(
+                    'Change Control Resource APIs are supported from 2021.2.0 or newer.')
+                return None
+        self.log.debug('v6 ' + str(cc_url) + ' ' + str(payload))
+        return self.clnt.post(cc_url, data=payload, timeout=self.request_timeout)
+
+    def change_control_start(self, cc_id, notes=""):
+        ''' Start a Change Control using Resource APIs.
+            Supported versions: CVP 2021.2.0 or newer and CVaaS.
+            Args:
+                cc_id (string): The ID for the new change control.
+                notes (string): An optional note.
+            Returns:
+                response (dict): A dict that contains...
+                Ex: {"value":{"key":{"id":cc_id}, "start":{"value":true, "notes":"note"}},
+                     "time":"2021-12-14T21:02:21.830306071Z"}
+        '''
+        payload = {
+            "key": {
+                "id": cc_id
+            },
+            "start": {
+                "value": True,
+                "notes": notes
+            }
+        }
+        cc_url = '/api/resources/changecontrol/v1/ChangeControlConfig'
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion < 6.0:
+                self.log.warning(
+                    'Change Control Resource APIs are supported from 2021.2.0 or newer.')
+                return None
+        self.log.debug('v6 ' + str(cc_url) + ' ' + str(payload))
+        return self.clnt.post(cc_url, data=payload, timeout=self.request_timeout)
+
+    def change_control_stop(self, cc_id, notes=""):
+        ''' Stop a Change Control using Resource APIs.
+            Supported versions: CVP 2021.2.0 or newer and CVaaS.
+
+            Args:
+                cc_id (string): The ID for the new change control.
+                notes (string): An optional note.
+            Returns:
+                response (dict): A dict that contains...
+                Ex: {"value":{"key":{"id":cc_id}, "start":{"value":false, "notes":"note"}},
+                     "time":"2021-12-14T21:02:21.830306071Z"}
+        '''
+        payload = {
+            "key": {
+                "id": cc_id
+            },
+            "start": {
+                "value": False,
+                "notes": notes
+            }
+        }
+        cc_url = '/api/resources/changecontrol/v1/ChangeControlConfig'
+        # For on-prem check the version as it is only supported from 2021.2.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion < 6.0:
+                self.log.warning(
+                    'Change Control Resource APIs are supported from 2021.2.0 or newer.')
+                return None
+        self.log.debug('v6 ' + str(cc_url) + ' ' + str(payload))
+        return self.clnt.post(cc_url, data=payload, timeout=self.request_timeout)
+
+    def change_control_schedule(self, cc_id, schedule_time, notes=""):
+        ''' Schedule a Change Control using Resource APIs.
+            Supported versions: CVP 2022.1.0 or newer and CVaaS.
+
+            Args:
+                cc_id (string): The ID for the new change control.
+                schedule_time (string): rfc3339 time format, e.g: 2021-12-23T02:07:00.0Z
+                notes (string): An optional note.
+            Returns:
+                response (dict): A dict that contains...
+                Ex: {"value":{"key":{"id":"5821c7c1-e276-4387-b60a"},
+                              "schedule":{"value":"2021-12-23T02:07:00Z",
+                                          "notes":"CC schedule via curl"}},
+                     "time":"2021-12-23T02:06:18.739965204Z"}
+        '''
+        payload = {
+            "key": {
+                "id": cc_id
+            },
+            "schedule": {
+                "value": schedule_time,
+                "notes": notes
+            }
+        }
+        cc_url = '/api/resources/changecontrol/v1/ChangeControlConfig'
+        # For on-prem check the version as it is only supported from 2022.1.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion < 8.0:
+                self.log.warning(
+                    'Change Control Scheduling via Resource APIs are supported from 2022.1.0 or newer.')
+                return None
+        self.log.debug('v8 ' + str(cc_url) + ' ' + str(payload))
+        return self.clnt.post(cc_url, data=payload, timeout=self.request_timeout)
+
+    def device_decommissioning(self, device_id, request_id):
+        ''' Decommission a device using Resource APIs.
+            Supported versions: CVP 2021.3.0 or newer and CVaaS.
+            Args:
+                device_id (string): Serial Number of the device.
+                request_id (string): Key identifies the request to decommission the device.
+                    Recommended to generate uuid with str(uuid.uuid4()).
+            Returns:
+                response (dict): Returns None if the device is not found else returns A dict that contains...
+                Ex: {'value': {'key': {'requestId': '4a4ba5a2-9886-4cd5-84d6-bdaf85a9f091'},
+                     'deviceId': 'BAD032986065E8DC14CBB6472EC314A6'},
+                     'time': '2022-02-12T02:58:30.765459650Z'}
+        '''
+        device_info = self.get_device_by_serial(device_id)
+        if device_info is not None and 'serialNumber' in device_info:
+            payload = {
+                "key": {
+                    "request_id": request_id
+                },
+                "device_id": device_id
+            }
+            url = '/api/resources/inventory/v1/DeviceDecommissioningConfig'
+            # For on-prem check the version as it is only supported from 2021.3.0+
+            if not self.clnt.is_cvaas:
+                if self.clnt.apiversion is None:
+                    self.get_cvp_info()
+                if self.clnt.apiversion < 7.0:
+                    self.log.warning(
+                        'Decommissioning via Resource APIs are supported from 2021.3.0 or newer.')
+                    return None
+            self.log.debug('v7 ' + str(url) + ' ' + str(payload))
+            return self.clnt.post(url, data=payload, timeout=self.request_timeout)
+        else:
+            self.log.warning('Device with %s serial number does not exist (or is not registered) to decommission' % device_id)
+            return None
+
+    def device_decommissioning_status_get_one(self, request_id):
+        ''' Get the decommission status of a device using Resource APIs.
+            Supported versions: CVP 2021.3.0 or newer and CVaaS.
+            Args:
+                request_id (string): key identifies the request to decommission the device
+            Returns:
+                response (dict): A dict that contains...
+                Ex:{"result":{"value":{"key":{"requestId":"123456789"},
+                  "status":"DECOMMISSIONING_STATUS_IN_PROGRESS",
+                  "statusMessage":"Disabled TerminAttr, waiting for device to be marked inactive"},
+                  "time":"2022-02-04T19:41:46.376310308Z","type":"INITIAL"}}
+        '''
+        params = 'key.requestId={}'.format(request_id)
+        url = '/api/resources/inventory/v1/DeviceDecommissioning?' + params
+        # For on-prem check the version as it is only supported from 2021.3.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion < 7.0:
+                self.log.warning(
+                    'Decommissioning via Resource APIs are supported from 2021.3.0 or newer.')
+                return None
+        self.log.debug('v7 ' + str(url))
+        return self.clnt.get(url, timeout=self.request_timeout)
+
+    def device_decommissioning_status_get_all(self, status="DECOMMISSIONING_STATUS_UNSPECIFIED"):
+        ''' Get the decommissioning status of all devices using Resource APIs.
+            Supported versions: CVP 2021.3.0 or newer and CVaaS.
+            Args:
+                status (enum): By default it will get the decommissioning status for all devices.
+                    Possible values:
+                        "DECOMMISSIONING_STATUS_UNSPECIFIED" or 0,
+                        "DECOMMISSIONING_STATUS_IN_PROGRESS" or 1,
+                        "DECOMMISSIONING_STATUS_FAILURE" or 2,
+                        "DECOMMISSIONING_STATUS_SUCCESS" or 3
+            Returns:
+                response (dict): A dict that contains...
+                Ex: {"result":{"value":{"key":{"requestId":"123456789"},
+                "status":"DECOMMISSIONING_STATUS_IN_PROGRESS",
+                "statusMessage":"Disabled TerminAttr, waiting for device to be marked inactive"},
+                "time":"2022-02-04T19:41:46.376310308Z","type":"INITIAL"}}
+        '''
+        payload = {
+            "partialEqFilter": [
+                {
+                    "status": status,
+                }
+            ]
+        }
+        url = '/api/resources/inventory/v1/DeviceDecommissioning/all'
+        # For on-prem check the version as it is only supported from 2021.3.0+
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion < 7.0:
+                self.log.warning(
+                    'Decommissioning via Resource APIs are supported from 2021.3.0 or newer.')
+                return None
+        self.log.debug('v7 ' + str(url))
+        return self.clnt.post(url, data=payload, timeout=self.request_timeout)
