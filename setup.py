@@ -42,6 +42,7 @@ except ImportError:
 
 from cvprac import __version__, __author__
 
+
 def find_modules(pkg):
     ''' Return all modules from the pkg
     '''
@@ -51,6 +52,7 @@ def find_modules(pkg):
             modules.append(path.join(dirname, subdirname))
     return modules
 
+
 def get_long_description():
     ''' Get the long description from README.rst if it exists.
         Null string is returned if README.rst is non-existent
@@ -58,17 +60,19 @@ def get_long_description():
     long_description = ''
     here = path.abspath(path.dirname(__file__))
     try:
-        with io.open(path.join(here, 'README.rst'), encoding='utf-8') as file_hdl:
+        with io.open(path.join(here, 'README.md'), encoding='utf-8') as file_hdl:
             long_description = file_hdl.read()
     except IOError:
         pass
     return long_description
+
 
 setup(
     name='cvprac',
     version=__version__,
     description='Arista Cloudvision(R) Portal Rest API Client written in python',
     long_description=get_long_description(),
+    long_description_content_type='text/markdown',
     author=__author__,
     author_email='eosplus-dev@arista.com',
     url='https://github.com/aristanetworks/cvprac',
