@@ -176,6 +176,37 @@ class CvpApi(object):
         return self.clnt.get('/user/getUser.do?userId={}'.format(username),
                              timeout=self.request_timeout)
 
+    def get_users(self, query='', start=0, end=0):
+        ''' Returns all users in CVP filtered by an optional query parameter
+
+            Args:
+                query (str): Query parameter to filter users by.
+                start (int): Start index for the pagination.  Default is 0.
+                end (int): End index for the pagination.  If end index is 0
+                    then all the records will be returned.  Default is 0.
+
+            Returns:
+                response (dict): A dict that contains the users.
+                    {'total': 1,
+                     'roles': {'cvpadmin': ['network-admin']},
+                     'users': [{'userId': 'cvpadmin',
+                                'firstName': '',
+                                'lastName': '',
+                                'description': '',
+                                'email': 'cvprac@cvprac.com',
+                                'lastAccessed': 1654555139700,
+                                'contactNumber': '',
+                                'userType': 'Local',
+                                'userStatus': 'Enabled',
+                                'currentStatus': 'Online',
+                                'addedByUser': 'cvp system'}]}
+        '''
+        self.log.debug('get_users: query: %s' % query)
+        return self.clnt.get('/user/getUsers.do?'
+                             'queryparam=%s&startIndex=%d&endIndex=%d' %
+                             (qplus(query), start, end),
+                             timeout=self.request_timeout)
+
     def delete_user(self, username):
         ''' Remove specified user from CVP
 
