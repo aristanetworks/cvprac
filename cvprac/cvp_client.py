@@ -100,7 +100,7 @@ from pkg_resources import parse_version
 
 import requests
 from requests.exceptions import ConnectionError, HTTPError, Timeout, \
-    ReadTimeout, TooManyRedirects
+    ReadTimeout, TooManyRedirects, JSONDecodeError
 
 from cvprac.cvp_api import CvpApi
 from cvprac.cvp_client_errors import CvpApiError, CvpLoginError, \
@@ -660,17 +660,19 @@ class CvpClient(object):
         if response:
             try:
                 resp_data = response.json()
-            except ValueError as error:
-                self.log.debug('Error trying to decode request response %s',
+            except JSONDecodeError as error:
+                self.log.debug('Error trying to decode request response - %s',
                                error)
-                if 'Extra data' in str(error):
-                    self.log.debug('Found multiple objects in response data.'
-                                   'Attempt to decode')
+                if ('Extra data' in str(error) or
+                        'Errno Expecting value' in str(error)):
+                    self.log.debug('Found multiple objects or NO objects in'
+                                   'response data. Attempt to decode')
                     decoded_data = json_decoder(response.text)
                     resp_data = dict(data=decoded_data)
                 else:
-                    self.log.debug('Attempt to return response text')
-                    resp_data = dict(data=response.text)
+                    self.log.error('Unknown format for JSONDecodeError - %s',
+                                   error)
+                    raise error
         else:
             self.log.debug('Received no response for request %s %s',
                            req_type, url)
