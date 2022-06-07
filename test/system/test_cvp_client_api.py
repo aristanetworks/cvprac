@@ -85,6 +85,12 @@ class TestCvpClient(TestCvpClientBase):
         '''
         # pylint: disable=too-many-statements
         # pylint: disable=too-many-branches
+        # Test Get All Users
+        result = self.api.get_users()
+        self.assertIsNotNone(result)
+        self.assertIn('total', result)
+        start_total = result['total']
+
         dut = self.duts[0]
         # Test Get User
         if 'username' in dut:
@@ -193,6 +199,12 @@ class TestCvpClient(TestCvpClientBase):
         self.assertIsNotNone(result['roles'])
         self.assertEqual(result['roles'], [update_user_role])
 
+        # Test Get All Users with New User
+        result = self.api.get_users()
+        self.assertIsNotNone(result)
+        self.assertIn('total', result)
+        self.assertEqual(result['total'], start_total + 1)
+
         # Test Delete User
         result = self.api.delete_user('test_cvp_user')
         self.assertIsNotNone(result)
@@ -202,6 +214,12 @@ class TestCvpClient(TestCvpClientBase):
         # Verify the user successfully deleted and doesn't exist
         with self.assertRaises(CvpApiError):
             self.api.get_user('test_cvp_user')
+
+        # Test Get All Users Final
+        result = self.api.get_users()
+        self.assertIsNotNone(result)
+        self.assertIn('total', result)
+        self.assertEqual(result['total'], start_total)
 
     def test_api_check_compliance(self):
         ''' Verify check_compliance
