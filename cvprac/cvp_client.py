@@ -602,6 +602,11 @@ class CvpClient(object):
                     or delete request failed and no session could be
                     established to a CVP node.  Destroy the class and
                     re-instantiate.
+                JSONDecodeError: A JSONDecodeError is raised when the response
+                    content contains invalid JSON. Potentially in the case of
+                    Resource APIs that will return Stream JSON format with
+                    multiple object or in the case where the response contains
+                    incomplete JSON.
         '''
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-statements
@@ -658,21 +663,29 @@ class CvpClient(object):
             break
         resp_data = None
         if response:
-            try:
-                resp_data = response.json()
-            except JSONDecodeError as error:
-                self.log.debug('Error trying to decode request response - %s',
-                               error)
-                if ('Extra data' in str(error) or
-                        'Errno Expecting value' in str(error)):
-                    self.log.debug('Found multiple objects or NO objects in'
-                                   'response data. Attempt to decode')
-                    decoded_data = json_decoder(response.text)
-                    resp_data = dict(data=decoded_data)
-                else:
-                    self.log.error('Unknown format for JSONDecodeError - %s',
-                                   error)
-                    raise error
+            if response.content:
+                try:
+                    resp_data = response.json()
+                except JSONDecodeError as error:
+                    err_str = str(error)
+                    if len(err_str) > 700:
+                        err_str = f"{err_str[:300]}[... truncated ...]" \
+                                  f" {err_str[-300:]}"
+                    self.log.debug(
+                        'Error trying to decode request response - %s', err_str)
+                    if 'Extra data' in str(error):
+                        self.log.debug('Found multiple objects or NO objects in'
+                                       'response data. Attempt to decode')
+                        decoded_data = json_decoder(response.text)
+                        resp_data = dict(data=decoded_data)
+                    else:
+                        self.log.error(
+                            'Unknown format for JSONDecodeError - %s', err_str)
+                        # Suppressing context as per
+                        # https://peps.python.org/pep-0409/
+                        raise JSONDecodeError(err_str) from None
+            else:
+                resp_data = dict(data=[])
         else:
             self.log.debug('Received no response for request %s %s',
                            req_type, url)
