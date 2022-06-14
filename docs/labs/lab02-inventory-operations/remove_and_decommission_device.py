@@ -1,4 +1,4 @@
-# Copyright (c) 2021 Arista Networks, Inc.
+# Copyright (c) 2022 Arista Networks, Inc.
 # Use of this source code is governed by the Apache License 2.0
 # that can be found in the COPYING file.
 
@@ -14,7 +14,7 @@ requests.packages.urllib3.disable_warnings()
 clnt = CvpClient()
 clnt.connect(nodes=['cvp1'], username="username",password="password")
 
-device_id = input("Serial number of device to be decommissioned: ")
+device_id = input("Serial number of the device to be decommissioned: ")
 request_id = str(uuid.uuid4())
 clnt.api.device_decommissioning(device_id, request_id)
 
