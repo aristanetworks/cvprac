@@ -12,7 +12,7 @@ requests.packages.urllib3.disable_warnings()
 
 # Create connection to CloudVision
 clnt = CvpClient()
-clnt.connect(nodes=['cvp1'], username="username",password="password")
+clnt.connect(nodes=['cvp1'], username="username", password="password")
 
 device_id = input("Serial number of the device to be decommissioned: ")
 request_id = str(uuid.uuid4())
