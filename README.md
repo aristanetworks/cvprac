@@ -372,6 +372,7 @@ It is strongly recommended to use one from the below:
 - ```Feat```: Create a capability e.g. feature, test, dependency
 - ```Fix```: Fix an issue e.g. bug, typo, accident, misstatement
 - ```Doc```: Refactor of documentation, e.g. help files
+- ```Example```: Add a new example or modify an [existing one](docs/labs/)
 - ```Test```: Add or refactor anything regarding test, e.g add a new testCases or missing testCases
 - ```Refactor```: A code change that MUST be just a refactoring
 - ```Bump```: Increase the version of something e.g. dependency
