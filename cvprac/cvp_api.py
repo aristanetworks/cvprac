@@ -3828,7 +3828,16 @@ class CvpApi(object):
                 return None
         self.log.debug('v7 ' + str(url))
         return self.clnt.post(url, data=payload, timeout=self.request_timeout)
-    
+
+    def get_roles(self):
+        ''' Get all the user roles in CloudVision.
+            Returns:
+               response (dict):
+
+        '''
+        url = '/role/getRoles.do?startIndex=0&endIndex=0'
+        return self.clnt.get(url,timeout=self.request_timeout)
+
     def svc_account_token_get_all(self):
         ''' Get all service account token states using Resource APIs.
             Supported versions: CVP 2021.3.0 or newer and CVaaS.
@@ -3963,17 +3972,32 @@ class CvpApi(object):
             Supported versions: CVP 2021.3.0 or newer and CVaaS.
             Args:
                 username (string): The service account username.
+                description (string): The description of the service account.
                 roles (list): The list of role IDs. 
                     Default roles have a human readable name, e.g.: 'network-admin', 'network-operator';
-                    other roles will have the format of 'role_<unix_timestamp>', e.g. 'role_1658850344592739349'
+                    other roles will have the format of 'role_<unix_timestamp>', e.g. 'role_1658850344592739349'.
+                    cvprac automatically converts non-default role names to role IDs.
+                status (enum): The status of the service account. Possible values:
+                    0 or 'ACCOUNT_STATUS_UNSPECIFIED'
+                    1 or 'ACCOUNT_STATUS_ENABLED'
+                    2 or 'ACCOUNT_STATUS_DISABLED'
             Returns:
                 response (dict): Returns a dict that contains...
                 Ex: [{'value': {'key': {'name': 'cvprac2'}, 'status': 'ACCOUNT_STATUS_ENABLED', 
                       'description': 'testapi', 'groups': {'values': ['network-admin', 'role_1658850344592739349']}}, 
                       'time': '2022-07-26T18:19:55.392173445Z'}]
         '''
+        role_ids = []
+        all_roles = self.get_roles()
+        for r in roles:
+            for role in all_roles['roles']:
+                if r == role['key']:
+                    role_ids.append(r)
+                elif r == role['name']:
+                    role_ids.append(role['key'])
+
         payload = {'value': {'description': description,
-                             'groups': {'values': roles},
+                             'groups': {'values': role_ids},
                              'key': {'name': username},
                              'status': status}}
         url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/Set'
