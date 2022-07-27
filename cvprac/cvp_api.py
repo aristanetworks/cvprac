@@ -3895,7 +3895,8 @@ class CvpApi(object):
             Supported versions: CVP 2021.3.0 or newer and CVaaS.
             Args:
                 username (string): The service account username for which the token will be generated.
-                duration (string): The validity of the service account (maximum 1 year in seconds).
+                duration (string): The validity of the service account in seconds e.g.: "20000s"
+                    The maximum value is 1 year in seconds e.g.: "31536000s"
             Returns:
                 response (dict): Returns a dict that contains the token:
                 Ex: [{'value': {'key': {'id': '<userId>'}, 'user': 'ansible', 'description': 'cvprac test', 
@@ -4005,3 +4006,21 @@ class CvpApi(object):
                 return None
         self.log.debug('v7 {} '.format(url) + str(payload))
         return self.clnt.post(url, data=payload)
+    
+    def svc_account_delete_expired_tokens(self):
+        ''' Delete all service account tokens using Resource APIs.
+            Supported versions: CVP 2021.3.0 or newer and CVaaS.
+            Returns:
+                response (dict): Returns a dict that contains the list of tokens that were deleted:
+                Ex: [{'value': {'key': {'id': '091f48a2808ef6cc9bda7170df2d22ff887182f7'}, 'user': 'cvprac3', 
+                'description': 'cvprac test999', 'valid_until': '2022-07-26T18:31:18Z', 'created_by': 'cvpadmin', 
+                'last_used': None}, 'time': '2022-07-26T18:30:28.022504853Z', 'type': 'INITIAL'}, {'value': {'key': {'id': '2f6325d9caaa5ddc010ae9412fd52b7115644713'},...]
+        '''
+        tokens = self.svc_account_token_get_all()
+        expired_tokens = []
+        for tok in tokens:
+            dt = tok['value']['valid_until']
+            if datetime.strptime(dt,"%Y-%m-%dT%H:%M:%SZ") < datetime.now():
+                self.svc_account_token_delete(tok['value']['key']['id'])
+                expired_tokens.append(tok)
+        return expired_tokens
