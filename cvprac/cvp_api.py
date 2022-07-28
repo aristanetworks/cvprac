@@ -3842,7 +3842,7 @@ class CvpApi(object):
         ''' Get all service account token states using Resource APIs.
             Supported versions: CVP 2021.3.0 or newer and CVaaS.
             Returns:
-                response (dict): Returns a dict that contains...
+                response (list): Returns a list dictionaries that contains...
                 Ex: [{'value': {'key': {'id': 'randomId'}, 'user': 'string', 'description': 'string', 
                       'valid_until': '2022-11-02T06:58:53Z', 'created_by': 'string', 'last_used': None}, 
                       'time': '2022-05-03T15:38:53.725014447Z', 'type': 'INITIAL'}, ...]
@@ -3862,7 +3862,7 @@ class CvpApi(object):
         ''' Get an arbitrary service account tokens state using Resource APIs
             Supported versions: CVP 2021.3.0 or newer and CVaaS.
             Returns:
-                response (dict): Returns a dict that contains...
+                response (list): Returns a list of dict that contains...
                 Ex: [{'value': {'key': {'id': 'randomId'}, 'user': 'string', 'description': 'string', 
                       'valid_until': '2022-11-02T06:58:53Z', 'created_by': 'cvpadmin', 'last_used': None}, 
                       'time': '2022-05-03T15:38:53.725014447Z', 'type': 'INITIAL'}]
@@ -3884,7 +3884,7 @@ class CvpApi(object):
             Args:
                 token_id (string): The id of the service account token.
             Returns:
-                response (dict): Returns a dict that contains the time of deletion:
+                response (list): Returns a list of dict that contains the time of deletion:
                 Ex: [{'key': {'id': '<token_id>'}, 
                       'time': '2022-07-26T15:29:03.687167871Z'}]
         '''
@@ -3907,7 +3907,7 @@ class CvpApi(object):
                 duration (string): The validity of the service account in seconds e.g.: "20000s"
                     The maximum value is 1 year in seconds e.g.: "31536000s"
             Returns:
-                response (dict): Returns a dict that contains the token:
+                response (list): Returns a list of dict that contains the token:
                 Ex: [{'value': {'key': {'id': '<userId>'}, 'user': 'ansible', 'description': 'cvprac test', 
                       'valid_for': '550s', 'token': '<ey...>'}]
         '''
@@ -3928,7 +3928,7 @@ class CvpApi(object):
         ''' Get all service account states using Resource APIs.
             Supported versions: CVP 2021.3.0 or newer and CVaaS.
             Returns:
-                response (dict): Returns a dict that contains...
+                response (list): Returns a list of dictionaries that contains...
                 Ex: [{'value': {'key': {'name': 'ansible'}, 'status': 'ACCOUNT_STATUS_ENABLED', 
                       'description': 'lab-tests', 'groups': {'values': ['network-admin']}}, 
                       'time': '2022-02-10T04:28:14.251684869Z', 'type': 'INITIAL'}, ...]
@@ -3951,7 +3951,7 @@ class CvpApi(object):
             Args:
                 username (string): The service account username.
             Returns:
-                response (dict): Returns a dict that contains...
+                response (list): Returns a list of dict that contains...
                 Ex: [{'value': {'key': {'name': 'ansible'}, 'status': 'ACCOUNT_STATUS_ENABLED', 
                       'description': 'lab-tests', 'groups': {'values': ['network-admin']}}, 
                       'time': '2022-02-10T04:28:14.251684869Z'}]
@@ -3982,7 +3982,7 @@ class CvpApi(object):
                     1 or 'ACCOUNT_STATUS_ENABLED'
                     2 or 'ACCOUNT_STATUS_DISABLED'
             Returns:
-                response (dict): Returns a dict that contains...
+                response (list): Returns a list of dict that contains...
                 Ex: [{'value': {'key': {'name': 'cvprac2'}, 'status': 'ACCOUNT_STATUS_ENABLED', 
                       'description': 'testapi', 'groups': {'values': ['network-admin', 'role_1658850344592739349']}}, 
                       'time': '2022-07-26T18:19:55.392173445Z'}]
@@ -4016,7 +4016,7 @@ class CvpApi(object):
             Args:
                 username (string): The service account username.
             Returns:
-                response (dict): Returns a dict that contains the time of deletion:
+                response (list): Returns a list of dict that contains the time of deletion:
                 Ex: [{'key': {'name': 'cvprac2'}, 
                       'time': '2022-07-26T18:26:53.637425846Z'}]
         '''
@@ -4035,7 +4035,7 @@ class CvpApi(object):
         ''' Delete all service account tokens using Resource APIs.
             Supported versions: CVP 2021.3.0 or newer and CVaaS.
             Returns:
-                response (dict): Returns a dict that contains the list of tokens that were deleted:
+                response (list): Returns a list of dict that contains the list of tokens that were deleted:
                 Ex: [{'value': {'key': {'id': '091f48a2808ef6cc9bda7170df2d22ff887182f7'}, 'user': 'cvprac3', 
                 'description': 'cvprac test999', 'valid_until': '2022-07-26T18:31:18Z', 'created_by': 'cvpadmin', 
                 'last_used': None}, 'time': '2022-07-26T18:30:28.022504853Z', 'type': 'INITIAL'}, {'value': {'key': {'id': '2f6325d9caaa5ddc010ae9412fd52b7115644713'},...]
@@ -4044,7 +4044,7 @@ class CvpApi(object):
         expired_tokens = []
         for tok in tokens:
             dt = tok['value']['valid_until']
-            if datetime.strptime(dt,"%Y-%m-%dT%H:%M:%SZ") < datetime.now():
+            if datetime.strptime(dt,"%Y-%m-%dT%H:%M:%SZ") < datetime.utcnow():
                 self.svc_account_token_delete(tok['value']['key']['id'])
                 expired_tokens.append(tok)
         return expired_tokens

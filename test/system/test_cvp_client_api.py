@@ -220,6 +220,129 @@ class TestCvpClient(TestCvpClientBase):
         self.assertIsNotNone(result)
         self.assertIn('total', result)
         self.assertEqual(result['total'], start_total)
+    
+    def test_api_svc_account_operations(self):
+        ''' Verify svc_account_account_get_all, svc_account_account_get_one, svc_account_account_set,
+            svc_account_account_delete, svc_account_token_get_all, svc_account_token_set, 
+            svc_account_token_delete, svc_account_delete_expired_tokens
+        '''
+        result = self.api.svc_account_account_get_all()
+        self.assertIsNotNone(result)
+        start_total = len(result)
+
+        username = "cvpractest"
+        description = "cvprac test"
+        # TODO add custom roles after role creation APIs are added
+        roles = ["network-admin", "network-operator"]
+        status = 1 # enabled
+        # Test get service account
+        try:
+            result = self.api.svc_account_account_get_one(username)
+            self.assertIsNotNone(result)
+            self.assertIn('value', result[0])
+            self.assertIn('key', result[0]['value'])
+            self.assertIn('name', result[0]['value']['key'])
+            self.assertEqual(result[0]['value']['key']['name'], username)
+            initial_acc_status = result[0]['value']['status']
+            initial_groups = result[0]['value']['groups']['values']
+        except CvpApiError:
+            # Test create service account
+            result = self.api.svc_account_account_set(username, description, roles, status)
+            self.assertIsNotNone(result)
+            self.assertIn('value', result[0])
+            self.assertIn('key', result[0]['value'])
+            self.assertIn('name', result[0]['value']['key'])
+            self.assertEqual(result[0]['value']['key']['name'], username)
+            self.assertEqual(result[0]['value']['status'], 'ACCOUNT_STATUS_ENABLED')
+            self.assertEqual(result[0]['value']['description'], description)
+            self.assertEqual(result[0]['value']['groups']['values'], roles)
+            initial_acc_status = result[0]['value']['status']
+            initial_groups = result[0]['value']['groups']['values']
+        
+        if initial_acc_status == 'ACCOUNT_STATUS_ENABLED':
+            update_acc_status = 'ACCOUNT_STATUS_DISABLED'
+        
+        if initial_groups == ["network-admin", "network-operator"]:
+            update_groups = ["network-operator"]
+        # Test update service account
+        result = self.api.svc_account_account_set(username, description, update_groups, update_acc_status)
+
+        # Test Get all service account with new account
+        result = self.api.svc_account_account_get_all()
+        self.assertIsNotNone(result)
+        self.assertEqual(len(result), start_total + 1)
+
+        # Test delete service account
+        result = self.api.svc_account_account_delete(username)
+        self.assertIsNotNone(result)
+        self.assertIn('value', result[0])
+        self.assertIn('key', result[0]['value'])
+        self.assertIn('name', result[0]['value']['key'])
+        self.assertIn('time', result[0])
+
+        # Verify the service account was successfully deleted and doesn't exist
+        with self.assertRaises(CvpApiError):
+            self.api.svc_account_account_get_one(username)
+        
+        # Test Get All service accounts final
+        result = self.api.svc_account_account_get_all()
+        self.assertIsNotNone(result)
+        self.assertEqual(len(result), start_total)
+
+        # Test creating tokens
+        # Create a few service accounts and several tokens for each
+        result = self.api.svc_account_account_set("cvprac1", "test", ["network-admin"], 1)
+        self.assertIsNotNone(result)
+        self.assertIn('name', result[0]['value']['key'])
+        result = self.api.svc_account_account_set("cvprac2", "test", ["network-admin"], 1)
+        self.assertIsNotNone(result)
+        self.assertIn('name', result[0]['value']['key'])
+        result = self.api.svc_account_token_set("cvprac1", "10s", "test1")
+        self.assertIsNotNone(result)
+        self.assertIn('id', result[0]['value']['key'])
+        result = self.api.svc_account_token_set("cvprac1", "5s", "test1")
+        self.assertIsNotNone(result)
+        self.assertIn('id', result[0]['value']['key'])
+        result = self.api.svc_account_token_set("cvprac1", "1600s", "test1")
+        self.assertIsNotNone(result)
+        self.assertIn('id', result[0]['value']['key'])
+        result = self.api.svc_account_token_set("cvprac2", "10s", "test2")
+        self.assertIsNotNone(result)
+        self.assertIn('id', result[0]['value']['key'])
+        result = self.api.svc_account_token_set("cvprac2", "5s", "test2")
+        self.assertIsNotNone(result)
+        self.assertIn('id', result[0]['value']['key'])
+        result = self.api.svc_account_token_set("cvprac2", "1600s", "test2")
+        self.assertIsNotNone(result)
+        self.assertIn('id', result[0]['value']['key'])
+        result = self.api.svc_account_token_set("cvprac2", "3600s", "test2")   
+        self.assertIsNotNone(result)
+        self.assertIn('id', result[0]['value']['key'])
+        token_id = result[0]['value']['key']['id']
+
+        # Test Get All service account tokens
+
+        result = self.api.svc_account_token_get_all()
+        self.assertIsNotNone(result)
+        start_total_tok = len(result)
+
+        # Test delete a service account token
+        result = self.api.svc_account_token_delete(token_id)
+        self.assertIsNotNone(result)
+        self.assertIn('value', result[0]])
+        self.assertIn('id', result[0]['value']['key'])
+        self.assertIn('time', result[0]['value'])
+        self.assertEqual(len(result), start_total_tok - 1)
+
+        # Test delete all expired service account tokens
+        
+        time.sleep(11) # Sleep for 11 seconds so that few of the tokens can expire
+        result = self.api.svc_account_delete_expired_tokens()
+        self.assertIsNotNone(result)
+        result = self.api.svc_account_token_get_all()
+        self.assertIsNotNone(result)
+        end_total_tok = len(result)
+        self.assertEqual(end_total_tok, start_total_tok - 5)
 
     def test_api_check_compliance(self):
         ''' Verify check_compliance
