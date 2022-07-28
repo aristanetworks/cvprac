@@ -3843,8 +3843,9 @@ class CvpApi(object):
             Supported versions: CVP 2021.3.0 or newer and CVaaS.
             Returns:
                 response (list): Returns a list dictionaries that contains...
-                Ex: [{'value': {'key': {'id': 'randomId'}, 'user': 'string', 'description': 'string', 
-                      'valid_until': '2022-11-02T06:58:53Z', 'created_by': 'string', 'last_used': None}, 
+                Ex: [{'value': {'key': {'id': 'randomId'}, 'user': 'string',
+                      'description': 'string','valid_until': '2022-11-02T06:58:53Z',
+                      'created_by': 'string', 'last_used': None},
                       'time': '2022-05-03T15:38:53.725014447Z', 'type': 'INITIAL'}, ...]
         '''
         payload = {}
@@ -3853,7 +3854,7 @@ class CvpApi(object):
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
             if self.clnt.apiversion < 7.0:
-                self.log.warning('Service Account Resource APIs are supported from 2021.3.0 or newer.')
+                self.log.warning('Service Account Resource APIs are supported from 2021.3.0+.')
                 return None
         self.log.debug('v7 {} '.format(url) + str(payload))
         return self.clnt.post(url, data=payload)
@@ -3863,8 +3864,9 @@ class CvpApi(object):
             Supported versions: CVP 2021.3.0 or newer and CVaaS.
             Returns:
                 response (list): Returns a list of dict that contains...
-                Ex: [{'value': {'key': {'id': 'randomId'}, 'user': 'string', 'description': 'string', 
-                      'valid_until': '2022-11-02T06:58:53Z', 'created_by': 'cvpadmin', 'last_used': None}, 
+                Ex: [{'value': {'key': {'id': 'randomId'}, 'user': 'string',
+                      'description': 'string', 'valid_until': '2022-11-02T06:58:53Z',
+                      'created_by': 'cvpadmin', 'last_used': None},
                       'time': '2022-05-03T15:38:53.725014447Z', 'type': 'INITIAL'}]
         '''
         payload = {"key":{"id": token_id}}
@@ -3873,7 +3875,7 @@ class CvpApi(object):
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
             if self.clnt.apiversion < 7.0:
-                self.log.warning('Service Account Resource APIs are supported from 2021.3.0 or newer.')
+                self.log.warning('Service Account Resource APIs are supported from 2021.3.0+.')
                 return None
         self.log.debug('v7 {} '.format(url) + str(payload))
         return self.clnt.post(url, data=payload)
@@ -3885,7 +3887,7 @@ class CvpApi(object):
                 token_id (string): The id of the service account token.
             Returns:
                 response (list): Returns a list of dict that contains the time of deletion:
-                Ex: [{'key': {'id': '<token_id>'}, 
+                Ex: [{'key': {'id': '<token_id>'},
                       'time': '2022-07-26T15:29:03.687167871Z'}]
         '''
         payload = {"key":{"id": token_id}}
@@ -3894,21 +3896,23 @@ class CvpApi(object):
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
             if self.clnt.apiversion < 7.0:
-                self.log.warning('Service Account Resource APIs are supported from 2021.3.0 or newer.')
+                self.log.warning('Service Account Resource APIs are supported from 2021.3.0+.')
                 return None
         self.log.debug('v7 {} '.format(url) + str(payload))
         return self.clnt.post(url, data=payload)
-    
+
     def svc_account_token_set(self, username, duration, description):
         ''' Create a service account token using Resource APIs.
             Supported versions: CVP 2021.3.0 or newer and CVaaS.
             Args:
-                username (string): The service account username for which the token will be generated.
+                username (string): The service account username for which the token will be
+                    generated.
                 duration (string): The validity of the service account in seconds e.g.: "20000s"
                     The maximum value is 1 year in seconds e.g.: "31536000s"
             Returns:
                 response (list): Returns a list of dict that contains the token:
-                Ex: [{'value': {'key': {'id': '<userId>'}, 'user': 'ansible', 'description': 'cvprac test', 
+                Ex: [{'value': {'key': {'id': '<userId>'}, 'user': 'ansible',
+                      'description': 'cvprac test',
                       'valid_for': '550s', 'token': '<ey...>'}]
         '''
         payload = {'value': {'description': description,
@@ -3919,18 +3923,18 @@ class CvpApi(object):
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
             if self.clnt.apiversion < 7.0:
-                self.log.warning('Service Account Resource APIs are supported from 2021.3.0 or newer.')
+                self.log.warning('Service Account Resource APIs are supported from 2021.3.0+.')
                 return None
         self.log.debug('v7 {} '.format(url) + str(payload))
         return self.clnt.post(url, data=payload)
-    
+
     def svc_account_account_get_all(self):
         ''' Get all service account states using Resource APIs.
             Supported versions: CVP 2021.3.0 or newer and CVaaS.
             Returns:
                 response (list): Returns a list of dictionaries that contains...
-                Ex: [{'value': {'key': {'name': 'ansible'}, 'status': 'ACCOUNT_STATUS_ENABLED', 
-                      'description': 'lab-tests', 'groups': {'values': ['network-admin']}}, 
+                Ex: [{'value': {'key': {'name': 'ansible'}, 'status': 'ACCOUNT_STATUS_ENABLED',
+                      'description': 'lab-tests', 'groups': {'values': ['network-admin']}},
                       'time': '2022-02-10T04:28:14.251684869Z', 'type': 'INITIAL'}, ...]
 
         '''
@@ -3940,11 +3944,11 @@ class CvpApi(object):
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
             if self.clnt.apiversion < 7.0:
-                self.log.warning('Service Account Resource APIs are supported from 2021.3.0 or newer.')
+                self.log.warning('Service Account Resource APIs are supported from 2021.3.0+.')
                 return None
         self.log.debug('v7 {} '.format(url) + str(payload))
         return self.clnt.post(url, data=payload)
-    
+
     def svc_account_account_get_one(self, username):
         ''' Get an arbitrary service account's state using Resource APIs
             Supported versions: CVP 2021.3.0 or newer and CVaaS.
@@ -3952,8 +3956,8 @@ class CvpApi(object):
                 username (string): The service account username.
             Returns:
                 response (list): Returns a list of dict that contains...
-                Ex: [{'value': {'key': {'name': 'ansible'}, 'status': 'ACCOUNT_STATUS_ENABLED', 
-                      'description': 'lab-tests', 'groups': {'values': ['network-admin']}}, 
+                Ex: [{'value': {'key': {'name': 'ansible'}, 'status': 'ACCOUNT_STATUS_ENABLED',
+                      'description': 'lab-tests', 'groups': {'values': ['network-admin']}},
                       'time': '2022-02-10T04:28:14.251684869Z'}]
         '''
         payload = {"key":{"name": username}}
@@ -3962,20 +3966,21 @@ class CvpApi(object):
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
             if self.clnt.apiversion < 7.0:
-                self.log.warning('Service Account Resource APIs are supported from 2021.3.0 or newer.')
+                self.log.warning('Service Account Resource APIs are supported from 2021.3.0+')
                 return None
         self.log.debug('v7 {} '.format(url) + str(payload))
         return self.clnt.post(url, data=payload)
-    
+
     def svc_account_account_set(self, username, description, roles, status):
         ''' Create a service account token using Resource APIs.
             Supported versions: CVP 2021.3.0 or newer and CVaaS.
             Args:
                 username (string): The service account username.
                 description (string): The description of the service account.
-                roles (list): The list of role IDs. 
-                    Default roles have a human readable name, e.g.: 'network-admin', 'network-operator';
-                    other roles will have the format of 'role_<unix_timestamp>', e.g. 'role_1658850344592739349'.
+                roles (list): The list of role IDs. Default roles have a human readable name,
+                    e.g.: 'network-admin', 'network-operator';
+                    other roles will have the format of 'role_<unix_timestamp>',
+                    e.g. 'role_1658850344592739349'.
                     cvprac automatically converts non-default role names to role IDs.
                 status (enum): The status of the service account. Possible values:
                     0 or 'ACCOUNT_STATUS_UNSPECIFIED'
@@ -3983,8 +3988,9 @@ class CvpApi(object):
                     2 or 'ACCOUNT_STATUS_DISABLED'
             Returns:
                 response (list): Returns a list of dict that contains...
-                Ex: [{'value': {'key': {'name': 'cvprac2'}, 'status': 'ACCOUNT_STATUS_ENABLED', 
-                      'description': 'testapi', 'groups': {'values': ['network-admin', 'role_1658850344592739349']}}, 
+                Ex: [{'value': {'key': {'name': 'cvprac2'}, 'status': 'ACCOUNT_STATUS_ENABLED',
+                      'description': 'testapi', 'groups': {'values':
+                      ['network-admin', 'role_1658850344592739349']}},
                       'time': '2022-07-26T18:19:55.392173445Z'}]
         '''
         role_ids = []
@@ -4005,7 +4011,7 @@ class CvpApi(object):
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
             if self.clnt.apiversion < 7.0:
-                self.log.warning('Service Account Resource APIs are supported from 2021.3.0 or newer.')
+                self.log.warning('Service Account Resource APIs are supported from 2021.3.0+.')
                 return None
         self.log.debug('v7 {} '.format(url) + str(payload))
         return self.clnt.post(url, data=payload)
@@ -4017,7 +4023,7 @@ class CvpApi(object):
                 username (string): The service account username.
             Returns:
                 response (list): Returns a list of dict that contains the time of deletion:
-                Ex: [{'key': {'name': 'cvprac2'}, 
+                Ex: [{'key': {'name': 'cvprac2'},
                       'time': '2022-07-26T18:26:53.637425846Z'}]
         '''
         payload = {"key":{"name": username}}
@@ -4026,19 +4032,22 @@ class CvpApi(object):
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
             if self.clnt.apiversion < 7.0:
-                self.log.warning('Service Account Resource APIs are supported from 2021.3.0 or newer.')
+                self.log.warning('Service Account Resource APIs are supported from 2021.3.0+.')
                 return None
         self.log.debug('v7 {} '.format(url) + str(payload))
         return self.clnt.post(url, data=payload)
-    
+
     def svc_account_delete_expired_tokens(self):
         ''' Delete all service account tokens using Resource APIs.
             Supported versions: CVP 2021.3.0 or newer and CVaaS.
             Returns:
-                response (list): Returns a list of dict that contains the list of tokens that were deleted:
-                Ex: [{'value': {'key': {'id': '091f48a2808ef6cc9bda7170df2d22ff887182f7'}, 'user': 'cvprac3', 
-                'description': 'cvprac test999', 'valid_until': '2022-07-26T18:31:18Z', 'created_by': 'cvpadmin', 
-                'last_used': None}, 'time': '2022-07-26T18:30:28.022504853Z', 'type': 'INITIAL'}, {'value': {'key': {'id': '2f6325d9caaa5ddc010ae9412fd52b7115644713'},...]
+                response (list): Returns a list of dict that contains the list of tokens
+                that were deleted:
+                Ex: [{'value': {'key': {'id': '091f48a2808'},'user': 'cvprac3',
+                'description': 'cvprac test', 'valid_until': '2022-07-26T18:31:18Z',
+                'created_by': 'cvpadmin', 'last_used': None},
+                'time': '2022-07-26T18:30:28.022504853Z','type': 'INITIAL'},
+                {'value': {'key': {'id': '2f6325d9c'},...]
         '''
         tokens = self.svc_account_token_get_all()
         expired_tokens = []
