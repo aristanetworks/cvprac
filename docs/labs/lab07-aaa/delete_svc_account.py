@@ -14,4 +14,4 @@ clnt = CvpClient()
 clnt.connect(['cvp1'],'username', 'password')
 
 username = "cvprac2"
-clnt.api.svc_account_account_delete(username)
+clnt.api.svc_account_delete(username)

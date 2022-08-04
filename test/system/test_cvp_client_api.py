@@ -222,10 +222,10 @@ class TestCvpClient(TestCvpClientBase):
         self.assertEqual(result['total'], start_total)
 
     def test_api_svc_account_operations(self):
-        ''' Verify svc_account_account_get_all, svc_account_account_get_one,
-            svc_account_account_set, svc_account_account_delete
+        ''' Verify svc_account_get_all, svc_account_get_one,
+            svc_account_set, svc_account_delete
         '''
-        result = self.api.svc_account_account_get_all()
+        result = self.api.svc_account_get_all()
         self.assertIsNotNone(result)
         start_total = len(result)
 
@@ -236,7 +236,7 @@ class TestCvpClient(TestCvpClientBase):
         status = 1 # enabled
         # Test get service account
         try:
-            result = self.api.svc_account_account_get_one(username)
+            result = self.api.svc_account_get_one(username)
             self.assertIsNotNone(result)
             self.assertIn('value', result[0])
             self.assertIn('key', result[0]['value'])
@@ -246,7 +246,7 @@ class TestCvpClient(TestCvpClientBase):
             initial_groups = result[0]['value']['groups']['values']
         except CvpApiError:
             # Test create service account
-            result = self.api.svc_account_account_set(username, description, roles, status)
+            result = self.api.svc_account_set(username, description, roles, status)
             self.assertIsNotNone(result)
             self.assertIn('value', result[0])
             self.assertIn('key', result[0]['value'])
@@ -264,16 +264,16 @@ class TestCvpClient(TestCvpClientBase):
         if initial_groups == ["network-admin", "network-operator"]:
             update_groups = ["network-operator"]
         # Test update service account
-        result = self.api.svc_account_account_set(username, description, update_groups,
+        result = self.api.svc_account_set(username, description, update_groups,
                                                   update_acc_status)
 
         # Test Get all service account with new account
-        result = self.api.svc_account_account_get_all()
+        result = self.api.svc_account_get_all()
         self.assertIsNotNone(result)
         self.assertEqual(len(result), start_total + 1)
 
         # Test delete service account
-        result = self.api.svc_account_account_delete(username)
+        result = self.api.svc_account_delete(username)
         self.assertIsNotNone(result)
         self.assertIn('value', result[0])
         self.assertIn('key', result[0]['value'])
@@ -282,23 +282,23 @@ class TestCvpClient(TestCvpClientBase):
 
         # Verify the service account was successfully deleted and doesn't exist
         with self.assertRaises(CvpApiError):
-            self.api.svc_account_account_get_one(username)
+            self.api.svc_account_get_one(username)
 
         # Test Get All service accounts final
-        result = self.api.svc_account_account_get_all()
+        result = self.api.svc_account_get_all()
         self.assertIsNotNone(result)
         self.assertEqual(len(result), start_total)
 
     def test_api_svc_account_token_operations(self):
-        ''' Verify  svc_account_account_set, svc_account_token_get_all, svc_account_token_set,
+        ''' Verify  svc_account_set, svc_account_token_get_all, svc_account_token_set,
             svc_account_token_delete, svc_account_delete_expired_tokens
         '''
         # Test creating tokens
         # Create a few service accounts and several tokens for each
-        result = self.api.svc_account_account_set("cvprac1", "test", ["network-admin"], 1)
+        result = self.api.svc_account_set("cvprac1", "test", ["network-admin"], 1)
         self.assertIsNotNone(result)
         self.assertIn('name', result[0]['value']['key'])
-        result = self.api.svc_account_account_set("cvprac2", "test", ["network-admin"], 1)
+        result = self.api.svc_account_set("cvprac2", "test", ["network-admin"], 1)
         self.assertIsNotNone(result)
         self.assertIn('name', result[0]['value']['key'])
         result = self.api.svc_account_token_set("cvprac1", "10s", "test1")

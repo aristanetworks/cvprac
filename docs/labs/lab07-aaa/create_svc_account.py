@@ -17,4 +17,4 @@ username = "cvprac2"
 description = "test cvprac"
 roles = ["network-admin", "clouddeploy"] # both role names and role IDs are supported
 status = 1 # 1 is equivalent to "ACCOUNT_STATUS_ENABLED"
-clnt.api.svc_account_account_set(username, description, roles, status)
+clnt.api.svc_account_set(username, description, roles, status)

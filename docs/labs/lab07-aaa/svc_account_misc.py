@@ -15,11 +15,11 @@ clnt.connect(['cvp1'],'username', 'password')
 
 # Get all service accounts states
 
-accounts = clnt.api.svc_account_account_get_all()
+accounts = clnt.api.svc_account_get_all()
 
 # Get specific service account state
 
-account = clnt.api.svc_account_account_get_one("cvprac2")
+account = clnt.api.svc_account_get_one("cvprac2")
 
 # Get all service account token states
 

@@ -3856,7 +3856,7 @@ class CvpApi(object):
             if self.clnt.apiversion < 7.0:
                 self.log.warning('Service Account Resource APIs are supported from 2021.3.0+.')
                 return None
-        self.log.debug('v7 {} '.format(url) + str(payload))
+        self.log.debug('v7 {} {}'.format(url, str(payload)))
         return self.clnt.post(url, data=payload)
 
     def svc_account_token_get_one(self, token_id):
@@ -3877,7 +3877,7 @@ class CvpApi(object):
             if self.clnt.apiversion < 7.0:
                 self.log.warning('Service Account Resource APIs are supported from 2021.3.0+.')
                 return None
-        self.log.debug('v7 {} '.format(url) + str(payload))
+        self.log.debug('v7 {} {}'.format(url, str(payload)))
         return self.clnt.post(url, data=payload)
 
     def svc_account_token_delete(self, token_id):
@@ -3898,7 +3898,7 @@ class CvpApi(object):
             if self.clnt.apiversion < 7.0:
                 self.log.warning('Service Account Resource APIs are supported from 2021.3.0+.')
                 return None
-        self.log.debug('v7 {} '.format(url) + str(payload))
+        self.log.debug('v7 {} {}'.format(url, str(payload)))
         return self.clnt.post(url, data=payload)
 
     def svc_account_token_set(self, username, duration, description):
@@ -3909,6 +3909,7 @@ class CvpApi(object):
                     generated.
                 duration (string): The validity of the service account in seconds e.g.: "20000s"
                     The maximum value is 1 year in seconds e.g.: "31536000s"
+                description (string): The description of the service account token.
             Returns:
                 response (list): Returns a list of dict that contains the token:
                 Ex: [{'value': {'key': {'id': '<userId>'}, 'user': 'ansible',
@@ -3925,10 +3926,10 @@ class CvpApi(object):
             if self.clnt.apiversion < 7.0:
                 self.log.warning('Service Account Resource APIs are supported from 2021.3.0+.')
                 return None
-        self.log.debug('v7 {} '.format(url) + str(payload))
+        self.log.debug('v7 {} {}'.format(url, str(payload)))
         return self.clnt.post(url, data=payload)
 
-    def svc_account_account_get_all(self):
+    def svc_account_get_all(self):
         ''' Get all service account states using Resource APIs.
             Supported versions: CVP 2021.3.0 or newer and CVaaS.
             Returns:
@@ -3938,7 +3939,6 @@ class CvpApi(object):
                       'time': '2022-02-10T04:28:14.251684869Z', 'type': 'INITIAL'}, ...]
 
         '''
-        payload = {}
         url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/GetAll'
         if not self.clnt.is_cvaas:
             if self.clnt.apiversion is None:
@@ -3946,10 +3946,10 @@ class CvpApi(object):
             if self.clnt.apiversion < 7.0:
                 self.log.warning('Service Account Resource APIs are supported from 2021.3.0+.')
                 return None
-        self.log.debug('v7 {} '.format(url) + str(payload))
-        return self.clnt.post(url, data=payload)
+        self.log.debug('v7 {} '.format(url))
+        return self.clnt.post(url)
 
-    def svc_account_account_get_one(self, username):
+    def svc_account_get_one(self, username):
         ''' Get an arbitrary service account's state using Resource APIs
             Supported versions: CVP 2021.3.0 or newer and CVaaS.
             Args:
@@ -3968,10 +3968,10 @@ class CvpApi(object):
             if self.clnt.apiversion < 7.0:
                 self.log.warning('Service Account Resource APIs are supported from 2021.3.0+')
                 return None
-        self.log.debug('v7 {} '.format(url) + str(payload))
+        self.log.debug('v7 {} {}'.format(url, str(payload)))
         return self.clnt.post(url, data=payload)
 
-    def svc_account_account_set(self, username, description, roles, status):
+    def svc_account_set(self, username, description, roles, status):
         ''' Create a service account token using Resource APIs.
             Supported versions: CVP 2021.3.0 or newer and CVaaS.
             Args:
@@ -4013,10 +4013,10 @@ class CvpApi(object):
             if self.clnt.apiversion < 7.0:
                 self.log.warning('Service Account Resource APIs are supported from 2021.3.0+.')
                 return None
-        self.log.debug('v7 {} '.format(url) + str(payload))
+        self.log.debug('v7 {} {}'.format(url, str(payload)))
         return self.clnt.post(url, data=payload)
 
-    def svc_account_account_delete(self, username):
+    def svc_account_delete(self, username):
         ''' Delete a service account token using Resource APIs.
             Supported versions: CVP 2021.3.0 or newer and CVaaS.
             Args:
@@ -4034,7 +4034,7 @@ class CvpApi(object):
             if self.clnt.apiversion < 7.0:
                 self.log.warning('Service Account Resource APIs are supported from 2021.3.0+.')
                 return None
-        self.log.debug('v7 {} '.format(url) + str(payload))
+        self.log.debug('v7 {} {}'.format(url, str(payload)))
         return self.clnt.post(url, data=payload)
 
     def svc_account_delete_expired_tokens(self):
