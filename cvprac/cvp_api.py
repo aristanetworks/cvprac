@@ -3860,9 +3860,9 @@ class CvpApi(object):
                       'created_by': 'string', 'last_used': None},
                       'time': '2022-05-03T15:38:53.725014447Z', 'type': 'INITIAL'}, ...]
         '''
-        url = '/api/v3/services/arista.serviceaccount.v1.TokenService/GetAll'
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
         if self.check_v7(msg):
+            url = '/api/v3/services/arista.serviceaccount.v1.TokenService/GetAll'
             self.log.debug('v7 {}'.format(url))
             return self.clnt.post(url)
 
@@ -3876,10 +3876,10 @@ class CvpApi(object):
                       'created_by': 'cvpadmin', 'last_used': None},
                       'time': '2022-05-03T15:38:53.725014447Z', 'type': 'INITIAL'}]
         '''
-        payload = {"key":{"id": token_id}}
-        url = '/api/v3/services/arista.serviceaccount.v1.TokenService/GetOne'
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
         if self.check_v7(msg):
+            payload = {"key":{"id": token_id}}
+            url = '/api/v3/services/arista.serviceaccount.v1.TokenService/GetOne'
             self.log.debug('v7 {} {}'.format(url, payload))
             return self.clnt.post(url, data=payload)
 
@@ -3893,10 +3893,10 @@ class CvpApi(object):
                 Ex: [{'key': {'id': '<token_id>'},
                       'time': '2022-07-26T15:29:03.687167871Z'}]
         '''
-        payload = {"key":{"id": token_id}}
-        url = '/api/v3/services/arista.serviceaccount.v1.TokenConfigService/Delete'
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
         if self.check_v7(msg):
+            payload = {"key":{"id": token_id}}
+            url = '/api/v3/services/arista.serviceaccount.v1.TokenConfigService/Delete'
             self.log.debug('v7 {} {}'.format(url, payload))
             return self.clnt.post(url, data=payload)
 
@@ -3918,9 +3918,9 @@ class CvpApi(object):
         payload = {'value': {'description': description,
                              'user': username,
                              'valid_for': duration}}
-        url = '/api/v3/services/arista.serviceaccount.v1.TokenConfigService/Set'
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
         if self.check_v7(msg):
+            url = '/api/v3/services/arista.serviceaccount.v1.TokenConfigService/Set'
             self.log.debug('v7 {} {}'.format(url, payload))
             return self.clnt.post(url, data=payload)
 
@@ -3934,9 +3934,9 @@ class CvpApi(object):
                       'time': '2022-02-10T04:28:14.251684869Z', 'type': 'INITIAL'}, ...]
 
         '''
-        url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/GetAll'
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
         if self.check_v7(msg):
+            url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/GetAll'
             self.log.debug('v7 {} '.format(url))
             return self.clnt.post(url)
 
@@ -3951,10 +3951,10 @@ class CvpApi(object):
                       'description': 'lab-tests', 'groups': {'values': ['network-admin']}},
                       'time': '2022-02-10T04:28:14.251684869Z'}]
         '''
-        payload = {"key":{"name": username}}
-        url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/GetOne'
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
         if self.check_v7(msg):
+            payload = {"key":{"name": username}}
+            url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/GetOne'
             self.log.debug('v7 {} {}'.format(url, payload))
             return self.clnt.post(url, data=payload)
 
@@ -3980,22 +3980,22 @@ class CvpApi(object):
                       ['network-admin', 'role_1658850344592739349']}},
                       'time': '2022-07-26T18:19:55.392173445Z'}]
         '''
-        role_ids = []
-        all_roles = self.get_roles()
-        for r in roles:
-            for role in all_roles['roles']:
-                if r == role['key']:
-                    role_ids.append(r)
-                elif r == role['name']:
-                    role_ids.append(role['key'])
-
-        payload = {'value': {'description': description,
-                             'groups': {'values': role_ids},
-                             'key': {'name': username},
-                             'status': status}}
-        url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/Set'
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
         if self.check_v7(msg):
+            role_ids = []
+            all_roles = self.get_roles()
+            for r in roles:
+                for role in all_roles['roles']:
+                    if r == role['key']:
+                        role_ids.append(r)
+                    elif r == role['name']:
+                        role_ids.append(role['key'])
+
+            payload = {'value': {'description': description,
+                                'groups': {'values': role_ids},
+                                'key': {'name': username},
+                                'status': status}}
+            url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/Set'
             self.log.debug('v7 {} {}'.format(url, payload))
             return self.clnt.post(url, data=payload)
 
@@ -4009,10 +4009,10 @@ class CvpApi(object):
                 Ex: [{'key': {'name': 'cvprac2'},
                       'time': '2022-07-26T18:26:53.637425846Z'}]
         '''
-        payload = {"key":{"name": username}}
-        url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/Delete'
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
         if self.check_v7(msg):
+            payload = {"key":{"name": username}}
+            url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/Delete'
             self.log.debug('v7 {} {}'.format(url, payload))
             return self.clnt.post(url, data=payload)
 
