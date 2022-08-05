@@ -58,7 +58,7 @@ from pprint import pprint
 import urllib3
 from test_cvp_base import TestCvpClientBase
 from requests.exceptions import Timeout
-from cvprac.cvp_client_errors import CvpApiError
+from cvprac.cvp_client_errors import CvpApiError, CvpRequestError
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -244,7 +244,7 @@ class TestCvpClient(TestCvpClientBase):
             self.assertEqual(result[0]['value']['key']['name'], username)
             initial_acc_status = result[0]['value']['status']
             initial_groups = result[0]['value']['groups']['values']
-        except CvpApiError:
+        except CvpRequestError:
             # Test create service account
             result = self.api.svc_account_set(username, description, roles, status)
             self.assertIsNotNone(result)
@@ -275,13 +275,12 @@ class TestCvpClient(TestCvpClientBase):
         # Test delete service account
         result = self.api.svc_account_delete(username)
         self.assertIsNotNone(result)
-        self.assertIn('value', result[0])
-        self.assertIn('key', result[0]['value'])
-        self.assertIn('name', result[0]['value']['key'])
+        self.assertIn('key', result[0])
+        self.assertIn('name', result[0]['key'])
         self.assertIn('time', result[0])
 
         # Verify the service account was successfully deleted and doesn't exist
-        with self.assertRaises(CvpApiError):
+        with self.assertRaises(CvpRequestError):
             self.api.svc_account_get_one(username)
 
         # Test Get All service accounts final
@@ -333,10 +332,10 @@ class TestCvpClient(TestCvpClientBase):
         # Test delete a service account token
         result = self.api.svc_account_token_delete(token_id)
         self.assertIsNotNone(result)
-        self.assertIn('value', result[0])
-        self.assertIn('id', result[0]['value']['key'])
-        self.assertIn('time', result[0]['value'])
-        self.assertEqual(len(result), start_total_tok - 1)
+        self.assertIn('id', result[0]['key'])
+        self.assertIn('time', result[0])
+        total_tok_post_del_one = self.api.svc_account_token_get_all()
+        self.assertEqual(start_total_tok - 1, len(total_tok_post_del_one))
 
         # Test delete all expired service account tokens
 
