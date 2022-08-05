@@ -3844,11 +3844,11 @@ class CvpApi(object):
         ''' Get all the user roles in CloudVision.
             Returns:
                response (dict): Returns a dict that contains all the user role states..
-               Ex: {'total': 7, 'roles': [{'name': 'Test Role', 'key': 'role_1599019487020581247', 
+               Ex: {'total': 7, 'roles': [{'name': 'Test Role', 'key': 'role_1599019487020581247',
                'description': 'Test'...}
         '''
         url = '/role/getRoles.do?startIndex=0&endIndex=0'
-        return self.clnt.get(url,timeout=self.request_timeout)
+        return self.clnt.get(url, timeout=self.request_timeout)
 
     def svc_account_token_get_all(self):
         ''' Get all service account token states using Resource APIs.
@@ -3878,7 +3878,7 @@ class CvpApi(object):
         '''
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
         if self.check_v7(msg):
-            payload = {"key":{"id": token_id}}
+            payload = {"key": {"id": token_id}}
             url = '/api/v3/services/arista.serviceaccount.v1.TokenService/GetOne'
             self.log.debug('v7 {} {}'.format(url, payload))
             return self.clnt.post(url, data=payload)
@@ -3895,7 +3895,7 @@ class CvpApi(object):
         '''
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
         if self.check_v7(msg):
-            payload = {"key":{"id": token_id}}
+            payload = {"key": {"id": token_id}}
             url = '/api/v3/services/arista.serviceaccount.v1.TokenConfigService/Delete'
             self.log.debug('v7 {} {}'.format(url, payload))
             return self.clnt.post(url, data=payload)
@@ -3953,7 +3953,7 @@ class CvpApi(object):
         '''
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
         if self.check_v7(msg):
-            payload = {"key":{"name": username}}
+            payload = {"key": {"name": username}}
             url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/GetOne'
             self.log.debug('v7 {} {}'.format(url, payload))
             return self.clnt.post(url, data=payload)
@@ -3992,9 +3992,9 @@ class CvpApi(object):
                         role_ids.append(role['key'])
 
             payload = {'value': {'description': description,
-                                'groups': {'values': role_ids},
-                                'key': {'name': username},
-                                'status': status}}
+                                 'groups': {'values': role_ids},
+                                 'key': {'name': username},
+                                 'status': status}}
             url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/Set'
             self.log.debug('v7 {} {}'.format(url, payload))
             return self.clnt.post(url, data=payload)
@@ -4011,7 +4011,7 @@ class CvpApi(object):
         '''
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
         if self.check_v7(msg):
-            payload = {"key":{"name": username}}
+            payload = {"key": {"name": username}}
             url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/Delete'
             self.log.debug('v7 {} {}'.format(url, payload))
             return self.clnt.post(url, data=payload)
@@ -4032,7 +4032,7 @@ class CvpApi(object):
         expired_tokens = []
         for tok in tokens:
             dt = tok['value']['valid_until']
-            if datetime.strptime(dt,"%Y-%m-%dT%H:%M:%SZ") < datetime.utcnow():
+            if datetime.strptime(dt, "%Y-%m-%dT%H:%M:%SZ") < datetime.utcnow():
                 self.svc_account_token_delete(tok['value']['key']['id'])
                 expired_tokens.append(tok)
         return expired_tokens
