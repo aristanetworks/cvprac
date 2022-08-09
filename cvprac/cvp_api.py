@@ -3867,7 +3867,7 @@ class CvpApi(object):
             return self.clnt.post(url)
 
     def svc_account_token_get_one(self, token_id):
-        ''' Get an arbitrary service account tokens state using Resource APIs
+        ''' Get a service account token's state using Resource APIs
             Supported versions: CVP 2021.3.0 or newer and CVaaS.
             Returns:
                 response (list): Returns a list of dict that contains...
@@ -3941,7 +3941,7 @@ class CvpApi(object):
             return self.clnt.post(url)
 
     def svc_account_get_one(self, username):
-        ''' Get an arbitrary service account's state using Resource APIs
+        ''' Get a service account's state using Resource APIs
             Supported versions: CVP 2021.3.0 or newer and CVaaS.
             Args:
                 username (string): The service account username.
@@ -3959,7 +3959,7 @@ class CvpApi(object):
             return self.clnt.post(url, data=payload)
 
     def svc_account_set(self, username, description, roles, status):
-        ''' Create a service account token using Resource APIs.
+        ''' Create a service account using Resource APIs.
             Supported versions: CVP 2021.3.0 or newer and CVaaS.
             Args:
                 username (string): The service account username.
@@ -3984,14 +3984,12 @@ class CvpApi(object):
         if self.check_v7(msg):
             role_ids = []
             all_roles = self.get_roles()
-            for r in roles:
-                for role in all_roles['roles']:
-                    if r == role['key']:
-                        role_ids.append(r)
-                        break
-                    elif r == role['name']:
-                        role_ids.append(role['key'])
-                        break
+            for role in all_roles['roles']:
+                if role['key'] in roles or role['name'] in roles:
+                    role_ids.append(role['key'])
+            if len(roles) != len(role_ids):
+                self.log.warning('Not all provided roles {} are valid. '
+                                 'Only using the found valid roles {}'.format(roles, role_ids))
 
             payload = {'value': {'description': description,
                                  'groups': {'values': role_ids},
@@ -4002,7 +4000,7 @@ class CvpApi(object):
             return self.clnt.post(url, data=payload)
 
     def svc_account_delete(self, username):
-        ''' Delete a service account token using Resource APIs.
+        ''' Delete a service account using Resource APIs.
             Supported versions: CVP 2021.3.0 or newer and CVaaS.
             Args:
                 username (string): The service account username.
