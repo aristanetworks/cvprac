@@ -3988,8 +3988,10 @@ class CvpApi(object):
                 for role in all_roles['roles']:
                     if r == role['key']:
                         role_ids.append(r)
+                        break
                     elif r == role['name']:
                         role_ids.append(role['key'])
+                        break
 
             payload = {'value': {'description': description,
                                  'groups': {'values': role_ids},
