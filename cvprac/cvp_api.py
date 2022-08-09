@@ -85,6 +85,17 @@ class CvpApi(object):
         self.log = clnt.log
         self.request_timeout = request_timeout
 
+    def check_v7(self, msg):
+        ''' Checking the version is above CVP 2021.3.0
+        '''
+        if not self.clnt.is_cvaas:
+            if self.clnt.apiversion is None:
+                self.get_cvp_info()
+            if self.clnt.apiversion < 7.0:
+                self.log.warning(msg)
+                return False
+        return True
+
     def get_cvp_info(self):
         ''' Returns information about CVP.
 
@@ -3828,3 +3839,200 @@ class CvpApi(object):
                 return None
         self.log.debug('v7 ' + str(url))
         return self.clnt.post(url, data=payload, timeout=self.request_timeout)
+
+    def get_roles(self):
+        ''' Get all the user roles in CloudVision.
+            Returns:
+               response (dict): Returns a dict that contains all the user role states..
+               Ex: {'total': 7, 'roles': [{'name': 'Test Role', 'key': 'role_1599019487020581247',
+               'description': 'Test'...}
+        '''
+        url = '/role/getRoles.do?startIndex=0&endIndex=0'
+        return self.clnt.get(url, timeout=self.request_timeout)
+
+    def svc_account_token_get_all(self):
+        ''' Get all service account token states using Resource APIs.
+            Supported versions: CVP 2021.3.0 or newer and CVaaS.
+            Returns:
+                response (list): Returns a list of dictionaries that contains...
+                Ex: [{'value': {'key': {'id': 'randomId'}, 'user': 'string',
+                      'description': 'string','valid_until': '2022-11-02T06:58:53Z',
+                      'created_by': 'string', 'last_used': None},
+                      'time': '2022-05-03T15:38:53.725014447Z', 'type': 'INITIAL'}, ...]
+        '''
+        msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
+        if self.check_v7(msg):
+            url = '/api/v3/services/arista.serviceaccount.v1.TokenService/GetAll'
+            self.log.debug('v7 {}'.format(url))
+            return self.clnt.post(url)
+
+    def svc_account_token_get_one(self, token_id):
+        ''' Get a service account token's state using Resource APIs
+            Supported versions: CVP 2021.3.0 or newer and CVaaS.
+            Returns:
+                response (list): Returns a list of dict that contains...
+                Ex: [{'value': {'key': {'id': 'randomId'}, 'user': 'string',
+                      'description': 'string', 'valid_until': '2022-11-02T06:58:53Z',
+                      'created_by': 'cvpadmin', 'last_used': None},
+                      'time': '2022-05-03T15:38:53.725014447Z', 'type': 'INITIAL'}]
+        '''
+        msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
+        if self.check_v7(msg):
+            payload = {"key": {"id": token_id}}
+            url = '/api/v3/services/arista.serviceaccount.v1.TokenService/GetOne'
+            self.log.debug('v7 {} {}'.format(url, payload))
+            return self.clnt.post(url, data=payload)
+
+    def svc_account_token_delete(self, token_id):
+        ''' Delete a service account token using Resource APIs.
+            Supported versions: CVP 2021.3.0 or newer and CVaaS.
+            Args:
+                token_id (string): The id of the service account token.
+            Returns:
+                response (list): Returns a list of dict that contains the time of deletion:
+                Ex: [{'key': {'id': '<token_id>'},
+                      'time': '2022-07-26T15:29:03.687167871Z'}]
+        '''
+        msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
+        if self.check_v7(msg):
+            payload = {"key": {"id": token_id}}
+            url = '/api/v3/services/arista.serviceaccount.v1.TokenConfigService/Delete'
+            self.log.debug('v7 {} {}'.format(url, payload))
+            return self.clnt.post(url, data=payload)
+
+    def svc_account_token_set(self, username, duration, description):
+        ''' Create a service account token using Resource APIs.
+            Supported versions: CVP 2021.3.0 or newer and CVaaS.
+            Args:
+                username (string): The service account username for which the token will be
+                    generated.
+                duration (string): The validity of the service account in seconds e.g.: "20000s"
+                    The maximum value is 1 year in seconds e.g.: "31536000s"
+                description (string): The description of the service account token.
+            Returns:
+                response (list): Returns a list of dict that contains the token:
+                Ex: [{'value': {'key': {'id': '<userId>'}, 'user': 'ansible',
+                      'description': 'cvprac test',
+                      'valid_for': '550s', 'token': '<ey...>'}]
+        '''
+        payload = {'value': {'description': description,
+                             'user': username,
+                             'valid_for': duration}}
+        msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
+        if self.check_v7(msg):
+            url = '/api/v3/services/arista.serviceaccount.v1.TokenConfigService/Set'
+            self.log.debug('v7 {} {}'.format(url, payload))
+            return self.clnt.post(url, data=payload)
+
+    def svc_account_get_all(self):
+        ''' Get all service account states using Resource APIs.
+            Supported versions: CVP 2021.3.0 or newer and CVaaS.
+            Returns:
+                response (list): Returns a list of dictionaries that contains...
+                Ex: [{'value': {'key': {'name': 'ansible'}, 'status': 'ACCOUNT_STATUS_ENABLED',
+                      'description': 'lab-tests', 'groups': {'values': ['network-admin']}},
+                      'time': '2022-02-10T04:28:14.251684869Z', 'type': 'INITIAL'}, ...]
+
+        '''
+        msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
+        if self.check_v7(msg):
+            url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/GetAll'
+            self.log.debug('v7 {} '.format(url))
+            return self.clnt.post(url)
+
+    def svc_account_get_one(self, username):
+        ''' Get a service account's state using Resource APIs
+            Supported versions: CVP 2021.3.0 or newer and CVaaS.
+            Args:
+                username (string): The service account username.
+            Returns:
+                response (list): Returns a list of dict that contains...
+                Ex: [{'value': {'key': {'name': 'ansible'}, 'status': 'ACCOUNT_STATUS_ENABLED',
+                      'description': 'lab-tests', 'groups': {'values': ['network-admin']}},
+                      'time': '2022-02-10T04:28:14.251684869Z'}]
+        '''
+        msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
+        if self.check_v7(msg):
+            payload = {"key": {"name": username}}
+            url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/GetOne'
+            self.log.debug('v7 {} {}'.format(url, payload))
+            return self.clnt.post(url, data=payload)
+
+    def svc_account_set(self, username, description, roles, status):
+        ''' Create a service account using Resource APIs.
+            Supported versions: CVP 2021.3.0 or newer and CVaaS.
+            Args:
+                username (string): The service account username.
+                description (string): The description of the service account.
+                roles (list): The list of role IDs. Default roles have a human readable name,
+                    e.g.: 'network-admin', 'network-operator';
+                    other roles will have the format of 'role_<unix_timestamp>',
+                    e.g. 'role_1658850344592739349'.
+                    cvprac automatically converts non-default role names to role IDs.
+                status (enum): The status of the service account. Possible values:
+                    0 or 'ACCOUNT_STATUS_UNSPECIFIED'
+                    1 or 'ACCOUNT_STATUS_ENABLED'
+                    2 or 'ACCOUNT_STATUS_DISABLED'
+            Returns:
+                response (list): Returns a list of dict that contains...
+                Ex: [{'value': {'key': {'name': 'cvprac2'}, 'status': 'ACCOUNT_STATUS_ENABLED',
+                      'description': 'testapi', 'groups': {'values':
+                      ['network-admin', 'role_1658850344592739349']}},
+                      'time': '2022-07-26T18:19:55.392173445Z'}]
+        '''
+        msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
+        if self.check_v7(msg):
+            role_ids = []
+            all_roles = self.get_roles()
+            for role in all_roles['roles']:
+                if role['key'] in roles or role['name'] in roles:
+                    role_ids.append(role['key'])
+            if len(roles) != len(role_ids):
+                self.log.warning('Not all provided roles {} are valid. '
+                                 'Only using the found valid roles {}'.format(roles, role_ids))
+
+            payload = {'value': {'description': description,
+                                 'groups': {'values': role_ids},
+                                 'key': {'name': username},
+                                 'status': status}}
+            url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/Set'
+            self.log.debug('v7 {} {}'.format(url, payload))
+            return self.clnt.post(url, data=payload)
+
+    def svc_account_delete(self, username):
+        ''' Delete a service account using Resource APIs.
+            Supported versions: CVP 2021.3.0 or newer and CVaaS.
+            Args:
+                username (string): The service account username.
+            Returns:
+                response (list): Returns a list of dict that contains the time of deletion:
+                Ex: [{'key': {'name': 'cvprac2'},
+                      'time': '2022-07-26T18:26:53.637425846Z'}]
+        '''
+        msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
+        if self.check_v7(msg):
+            payload = {"key": {"name": username}}
+            url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/Delete'
+            self.log.debug('v7 {} {}'.format(url, payload))
+            return self.clnt.post(url, data=payload)
+
+    def svc_account_delete_expired_tokens(self):
+        ''' Delete all service account tokens using Resource APIs.
+            Supported versions: CVP 2021.3.0 or newer and CVaaS.
+            Returns:
+                response (list): Returns a list of dict that contains the list of tokens
+                that were deleted:
+                Ex: [{'value': {'key': {'id': '091f48a2808'},'user': 'cvprac3',
+                'description': 'cvprac test', 'valid_until': '2022-07-26T18:31:18Z',
+                'created_by': 'cvpadmin', 'last_used': None},
+                'time': '2022-07-26T18:30:28.022504853Z','type': 'INITIAL'},
+                {'value': {'key': {'id': '2f6325d9c'},...]
+        '''
+        tokens = self.svc_account_token_get_all()
+        expired_tokens = []
+        for tok in tokens:
+            token = tok['value']
+            if datetime.strptime(token['valid_until'], "%Y-%m-%dT%H:%M:%SZ") < datetime.utcnow():
+                self.svc_account_token_delete(token['key']['id'])
+                expired_tokens.append(tok)
+        return expired_tokens
