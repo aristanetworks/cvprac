@@ -4031,8 +4031,8 @@ class CvpApi(object):
         tokens = self.svc_account_token_get_all()
         expired_tokens = []
         for tok in tokens:
-            dt = tok['value']['valid_until']
-            if datetime.strptime(dt, "%Y-%m-%dT%H:%M:%SZ") < datetime.utcnow():
-                self.svc_account_token_delete(tok['value']['key']['id'])
+            token = tok['value']
+            if datetime.strptime(token['valid_until'], "%Y-%m-%dT%H:%M:%SZ") < datetime.utcnow():
+                self.svc_account_token_delete(token['key']['id'])
                 expired_tokens.append(tok)
         return expired_tokens
