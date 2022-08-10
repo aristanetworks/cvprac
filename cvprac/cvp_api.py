@@ -85,13 +85,13 @@ class CvpApi(object):
         self.log = clnt.log
         self.request_timeout = request_timeout
 
-    def check_v7(self, msg):
-        ''' Checking the version is above CVP 2021.3.0
+    def check_version_greater_or_equal(self, version, msg):
+        ''' Checking the version greater than or equal to provided API version
         '''
         if not self.clnt.is_cvaas:
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
-            if self.clnt.apiversion < 7.0:
+            if self.clnt.apiversion < version:
                 self.log.warning(msg)
                 return False
         return True
@@ -3862,7 +3862,7 @@ class CvpApi(object):
                       'time': '2022-05-03T15:38:53.725014447Z', 'type': 'INITIAL'}, ...]
         '''
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
-        if self.check_v7(msg):
+        if self.check_version_greater_or_equal(7.0, msg):
             url = '/api/v3/services/arista.serviceaccount.v1.TokenService/GetAll'
             self.log.debug('v7 {}'.format(url))
             return self.clnt.post(url)
@@ -3878,7 +3878,7 @@ class CvpApi(object):
                       'time': '2022-05-03T15:38:53.725014447Z', 'type': 'INITIAL'}]
         '''
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
-        if self.check_v7(msg):
+        if self.check_version_greater_or_equal(7.0, msg):
             payload = {"key": {"id": token_id}}
             url = '/api/v3/services/arista.serviceaccount.v1.TokenService/GetOne'
             self.log.debug('v7 {} {}'.format(url, payload))
@@ -3895,7 +3895,7 @@ class CvpApi(object):
                       'time': '2022-07-26T15:29:03.687167871Z'}]
         '''
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
-        if self.check_v7(msg):
+        if self.check_version_greater_or_equal(7.0, msg):
             payload = {"key": {"id": token_id}}
             url = '/api/v3/services/arista.serviceaccount.v1.TokenConfigService/Delete'
             self.log.debug('v7 {} {}'.format(url, payload))
@@ -3920,7 +3920,7 @@ class CvpApi(object):
                              'user': username,
                              'valid_for': duration}}
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
-        if self.check_v7(msg):
+        if self.check_version_greater_or_equal(7.0, msg):
             url = '/api/v3/services/arista.serviceaccount.v1.TokenConfigService/Set'
             self.log.debug('v7 {} {}'.format(url, payload))
             return self.clnt.post(url, data=payload)
@@ -3936,7 +3936,7 @@ class CvpApi(object):
 
         '''
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
-        if self.check_v7(msg):
+        if self.check_version_greater_or_equal(7.0, msg):
             url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/GetAll'
             self.log.debug('v7 {} '.format(url))
             return self.clnt.post(url)
@@ -3953,7 +3953,7 @@ class CvpApi(object):
                       'time': '2022-02-10T04:28:14.251684869Z'}]
         '''
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
-        if self.check_v7(msg):
+        if self.check_version_greater_or_equal(7.0, msg):
             payload = {"key": {"name": username}}
             url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/GetOne'
             self.log.debug('v7 {} {}'.format(url, payload))
@@ -3982,7 +3982,7 @@ class CvpApi(object):
                       'time': '2022-07-26T18:19:55.392173445Z'}]
         '''
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
-        if self.check_v7(msg):
+        if self.check_version_greater_or_equal(7.0, msg):
             role_ids = []
             all_roles = self.get_roles()
             for role in all_roles['roles']:
@@ -4011,7 +4011,7 @@ class CvpApi(object):
                       'time': '2022-07-26T18:26:53.637425846Z'}]
         '''
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
-        if self.check_v7(msg):
+        if self.check_version_greater_or_equal(7.0, msg):
             payload = {"key": {"name": username}}
             url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/Delete'
             self.log.debug('v7 {} {}'.format(url, payload))
