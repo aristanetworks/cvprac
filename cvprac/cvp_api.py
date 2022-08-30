@@ -85,7 +85,7 @@ class CvpApi(object):
         self.log = clnt.log
         self.request_timeout = request_timeout
 
-    def check_version_greater_or_equal(self, version, msg):
+    def _check_version_greater_or_equal(self, version, msg):
         ''' Checking the version greater than or equal to provided API version
         '''
         if not self.clnt.is_cvaas:
@@ -2977,7 +2977,7 @@ class CvpApi(object):
         '''
         msg = 'Tag.V2 Resource APIs are supported from 2021.2.0 or newer.'
         # For on-prem check the version as it is only supported from 2021.2.0+
-        if self.check_version_greater_or_equal(6.0, msg):
+        if self._check_version_greater_or_equal(6.0, msg):
             tag_url = '/api/resources/tag/v2/Tag/all'
             payload = {
                 "partialEqFilter": [
@@ -3006,7 +3006,7 @@ class CvpApi(object):
         '''
         msg = 'Tag.V2 Resource APIs are supported from 2021.2.0 or newer.'
         # For on-prem check the version as it is only supported from 2021.2.0+
-        if self.check_version_greater_or_equal(6.0, msg):
+        if self._check_version_greater_or_equal(6.0, msg):
             tag_url = '/api/resources/tag/v2/TagConfig/all'
             payload = {
                 "partialEqFilter": [
@@ -3034,7 +3034,7 @@ class CvpApi(object):
         '''
         msg = 'Tag.V2 Resource APIs are supported from 2021.2.0 or newer.'
         # For on-prem check the version as it is only supported from 2021.2.0+
-        if self.check_version_greater_or_equal(6.0, msg):
+        if self._check_version_greater_or_equal(6.0, msg):
             tag_url = '/api/resources/tag/v2/TagAssignmentConfig/all'
             payload = {
                 "partialEqFilter": [
@@ -3070,7 +3070,7 @@ class CvpApi(object):
         '''
         msg = 'Tag.V2 Resource APIs are supported from 2021.2.0 or newer.'
         # For on-prem check the version as it is only supported from 2021.2.0+
-        if self.check_version_greater_or_equal(6.0, msg):
+        if self._check_version_greater_or_equal(6.0, msg):
             tag_url = '/api/resources/tag/v2/TagConfig'
             payload = {
                 "key": {
@@ -3112,7 +3112,7 @@ class CvpApi(object):
         '''
         msg = 'Tag.V2 Resource APIs are supported from 2021.2.0 or newer.'
         # For on-prem check the version as it is only supported from 2021.2.0+
-        if self.check_version_greater_or_equal(6.0, msg):
+        if self._check_version_greater_or_equal(6.0, msg):
             tag_url = '/api/resources/tag/v2/TagAssignmentConfig'
             payload = {
                 "key": {
@@ -3136,7 +3136,7 @@ class CvpApi(object):
         '''
         msg = 'Workspace Resource APIs are supported from 2021.2.0 or newer.'
         # For on-prem check the version as it is only supported from 2021.2.0+
-        if self.check_version_greater_or_equal(6.0, msg):
+        if self._check_version_greater_or_equal(6.0, msg):
             workspace_url = '/api/resources/workspace/v1/Workspace/all'
             payload = {}
             self.log.debug('v6 {}'.format(workspace_url))
@@ -3150,7 +3150,7 @@ class CvpApi(object):
         '''
         msg = 'Workspace Resource APIs are supported from 2021.2.0 or newer.'
         # For on-prem check the version as it is only supported from 2021.2.0+
-        if self.check_version_greater_or_equal(6.0, msg):
+        if self._check_version_greater_or_equal(6.0, msg):
             workspace_url = '/api/resources/workspace/v1/Workspace?key.workspaceId={}'.format(
                 workspace_id)
             self.log.debug('v6 {}'.format(workspace_url))
@@ -3186,7 +3186,7 @@ class CvpApi(object):
         '''
         msg = 'Workspace Resource APIs are supported from 2021.2.0 or newer.'
         # For on-prem check the version as it is only supported from 2021.2.0+
-        if self.check_version_greater_or_equal(6.0, msg):
+        if self._check_version_greater_or_equal(6.0, msg):
             workspace_url = '/api/resources/workspace/v1/WorkspaceConfig'
             payload = {
                 "key": {
@@ -3216,7 +3216,7 @@ class CvpApi(object):
         '''
         msg = 'Workspace Resource APIs are supported from 2021.2.0 or newer.'
         # For on-prem check the version as it is only supported from 2021.2.0+
-        if self.check_version_greater_or_equal(6.0, msg):
+        if self._check_version_greater_or_equal(6.0, msg):
             params = 'key.workspaceId={}&key.buildId={}'.format(workspace_id, build_id)
             workspace_url = '/api/resources/workspace/v1/WorkspaceBuild?' + params
             self.log.debug('v6 {}'.format(workspace_url + params))
@@ -3246,7 +3246,7 @@ class CvpApi(object):
         '''
         msg = 'Change Control Resource APIs are supported from 2021.2.0 or newer.'
         # For on-prem check the version as it is only supported from 2021.2.0+
-        if self.check_version_greater_or_equal(6.0, msg):
+        if self._check_version_greater_or_equal(6.0, msg):
             if cc_time is None:
                 params = 'key.id={}'.format(cc_id)
             else:
@@ -3270,7 +3270,7 @@ class CvpApi(object):
         '''
         msg = 'Change Control Resource APIs are supported from 2021.2.0 or newer.'
         # For on-prem check the version as it is only supported from 2021.2.0+
-        if self.check_version_greater_or_equal(6.0, msg):
+        if self._check_version_greater_or_equal(6.0, msg):
             cc_url = '/api/resources/changecontrol/v1/ChangeControl/all'
             self.log.debug('v6 {}'.format(cc_url))
             return self.clnt.get(cc_url, timeout=self.request_timeout)
@@ -3292,7 +3292,7 @@ class CvpApi(object):
         '''
         msg = 'Change Control Resource APIs are supported from 2021.2.0 or newer.'
         # For on-prem check the version as it is only supported from 2021.2.0+
-        if self.check_version_greater_or_equal(6.0, msg):
+        if self._check_version_greater_or_equal(6.0, msg):
             if cc_time is None:
                 params = 'key.id={}'.format(cc_id)
             else:
@@ -3317,7 +3317,7 @@ class CvpApi(object):
         '''
         msg = 'Change Control Resource APIs are supported from 2021.2.0 or newer.'
         # For on-prem check the version as it is only supported from 2021.2.0+
-        if self.check_version_greater_or_equal(6.0, msg):
+        if self._check_version_greater_or_equal(6.0, msg):
             cc_url = '/api/resources/changecontrol/v1/ApproveConfig/all'
             self.log.debug('v6 {}'.format(cc_url))
             return self.clnt.get(cc_url, timeout=self.request_timeout)
@@ -3365,7 +3365,7 @@ class CvpApi(object):
         '''
         msg = 'Change Control Resource APIs are supported from 2021.2.0 or newer.'
         # For on-prem check the version as it is only supported from 2021.2.0+
-        if self.check_version_greater_or_equal(6.0, msg):
+        if self._check_version_greater_or_equal(6.0, msg):
             params = 'key.id={}'.format(cc_id)
             cc_url = '/api/resources/changecontrol/v1/ChangeControlConfig?' + params
             self.log.debug('v6 {}'.format(cc_url))
@@ -3499,7 +3499,7 @@ class CvpApi(object):
         '''
         msg = 'Change Control Resource APIs are supported from 2021.2.0 or newer.'
         # For on-prem check the version as it is only supported from 2021.2.0+
-        if self.check_version_greater_or_equal(6.0, msg):
+        if self._check_version_greater_or_equal(6.0, msg):
             payload = custom_cc
             cc_url = '/api/resources/changecontrol/v1/ChangeControlConfig'
             self.log.debug('v6 ' + str(cc_url) + ' ' + str(payload))
@@ -3560,7 +3560,7 @@ class CvpApi(object):
                 }
         msg = 'Change Control Resource APIs are supported from 2021.2.0 or newer.'
         # For on-prem check the version as it is only supported from 2021.2.0+
-        if self.check_version_greater_or_equal(6.0, msg):
+        if self._check_version_greater_or_equal(6.0, msg):
             payload = {
                 'key': {
                     'id': cc_id
@@ -3589,7 +3589,7 @@ class CvpApi(object):
         '''
         msg = 'Change Control Resource APIs are supported from 2021.2.0 or newer.'
         # For on-prem check the version as it is only supported from 2021.2.0+
-        if self.check_version_greater_or_equal(6.0, msg):
+        if self._check_version_greater_or_equal(6.0, msg):
             payload = {
                 "key": {
                     "id": cc_id
@@ -3617,7 +3617,7 @@ class CvpApi(object):
         '''
         msg = 'Change Control Resource APIs are supported from 2021.2.0 or newer.'
         # For on-prem check the version as it is only supported from 2021.2.0+
-        if self.check_version_greater_or_equal(6.0, msg):
+        if self._check_version_greater_or_equal(6.0, msg):
             payload = {
                 "key": {
                     "id": cc_id
@@ -3648,7 +3648,7 @@ class CvpApi(object):
         '''
         msg = 'Change Control Scheduling via Resource APIs are supported from 2022.1.0 or newer.'
         # For on-prem check the version as it is only supported from 2022.1.0+
-        if self.check_version_greater_or_equal(8.0, msg):
+        if self._check_version_greater_or_equal(8.0, msg):
             payload = {
                 "key": {
                     "id": cc_id
@@ -3679,7 +3679,7 @@ class CvpApi(object):
         if device_info is not None and 'serialNumber' in device_info:
             msg = 'Decommissioning via Resource APIs are supported from 2021.3.0 or newer.'
             # For on-prem check the version as it is only supported from 2021.3.0+
-            if self.check_version_greater_or_equal(7.0, msg):
+            if self._check_version_greater_or_equal(7.0, msg):
                 payload = {
                     "key": {
                         "request_id": request_id
@@ -3709,7 +3709,7 @@ class CvpApi(object):
         '''
         msg = 'Decommissioning via Resource APIs are supported from 2021.3.0 or newer.'
         # For on-prem check the version as it is only supported from 2021.3.0+
-        if self.check_version_greater_or_equal(7.0, msg):
+        if self._check_version_greater_or_equal(7.0, msg):
             params = 'key.requestId={}'.format(request_id)
             url = '/api/resources/inventory/v1/DeviceDecommissioning?' + params
             self.log.debug('v7 ' + str(url))
@@ -3734,7 +3734,7 @@ class CvpApi(object):
         '''
         msg = 'Decommissioning via Resource APIs are supported from 2021.3.0 or newer.'
         # For on-prem check the version as it is only supported from 2021.3.0+
-        if self.check_version_greater_or_equal(7.0, msg):
+        if self._check_version_greater_or_equal(7.0, msg):
             payload = {
                 "partialEqFilter": [
                     {
@@ -3767,7 +3767,7 @@ class CvpApi(object):
                       'time': '2022-05-03T15:38:53.725014447Z', 'type': 'INITIAL'}, ...]
         '''
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
-        if self.check_version_greater_or_equal(7.0, msg):
+        if self._check_version_greater_or_equal(7.0, msg):
             url = '/api/v3/services/arista.serviceaccount.v1.TokenService/GetAll'
             self.log.debug('v7 {}'.format(url))
             return self.clnt.post(url)
@@ -3783,7 +3783,7 @@ class CvpApi(object):
                       'time': '2022-05-03T15:38:53.725014447Z', 'type': 'INITIAL'}]
         '''
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
-        if self.check_version_greater_or_equal(7.0, msg):
+        if self._check_version_greater_or_equal(7.0, msg):
             payload = {"key": {"id": token_id}}
             url = '/api/v3/services/arista.serviceaccount.v1.TokenService/GetOne'
             self.log.debug('v7 {} {}'.format(url, payload))
@@ -3800,7 +3800,7 @@ class CvpApi(object):
                       'time': '2022-07-26T15:29:03.687167871Z'}]
         '''
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
-        if self.check_version_greater_or_equal(7.0, msg):
+        if self._check_version_greater_or_equal(7.0, msg):
             payload = {"key": {"id": token_id}}
             url = '/api/v3/services/arista.serviceaccount.v1.TokenConfigService/Delete'
             self.log.debug('v7 {} {}'.format(url, payload))
@@ -3825,7 +3825,7 @@ class CvpApi(object):
                              'user': username,
                              'valid_for': duration}}
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
-        if self.check_version_greater_or_equal(7.0, msg):
+        if self._check_version_greater_or_equal(7.0, msg):
             url = '/api/v3/services/arista.serviceaccount.v1.TokenConfigService/Set'
             self.log.debug('v7 {} {}'.format(url, payload))
             return self.clnt.post(url, data=payload)
@@ -3841,7 +3841,7 @@ class CvpApi(object):
 
         '''
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
-        if self.check_version_greater_or_equal(7.0, msg):
+        if self._check_version_greater_or_equal(7.0, msg):
             url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/GetAll'
             self.log.debug('v7 {} '.format(url))
             return self.clnt.post(url)
@@ -3858,7 +3858,7 @@ class CvpApi(object):
                       'time': '2022-02-10T04:28:14.251684869Z'}]
         '''
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
-        if self.check_version_greater_or_equal(7.0, msg):
+        if self._check_version_greater_or_equal(7.0, msg):
             payload = {"key": {"name": username}}
             url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/GetOne'
             self.log.debug('v7 {} {}'.format(url, payload))
@@ -3887,7 +3887,7 @@ class CvpApi(object):
                       'time': '2022-07-26T18:19:55.392173445Z'}]
         '''
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
-        if self.check_version_greater_or_equal(7.0, msg):
+        if self._check_version_greater_or_equal(7.0, msg):
             role_ids = []
             all_roles = self.get_roles()
             for role in all_roles['roles']:
@@ -3916,7 +3916,7 @@ class CvpApi(object):
                       'time': '2022-07-26T18:26:53.637425846Z'}]
         '''
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
-        if self.check_version_greater_or_equal(7.0, msg):
+        if self._check_version_greater_or_equal(7.0, msg):
             payload = {"key": {"name": username}}
             url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/Delete'
             self.log.debug('v7 {} {}'.format(url, payload))
