@@ -226,8 +226,9 @@ class TestCvpClient(TestCvpClientBase):
             svc_account_set, svc_account_delete
         '''
         result = self.api.svc_account_get_all()
-        self.assertIsNotNone(result)
-        start_total = len(result)
+        start_total = 0
+        if result is not None:
+            start_total = len(result)
 
         username = "cvpractest"
         description = "cvprac test"
@@ -285,8 +286,10 @@ class TestCvpClient(TestCvpClientBase):
 
         # Test Get All service accounts final
         result = self.api.svc_account_get_all()
-        self.assertIsNotNone(result)
-        self.assertEqual(len(result), start_total)
+        if result is not None:
+            self.assertEqual(len(result), start_total)
+        else:
+            self.assertEqual(0, start_total)
 
     def test_api_svc_account_token_operations(self):
         ''' Verify  svc_account_set, svc_account_token_get_all, svc_account_token_set,
