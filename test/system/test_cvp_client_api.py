@@ -595,9 +595,15 @@ class TestCvpClient(TestCvpClientBase):
                         'SYS_TelemetryBuilderV3')
                 except CvpApiError as e:
                     if 'Entity does not exist' in e.msg:
-                        # Configlet Builder for 2021.x
-                        cfglt = self.api.get_configlet_by_name(
-                            'SYS_TelemetryBuilderV4')
+                        # Configlet Builder for 2021.x - 2022.1.1
+                        try:
+                            cfglt = self.api.get_configlet_by_name(
+                                'SYS_TelemetryBuilderV4')
+                        except CvpApiError as e:
+                            if 'Entity does not exist' in e.msg:
+                                # Configlet Builder for 2022.2.0 +
+                                cfglt = self.api.get_configlet_by_name(
+                                    'SYS_TelemetryBuilderV5')
                     else:
                         raise
             else:
@@ -2353,6 +2359,9 @@ class TestCvpClient(TestCvpClientBase):
             self.assertEqual(response['value']['request'], 'REQUEST_SUBMIT')
             self.assertEqual(
                 response['value']['requestParams']['requestId'], new_submit_id)
+
+            # Allow pause for Workspace state to settle post submit
+            time.sleep(1)
 
             # Test getting new workspace post submit
             result = self.api.get_workspace(new_workspace_id)
