@@ -40,8 +40,7 @@ taskIds = []
 for device in inventory:
     if device['complianceCode'] in compliance.keys():
         # create a list of non-compliant devices for reporting purposes
-        non_compliants.append(device)
-        print(device['hostname'])
+        non_compliants.append(device['hostname'])
         dev_mac = device['systemMacAddress']
         # check if device already has reconciled config and save the key if it does
         try:
@@ -49,6 +48,7 @@ for device in inventory:
             for configlet in configlets:
                 if configlet['reconciled'] == True:
                     configlet_key = configlet['key']
+                    break
                 else:
                     configlet_key = ""
             rc = clnt.api.get_device_configuration(dev_mac)
