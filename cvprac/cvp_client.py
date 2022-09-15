@@ -663,9 +663,23 @@ class CvpClient(object):
             break
         resp_data = None
         if response:
-            if response.content:
+            # Added check for response.content being 'null' because of the
+            # service account APIs being a special case /services/ API that
+            # returns a null string for no objects instead of an empty string.
+            if response.content and response.content != b'null':
                 try:
                     resp_data = response.json()
+                    if resp_data is not None and 'result' in resp_data:
+                        if '/resources/' in full_url:
+                            # Resource APIs use JSON streaming and will return
+                            # multiple JSON objects during GetAll type API
+                            # calls. We are wrapping the multiple objects into
+                            # a key "data" and we also return a dictionary with
+                            # key "data" as an empty dict for no data. This
+                            # checks and keeps consistent the "data" key wrapper
+                            # for a Resource API GetAll that returns a single
+                            # object.
+                            resp_data = dict(data=[resp_data])
                 except JSONDecodeError as error:
                     err_str = str(error)
                     if len(err_str) > 700:

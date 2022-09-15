@@ -205,6 +205,8 @@ class TestClient(unittest.TestCase):
         self.clnt.session = Mock()
         self.clnt.session.return_value = True
         request_return_value = Mock()
+        request_return_value.json.return_value = [{"modelName": "vEOS"},
+                                                  {"modelName": "vEOS"}]
         self.clnt.session.get.return_value = request_return_value
         self.clnt._create_session = Mock()
         self.clnt.NUM_RETRY_REQUESTS = 2
@@ -283,8 +285,8 @@ class TestClient(unittest.TestCase):
         self.clnt.session.return_value = True
         response_mock = Mock()
         response_mock.content = b'{"data":"success"}'
-        response_mock.json.return_value = {"data": "success"}
-        response_mock.text = '{"data":"success"}'
+        response_mock.json.return_value = {"result": {"value": "value"}}
+        response_mock.text = '{"result":{"value":"value"}}'
         self.clnt.session.get.return_value = response_mock
         self.clnt._create_session = Mock()
         self.clnt.NUM_RETRY_REQUESTS = 2
@@ -294,7 +296,7 @@ class TestClient(unittest.TestCase):
         self.clnt._is_good_response = Mock(return_value='Good')
         self.assertIsNone(self.clnt.last_used_node)
         resp = self.clnt._make_request('GET', 'url', 2, {'data': 'data'})
-        expected_response = {"data": "success"}
+        expected_response = {"result": {"value": "value"}}
         self.assertEqual(resp, expected_response)
         self.assertEqual(self.clnt.last_used_node, '1.1.1.1')
 

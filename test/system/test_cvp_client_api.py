@@ -228,13 +228,16 @@ class TestCvpClient(TestCvpClientBase):
         result = self.api.svc_account_get_all()
         start_total = 0
         if result is not None:
-            start_total = len(result)
+            if 'data' in result:
+                start_total = len(result['data'])
+            else:
+                start_total = len(result)
 
         username = "cvpractest"
         description = "cvprac test"
         # TODO add custom roles after role creation APIs are added
         roles = ["network-admin", "network-operator"]
-        status = 1 # enabled
+        status = 1  # enabled
         # Test get service account
         try:
             result = self.api.svc_account_get_one(username)
@@ -259,14 +262,17 @@ class TestCvpClient(TestCvpClientBase):
             initial_acc_status = result[0]['value']['status']
             initial_groups = result[0]['value']['groups']['values']
 
+        update_acc_status = 'ACCOUNT_STATUS_ENABLED'
         if initial_acc_status == 'ACCOUNT_STATUS_ENABLED':
             update_acc_status = 'ACCOUNT_STATUS_DISABLED'
 
+        update_groups = ["network-admin", "network-operator"]
         if initial_groups == ["network-admin", "network-operator"]:
             update_groups = ["network-operator"]
         # Test update service account
         result = self.api.svc_account_set(username, description, update_groups,
-                                                  update_acc_status)
+                                          update_acc_status)
+        self.assertIsNotNone(result)
 
         # Test Get all service account with new account
         result = self.api.svc_account_get_all()
@@ -287,7 +293,10 @@ class TestCvpClient(TestCvpClientBase):
         # Test Get All service accounts final
         result = self.api.svc_account_get_all()
         if result is not None:
-            self.assertEqual(len(result), start_total)
+            if 'data' in result:
+                self.assertEqual(len(result['data']), start_total)
+            else:
+                self.assertEqual(len(result), start_total)
         else:
             self.assertEqual(0, start_total)
 
@@ -2238,7 +2247,7 @@ class TestCvpClient(TestCvpClientBase):
             # Test getting device tags for workspace
             result = self.api.get_all_tags(element_type="ELEMENT_TYPE_DEVICE",
                                            workspace_id=new_workspace_id)
-            self.assertNotIn('data', result)
+            self.assertIn('data', result)
 
             # Test assign tag to device
             response = self.api.tag_assignment_config("ELEMENT_TYPE_DEVICE", new_workspace_id,
