@@ -2707,8 +2707,9 @@ class CvpApi(object):
         if self.clnt.apiversion is None:
             self.get_cvp_info()
         if self.clnt.apiversion >= 3.0:
-            self.log.debug('v3/v4/v5 /api/v3/services/'
-                           'ccapi.ChangeControl/Delete API Call')
+            self.log.debug(
+                'v3/v4/v5 /api/v3/services/ccapi.ChangeControl/Delete'
+                ' API Call')
             for cc_id in cc_ids:
                 resp_list = []
                 data = {'cc_id': cc_id}
