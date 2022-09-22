@@ -669,17 +669,17 @@ class CvpClient(object):
             if response.content and response.content != b'null':
                 try:
                     resp_data = response.json()
-                    if resp_data is not None and 'result' in resp_data:
-                        if '/resources/' in full_url:
-                            # Resource APIs use JSON streaming and will return
-                            # multiple JSON objects during GetAll type API
-                            # calls. We are wrapping the multiple objects into
-                            # a key "data" and we also return a dictionary with
-                            # key "data" as an empty dict for no data. This
-                            # checks and keeps consistent the "data" key wrapper
-                            # for a Resource API GetAll that returns a single
-                            # object.
-                            resp_data = dict(data=[resp_data])
+                    if (resp_data is not None and 'result' in resp_data
+                            and '/resources/' in full_url):
+                        # Resource APIs use JSON streaming and will return
+                        # multiple JSON objects during GetAll type API
+                        # calls. We are wrapping the multiple objects into
+                        # a key "data" and we also return a dictionary with
+                        # key "data" as an empty dict for no data. This
+                        # checks and keeps consistent the "data" key wrapper
+                        # for a Resource API GetAll that returns a single
+                        # object.
+                        resp_data = {'data': [resp_data]}
                 except JSONDecodeError as error:
                     err_str = str(error)
                     if len(err_str) > 700:
@@ -691,7 +691,7 @@ class CvpClient(object):
                         self.log.debug('Found multiple objects or NO objects in'
                                        'response data. Attempt to decode')
                         decoded_data = json_decoder(response.text)
-                        resp_data = dict(data=decoded_data)
+                        resp_data = {'data': decoded_data}
                     else:
                         self.log.error(
                             'Unknown format for JSONDecodeError - %s', err_str)
@@ -699,7 +699,7 @@ class CvpClient(object):
                         # https://peps.python.org/pep-0409/
                         raise JSONDecodeError(err_str) from None
             else:
-                resp_data = dict(data=[])
+                resp_data = {'data': []}
         else:
             self.log.debug('Received no response for request %s %s',
                            req_type, url)
