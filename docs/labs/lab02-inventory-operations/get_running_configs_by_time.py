@@ -27,6 +27,7 @@ for device in inventory:
         for idx in resultRunningConfig:
             if 'config' in idx:
                 result = idx['config']
+                break
         with open(device['hostname']+'.cfg','w') as f:
             f.write(result)
     except Exception as e:
