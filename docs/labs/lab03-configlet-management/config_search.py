@@ -10,7 +10,7 @@ requests.packages.urllib3.disable_warnings()
 
 # Create connection to CloudVision
 clnt = CvpClient()
-clnt.connect(nodes=['10.80.28.14'], username="cvpadmin",password="arastra")
+clnt.connect(nodes=['cvp1'], username="username",password="password")
 
 def main():
 
