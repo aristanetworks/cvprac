@@ -686,6 +686,7 @@ class CvpClient(object):
                 # for a Resource API GetAll that returns a single
                 # object.
                 return {'data': [resp_data]}
+            return resp_data
         except JSONDecodeError as error:
             # Truncate long error messages
             err_str = str(error)
@@ -705,7 +706,6 @@ class CvpClient(object):
                 # Suppressing context as per
                 # https://peps.python.org/pep-0409/
                 raise JSONDecodeError(err_str) from None
-        return resp_data
 
     def _send_request(self, req_type, full_url, timeout, data=None,
                       files=None):
