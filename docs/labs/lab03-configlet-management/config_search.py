@@ -10,18 +10,17 @@ requests.packages.urllib3.disable_warnings()
 
 # Create connection to CloudVision
 clnt = CvpClient()
-clnt.connect(nodes=['cvp1'], username="username",password="password")
+clnt.connect(nodes=['10.80.28.14'], username="cvpadmin",password="arastra")
 
 def main():
 
    print('Retrieving configlets ...')
 
    inventory = clnt.api.get_inventory()
-   configlets = clnt.api.get_configlets_and_mappers()['data']['configlets']
-   generated_configlet_mappers = clnt.api.get_configlets_and_mappers()['data']['generatedConfigletMappers']
-   configlet_mappers = clnt.api.get_configlets_and_mappers()['data']['configletMappers']
+   data = clnt.api.get_configlets_and_mappers()['data']
+   print(data)
 
-   print('Number of configlets:', len(configlets))
+   print('Number of configlets:', len(data['configlets']))
 
    searchAgain = True
    while searchAgain:
@@ -35,11 +34,11 @@ def main():
                 device_sn = i['serialNumber']
                 device_mac = i['systemMacAddress']
                 configlet_list = []
-                for c in configlets:
-                    for g in generated_configlet_mappers:
+                for c in data['configlets']:
+                    for g in data['generatedConfigletMappers']:
                         if device_mac == g['netElementId'] and c['key'] == g['configletBuilderId'] and search in c['config']:
                             configlet_list.append(c['name'])
-                    for k in configlet_mappers:
+                    for k in data['configletMappers']:
                         if device_mac == k['objectId'] and c['key'] == k['configletId'] and search in c['config']:
                             configlet_list.append(c['name'])
                 configlet_list_final = ",".join(configlet_list)
