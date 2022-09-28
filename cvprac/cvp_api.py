@@ -46,11 +46,13 @@ try:
 except (AttributeError, ImportError):
     from urllib.parse import quote_plus as qplus
 
-OPERATOR_DICT = {'>': operator.gt,
-                 '<': operator.lt,
-                 '>=': operator.ge,
-                 '<=': operator.le,
-                 '==': operator.eq}
+OPERATOR_DICT = {
+    '>': operator.gt,
+    '<': operator.lt,
+    '>=': operator.ge,
+    '<=': operator.le,
+    '==': operator.eq
+}
 
 
 class CvpApi(object):
