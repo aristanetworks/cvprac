@@ -226,7 +226,7 @@ class TestCvpClient(TestCvpClientBase):
             svc_account_set, svc_account_delete
         '''
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
-        if self.api.version_compare('>=', 7.0, msg):
+        if self.api.cvp_version_compare('>=', 7.0, msg):
             result = self.api.svc_account_get_all()
             start_total = 0
             if result is not None:
@@ -312,7 +312,7 @@ class TestCvpClient(TestCvpClientBase):
         # Test creating tokens
         # Create a few service accounts and several tokens for each
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
-        if self.api.version_compare('>=', 7.0, msg):
+        if self.api.cvp_version_compare('>=', 7.0, msg):
             result = self.api.svc_account_set("cvprac1", "test", ["network-admin"], 1)
             self.assertIsNotNone(result)
             self.assertIn('name', result[0]['value']['key'])
@@ -357,14 +357,25 @@ class TestCvpClient(TestCvpClientBase):
             self.assertEqual(start_total_tok - 1, len(total_tok_post_del_one))
 
             # Test delete all expired service account tokens
-
-            time.sleep(11) # Sleep for 11 seconds so that few of the tokens can expire
+            time.sleep(11)  # Sleep for 11 seconds so that few of the tokens can expire
             result = self.api.svc_account_delete_expired_tokens()
             self.assertIsNotNone(result)
             result = self.api.svc_account_token_get_all()
             self.assertIsNotNone(result)
             end_total_tok = len(result)
             self.assertEqual(end_total_tok, start_total_tok - 5)
+
+            # Delete services accounts created
+            result = self.api.svc_account_delete("cvprac1")
+            self.assertIsNotNone(result)
+            result = self.api.svc_account_delete("cvprac2")
+            self.assertIsNotNone(result)
+
+            # Verify the service account was successfully deleted and doesn't exist
+            with self.assertRaises(CvpRequestError):
+                self.api.svc_account_get_one("cvprac1")
+            with self.assertRaises(CvpRequestError):
+                self.api.svc_account_get_one("cvprac2")
         else:
             pprint(f'SKIPPING TEST (svc_account_token) FOR API - {self.clnt.apiversion}')
             time.sleep(1)
