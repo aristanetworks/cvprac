@@ -6,3 +6,4 @@ pep8
 pyflakes
 pylint
 pyyaml
+twine

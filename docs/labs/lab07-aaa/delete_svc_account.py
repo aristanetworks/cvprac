@@ -3,19 +3,15 @@
 # that can be found in the COPYING file.
 
 from cvprac.cvp_client import CvpClient
+from cvprac.cvp_client_errors import CvpApiError
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 import requests.packages.urllib3
 requests.packages.urllib3.disable_warnings()
 
-# Create connection to CloudVision
+# Create connection to CloudVision using user/password (on-prem only)
 clnt = CvpClient()
-clnt.connect(nodes=['cvp1'], username="username",password="password")
+clnt.connect(['cvp1'],'username', 'password')
 
-inventory = clnt.api.get_inventory()
-
-devices = []
-for netelement in inventory:
-   devices.append(netelement['systemMacAddress'])
-
-clnt.api.delete_devices(devices)
+username = "cvprac2"
+clnt.api.svc_account_delete(username)

@@ -23,8 +23,12 @@ for device in inventory:
         }
     }
     try:
-        resultRunningConfig = clnt.post(uri, data=data)[0]['config']
+        resultRunningConfig = clnt.post(uri, data=data)
+        for idx in resultRunningConfig:
+            if 'config' in idx:
+                result = idx['config']
+                break
         with open(device['hostname']+'.cfg','w') as f:
-            f.write(resultRunningConfig)
+            f.write(result)
     except Exception as e:
         print("Not able to get configuration for device {} - exception {}".format(device['fqdn'], e))

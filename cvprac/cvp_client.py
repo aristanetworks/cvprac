@@ -100,7 +100,7 @@ from pkg_resources import parse_version
 
 import requests
 from requests.exceptions import ConnectionError, HTTPError, Timeout, \
-    ReadTimeout, TooManyRedirects
+    ReadTimeout, TooManyRedirects, JSONDecodeError
 
 from cvprac.cvp_api import CvpApi
 from cvprac.cvp_client_errors import CvpApiError, CvpLoginError, \
@@ -602,6 +602,11 @@ class CvpClient(object):
                     or delete request failed and no session could be
                     established to a CVP node.  Destroy the class and
                     re-instantiate.
+                JSONDecodeError: A JSONDecodeError is raised when the response
+                    content contains invalid JSON. Potentially in the case of
+                    Resource APIs that will return Stream JSON format with
+                    multiple object or in the case where the response contains
+                    incomplete JSON.
         '''
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-statements
@@ -656,25 +661,51 @@ class CvpClient(object):
                     raise error
                 continue
             break
-        resp_data = None
-        if response:
-            try:
-                resp_data = response.json()
-            except ValueError as error:
-                self.log.debug('Error trying to decode request response %s',
-                               error)
-                if 'Extra data' in str(error):
-                    self.log.debug('Found multiple objects in response data.'
-                                   'Attempt to decode')
-                    decoded_data = json_decoder(response.text)
-                    resp_data = dict(data=decoded_data)
-                else:
-                    self.log.debug('Attempt to return response text')
-                    resp_data = dict(data=response.text)
-        else:
+
+        if not response:
             self.log.debug('Received no response for request %s %s',
                            req_type, url)
-        return resp_data
+            return None
+
+        # Added check for response.content being 'null' because of the
+        # service account APIs being a special case /services/ API that
+        # returns a null string for no objects instead of an empty string.
+        if not response.content or response.content == b'null':
+            return {'data': []}
+
+        try:
+            resp_data = response.json()
+            if (resp_data is not None and 'result' in resp_data
+                    and '/resources/' in full_url):
+                # Resource APIs use JSON streaming and will return
+                # multiple JSON objects during GetAll type API
+                # calls. We are wrapping the multiple objects into
+                # a key "data" and we also return a dictionary with
+                # key "data" as an empty dict for no data. This
+                # checks and keeps consistent the "data" key wrapper
+                # for a Resource API GetAll that returns a single
+                # object.
+                return {'data': [resp_data]}
+            return resp_data
+        except JSONDecodeError as error:
+            # Truncate long error messages
+            err_str = str(error)
+            if len(err_str) > 700:
+                err_str = f"{err_str[:300]}[... truncated ...]" \
+                          f" {err_str[-300:]}"
+            self.log.debug('Error trying to decode request response - %s',
+                           err_str)
+            if 'Extra data' in str(error):
+                self.log.debug('Found multiple objects or NO objects in'
+                               'response data. Attempt to decode')
+                decoded_data = json_decoder(response.text)
+                return {'data': decoded_data}
+            else:
+                self.log.error('Unknown format for JSONDecodeError - %s',
+                               err_str)
+                # Suppressing context as per
+                # https://peps.python.org/pep-0409/
+                raise JSONDecodeError(err_str) from None
 
     def _send_request(self, req_type, full_url, timeout, data=None,
                       files=None):

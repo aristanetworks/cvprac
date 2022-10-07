@@ -33,7 +33,6 @@
 """
 import io
 from os import path, walk
-from glob import glob
 
 try:
     from setuptools import setup
