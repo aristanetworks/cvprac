@@ -58,7 +58,7 @@ from pprint import pprint
 import urllib3
 from test_cvp_base import TestCvpClientBase
 from requests.exceptions import Timeout
-from cvprac.cvp_client_errors import CvpApiError
+from cvprac.cvp_client_errors import CvpApiError, CvpRequestError
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -85,6 +85,12 @@ class TestCvpClient(TestCvpClientBase):
         '''
         # pylint: disable=too-many-statements
         # pylint: disable=too-many-branches
+        # Test Get All Users
+        result = self.api.get_users()
+        self.assertIsNotNone(result)
+        self.assertIn('total', result)
+        start_total = result['total']
+
         dut = self.duts[0]
         # Test Get User
         if 'username' in dut:
@@ -193,6 +199,12 @@ class TestCvpClient(TestCvpClientBase):
         self.assertIsNotNone(result['roles'])
         self.assertEqual(result['roles'], [update_user_role])
 
+        # Test Get All Users with New User
+        result = self.api.get_users()
+        self.assertIsNotNone(result)
+        self.assertIn('total', result)
+        self.assertEqual(result['total'], start_total + 1)
+
         # Test Delete User
         result = self.api.delete_user('test_cvp_user')
         self.assertIsNotNone(result)
@@ -202,6 +214,171 @@ class TestCvpClient(TestCvpClientBase):
         # Verify the user successfully deleted and doesn't exist
         with self.assertRaises(CvpApiError):
             self.api.get_user('test_cvp_user')
+
+        # Test Get All Users Final
+        result = self.api.get_users()
+        self.assertIsNotNone(result)
+        self.assertIn('total', result)
+        self.assertEqual(result['total'], start_total)
+
+    def test_api_svc_account_operations(self):
+        ''' Verify svc_account_get_all, svc_account_get_one,
+            svc_account_set, svc_account_delete
+        '''
+        msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
+        if self.api.cvp_version_compare('>=', 7.0, msg):
+            result = self.api.svc_account_get_all()
+            start_total = 0
+            if result is not None:
+                if 'data' in result:
+                    start_total = len(result['data'])
+                else:
+                    start_total = len(result)
+
+            username = "cvpractest"
+            description = "cvprac test"
+            # TODO add custom roles after role creation APIs are added
+            roles = ["network-admin", "network-operator"]
+            status = 1  # enabled
+            # Test get service account
+            try:
+                result = self.api.svc_account_get_one(username)
+                self.assertIsNotNone(result)
+                self.assertIn('value', result[0])
+                self.assertIn('key', result[0]['value'])
+                self.assertIn('name', result[0]['value']['key'])
+                self.assertEqual(result[0]['value']['key']['name'], username)
+                initial_acc_status = result[0]['value']['status']
+                initial_groups = result[0]['value']['groups']['values']
+            except CvpRequestError:
+                # Test create service account
+                result = self.api.svc_account_set(username, description, roles, status)
+                self.assertIsNotNone(result)
+                self.assertIn('value', result[0])
+                self.assertIn('key', result[0]['value'])
+                self.assertIn('name', result[0]['value']['key'])
+                self.assertEqual(result[0]['value']['key']['name'], username)
+                self.assertEqual(result[0]['value']['status'], 'ACCOUNT_STATUS_ENABLED')
+                self.assertEqual(result[0]['value']['description'], description)
+                self.assertEqual(result[0]['value']['groups']['values'], roles)
+                initial_acc_status = result[0]['value']['status']
+                initial_groups = result[0]['value']['groups']['values']
+
+            update_acc_status = 'ACCOUNT_STATUS_ENABLED'
+            if initial_acc_status == 'ACCOUNT_STATUS_ENABLED':
+                update_acc_status = 'ACCOUNT_STATUS_DISABLED'
+
+            update_groups = ["network-admin", "network-operator"]
+            if initial_groups == ["network-admin", "network-operator"]:
+                update_groups = ["network-operator"]
+            # Test update service account
+            result = self.api.svc_account_set(username, description, update_groups,
+                                              update_acc_status)
+            self.assertIsNotNone(result)
+
+            # Test Get all service account with new account
+            result = self.api.svc_account_get_all()
+            self.assertIsNotNone(result)
+            self.assertEqual(len(result), start_total + 1)
+
+            # Test delete service account
+            result = self.api.svc_account_delete(username)
+            self.assertIsNotNone(result)
+            self.assertIn('key', result[0])
+            self.assertIn('name', result[0]['key'])
+            self.assertIn('time', result[0])
+
+            # Verify the service account was successfully deleted and doesn't exist
+            with self.assertRaises(CvpRequestError):
+                self.api.svc_account_get_one(username)
+
+            # Test Get All service accounts final
+            result = self.api.svc_account_get_all()
+            if result is not None:
+                if 'data' in result:
+                    self.assertEqual(len(result['data']), start_total)
+                else:
+                    self.assertEqual(len(result), start_total)
+            else:
+                self.assertEqual(0, start_total)
+        else:
+            pprint(f'SKIPPING TEST (svc_account) FOR API - {self.clnt.apiversion}')
+            time.sleep(1)
+
+    def test_api_svc_account_token_operations(self):
+        ''' Verify  svc_account_set, svc_account_token_get_all, svc_account_token_set,
+            svc_account_token_delete, svc_account_delete_expired_tokens
+        '''
+        # Test creating tokens
+        # Create a few service accounts and several tokens for each
+        msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
+        if self.api.cvp_version_compare('>=', 7.0, msg):
+            result = self.api.svc_account_set("cvprac1", "test", ["network-admin"], 1)
+            self.assertIsNotNone(result)
+            self.assertIn('name', result[0]['value']['key'])
+            result = self.api.svc_account_set("cvprac2", "test", ["network-admin"], 1)
+            self.assertIsNotNone(result)
+            self.assertIn('name', result[0]['value']['key'])
+            result = self.api.svc_account_token_set("cvprac1", "10s", "test1")
+            self.assertIsNotNone(result)
+            self.assertIn('id', result[0]['value']['key'])
+            result = self.api.svc_account_token_set("cvprac1", "5s", "test1")
+            self.assertIsNotNone(result)
+            self.assertIn('id', result[0]['value']['key'])
+            result = self.api.svc_account_token_set("cvprac1", "1600s", "test1")
+            self.assertIsNotNone(result)
+            self.assertIn('id', result[0]['value']['key'])
+            result = self.api.svc_account_token_set("cvprac2", "10s", "test2")
+            self.assertIsNotNone(result)
+            self.assertIn('id', result[0]['value']['key'])
+            result = self.api.svc_account_token_set("cvprac2", "5s", "test2")
+            self.assertIsNotNone(result)
+            self.assertIn('id', result[0]['value']['key'])
+            result = self.api.svc_account_token_set("cvprac2", "1600s", "test2")
+            self.assertIsNotNone(result)
+            self.assertIn('id', result[0]['value']['key'])
+            result = self.api.svc_account_token_set("cvprac2", "3600s", "test2")
+            self.assertIsNotNone(result)
+            self.assertIn('id', result[0]['value']['key'])
+            token_id = result[0]['value']['key']['id']
+
+            # Test Get All service account tokens
+
+            result = self.api.svc_account_token_get_all()
+            self.assertIsNotNone(result)
+            start_total_tok = len(result)
+
+            # Test delete a service account token
+            result = self.api.svc_account_token_delete(token_id)
+            self.assertIsNotNone(result)
+            self.assertIn('id', result[0]['key'])
+            self.assertIn('time', result[0])
+            total_tok_post_del_one = self.api.svc_account_token_get_all()
+            self.assertEqual(start_total_tok - 1, len(total_tok_post_del_one))
+
+            # Test delete all expired service account tokens
+            time.sleep(11)  # Sleep for 11 seconds so that few of the tokens can expire
+            result = self.api.svc_account_delete_expired_tokens()
+            self.assertIsNotNone(result)
+            result = self.api.svc_account_token_get_all()
+            self.assertIsNotNone(result)
+            end_total_tok = len(result)
+            self.assertEqual(end_total_tok, start_total_tok - 5)
+
+            # Delete services accounts created
+            result = self.api.svc_account_delete("cvprac1")
+            self.assertIsNotNone(result)
+            result = self.api.svc_account_delete("cvprac2")
+            self.assertIsNotNone(result)
+
+            # Verify the service account was successfully deleted and doesn't exist
+            with self.assertRaises(CvpRequestError):
+                self.api.svc_account_get_one("cvprac1")
+            with self.assertRaises(CvpRequestError):
+                self.api.svc_account_get_one("cvprac2")
+        else:
+            pprint(f'SKIPPING TEST (svc_account_token) FOR API - {self.clnt.apiversion}')
+            time.sleep(1)
 
     def test_api_check_compliance(self):
         ''' Verify check_compliance
@@ -448,9 +625,15 @@ class TestCvpClient(TestCvpClientBase):
                         'SYS_TelemetryBuilderV3')
                 except CvpApiError as e:
                     if 'Entity does not exist' in e.msg:
-                        # Configlet Builder for 2021.x
-                        cfglt = self.api.get_configlet_by_name(
-                            'SYS_TelemetryBuilderV4')
+                        # Configlet Builder for 2021.x - 2022.1.1
+                        try:
+                            cfglt = self.api.get_configlet_by_name(
+                                'SYS_TelemetryBuilderV4')
+                        except CvpApiError as e:
+                            if 'Entity does not exist' in e.msg:
+                                # Configlet Builder for 2022.2.0 +
+                                cfglt = self.api.get_configlet_by_name(
+                                    'SYS_TelemetryBuilderV5')
                     else:
                         raise
             else:
@@ -2085,7 +2268,7 @@ class TestCvpClient(TestCvpClientBase):
             # Test getting device tags for workspace
             result = self.api.get_all_tags(element_type="ELEMENT_TYPE_DEVICE",
                                            workspace_id=new_workspace_id)
-            self.assertNotIn('data', result)
+            self.assertIn('data', result)
 
             # Test assign tag to device
             response = self.api.tag_assignment_config("ELEMENT_TYPE_DEVICE", new_workspace_id,
@@ -2206,6 +2389,9 @@ class TestCvpClient(TestCvpClientBase):
             self.assertEqual(response['value']['request'], 'REQUEST_SUBMIT')
             self.assertEqual(
                 response['value']['requestParams']['requestId'], new_submit_id)
+
+            # Allow pause for Workspace state to settle post submit
+            time.sleep(1)
 
             # Test getting new workspace post submit
             result = self.api.get_workspace(new_workspace_id)
