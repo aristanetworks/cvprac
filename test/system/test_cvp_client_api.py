@@ -1509,11 +1509,11 @@ class TestCvpClient(TestCvpClientBase):
     def test_api_request_timeout(self):
         ''' Verify api timeout
         '''
-        self.assertEqual(self.api.request_timeout, 30)
+        self.assertEqual(self.api.request_timeout, self.request_timeout)
         self.api.request_timeout = 0.0001
         with self.assertRaises(Timeout):
             self.api.get_cvp_info()
-        self.api.request_timeout = 30.0
+        self.api.request_timeout = self.request_timeout
 
     def test_api_get_all_temp_actions(self):
         ''' Verify get_all_temp_actions
