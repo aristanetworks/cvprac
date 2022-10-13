@@ -703,9 +703,7 @@ class CvpClient(object):
             else:
                 self.log.error('Unknown format for JSONDecodeError - %s',
                                err_str)
-                # Suppressing context as per
-                # https://peps.python.org/pep-0409/
-                raise JSONDecodeError(err_str) from None
+                raise error
 
     def _send_request(self, req_type, full_url, timeout, data=None,
                       files=None):
