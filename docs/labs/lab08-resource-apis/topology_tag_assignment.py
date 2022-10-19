@@ -6,8 +6,8 @@
 # More details on tag.v2 can be found at https://aristanetworks.github.io/cloudvision-apis/models/tag.v2/
 # NOTE: Tag.v2 can be used for assigning both device and interface tags (studios, topology, etc) and it's not
 # limited to topology tags only. 
-# The following are built-in tags that can be used to modify the Topology rendering:
-# topology_hint_type: < core | edge | endpoint | leaf | management | spine | leaf >
+# The following are some of the built-in tags that can be used to modify the Topology rendering:
+# topology_hint_type: < core | edge | endpoint | management | leaf | spine  >
 # topology_hint_rack: < rack name as string >
 # topology_hint_pod: < pod name as string >
 # topology_hint_datacenter: < datacenter name as string >
@@ -80,13 +80,21 @@ for tag in tags_common+tags_spines:
 request = 'REQUEST_START_BUILD'
 request_id = 'b1'
 description='testing cvprac build'
-clnt.api.workspace_config(workspace_id=workspace_id,display_name=display_name,description=description,request=request,request_id=request_id)
+build_ws = clnt.api.workspace_config(workspace_id=workspace_id, display_name=display_name, 
+                                     description=description, request=request, request_id=request_id)
 
 ### Check workspace build status and proceed only after it finishes building
 b = 0
 while b == 0:
     build_id = request_id
-    request = clnt.api.workspace_build_status(workspace_id,build_id)
+    # Requesting for the build status too fast might fail if the build start didn't finish creating
+    # the build with the request_id/build_id
+    while True:
+        try:
+            request = clnt.api.workspace_build_status(workspace_id, build_id)
+            break
+        except Exception as e:
+            continue
     if request['value']['state'] == 'BUILD_STATE_SUCCESS':
         b = b+1
     else:
