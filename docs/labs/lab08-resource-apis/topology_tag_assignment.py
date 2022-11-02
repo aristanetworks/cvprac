@@ -80,7 +80,7 @@ for tag in tags_common+tags_spines:
 request = 'REQUEST_START_BUILD'
 request_id = 'b1'
 description='testing cvprac build'
-build_ws = clnt.api.workspace_config(workspace_id=workspace_id, display_name=display_name, 
+clnt.api.workspace_config(workspace_id=workspace_id, display_name=display_name, 
                                      description=description, request=request, request_id=request_id)
 
 ### Check workspace build status and proceed only after it finishes building
