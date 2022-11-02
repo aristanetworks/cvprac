@@ -2739,14 +2739,23 @@ class CvpApi(object):
             Args:
                 cc_ids (list): A list of change control IDs to be deleted.
         '''
-        if self.clnt.apiversion is None:
-            self.get_cvp_info()
-        if self.clnt.apiversion >= 3.0:
+        msg = 'Change Control Resource APIs supported from 2021.2.0 or newer.'
+        if self.cvp_version_compare('>=', 6.0, msg):
+            self.log.debug(
+                'v6+ Using Resource API Change Control Delete API Call')
+            resp_list = []
+            for cc_id in cc_ids:
+                resp = self.change_control_delete(cc_id)
+                resp_list.append(resp)
+            return resp_list
+
+        msg = 'Change Control Service APIs supported from 2019.0.0 to 2021.2.0'
+        if self.cvp_version_compare('>=', 3.0, msg):
             self.log.debug(
                 'v3/v4/v5 /api/v3/services/ccapi.ChangeControl/Delete'
                 ' API Call')
+            resp_list = []
             for cc_id in cc_ids:
-                resp_list = []
                 data = {'cc_id': cc_id}
                 resp = self.clnt.post(
                     '/api/v3/services/ccapi.ChangeControl/Delete',
