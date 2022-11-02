@@ -2,7 +2,22 @@
 # Use of this source code is governed by the Apache License 2.0
 # that can be found in the COPYING file.
 
+# In this example we are going to assign topology tags using the tags.v2 workspace aware API
+# More details on tag.v2 can be found at https://aristanetworks.github.io/cloudvision-apis/models/tag.v2/
+# NOTE: Tag.v2 can be used for assigning both device and interface tags (studios, topology, etc) and it's not
+# limited to topology tags only. 
+# The following are some of the built-in tags that can be used to modify the Topology rendering:
+# topology_hint_type: < core | edge | endpoint | management | leaf | spine  >
+# topology_hint_rack: < rack name as string >
+# topology_hint_pod: < pod name as string >
+# topology_hint_datacenter: < datacenter name as string >
+# topology_hint_building: < building name as string >
+# topology_hint_floor: < floor name as string >
+# topology_network_type: < datacenter | campus | cloud >
+
 from cvprac.cvp_client import CvpClient
+import uuid
+from datetime import datetime
 
 # Reading the service account token from a file
 with open("token.tok") as f:
@@ -14,13 +29,16 @@ clnt.connect(nodes=['cvp1'], username='',password='',api_token=token)
 
 tags_common = [{"key": "topology_hint_pod", "value": "tp-avd-pod1"},
                {"key": "topology_hint_datacenter", "value": "tp-avd-dc1"}]
-tags_leaf1 = [{"key": "topology_hint_rack", "value": "tp-avd-leafs1"}]
-tags_leaf2 = [{"key": "topology_hint_rack", "value": "tp-avd-leafs2"}]
-tags_spines = [{"key": "topology_hint_rack", "value": "tp-avd-spines"}]
+tags_leaf1 = [{"key": "topology_hint_rack", "value": "tp-avd-leafs1"},
+              {"key": "topology_hint_type", "value": "leaf"}]
+tags_leaf2 = [{"key": "topology_hint_rack", "value": "tp-avd-leafs2"},
+              {"key": "topology_hint_type", "value": "leaf"}]
+tags_spines = [{"key": "topology_hint_rack", "value": "tp-avd-spines"},
+               {"key": "topology_hint_type", "value": "spine"}]
 
 # Create workspace
-display_name = 'TestTagCVPRAC'
-workspace_id = "TestTagCVPRAC"
+display_name = f"Change_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+workspace_id = str(uuid.uuid4())
 clnt.api.workspace_config(workspace_id,display_name)
 
 ### Create tags
@@ -62,13 +80,21 @@ for tag in tags_common+tags_spines:
 request = 'REQUEST_START_BUILD'
 request_id = 'b1'
 description='testing cvprac build'
-clnt.api.workspace_config(workspace_id=workspace_id,display_name=display_name,description=description,request=request,request_id=request_id)
+clnt.api.workspace_config(workspace_id=workspace_id, display_name=display_name, 
+                                     description=description, request=request, request_id=request_id)
 
 ### Check workspace build status and proceed only after it finishes building
 b = 0
 while b == 0:
     build_id = request_id
-    request = clnt.api.workspace_build_status(workspace_id,build_id)
+    # Requesting for the build status too fast might fail if the build start didn't finish creating
+    # the build with the request_id/build_id
+    while True:
+        try:
+            request = clnt.api.workspace_build_status(workspace_id, build_id)
+            break
+        except Exception as e:
+            continue
     if request['value']['state'] == 'BUILD_STATE_SUCCESS':
         b = b+1
     else:
