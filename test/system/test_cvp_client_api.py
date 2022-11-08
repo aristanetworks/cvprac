@@ -2370,12 +2370,27 @@ class TestCvpClient(TestCvpClientBase):
                     response['value']['requestParams']['requestId'], second_build_id)
 
                 # Test getting new workspace post second build
-                result = self.api.get_workspace(new_workspace_id)
-                self.assertIn('value', result)
-                # check needsBuild parameter added in CVP 2022.1.0
-                if self.clnt.apiversion > 7.0:
-                    self.assertIn('needsBuild', result['value'])
-                    self.assertEqual(result['value']['needsBuild'], False)
+                # Attempt this up to three times to allow for operation to complete
+                # in slow environment
+                for _ in range(0, 2):
+                    result = self.api.get_workspace(new_workspace_id)
+                    self.assertIn('value', result)
+                    # check needsBuild parameter added in CVP 2022.1.0
+                    if self.clnt.apiversion > 7.0:
+                        self.assertIn('needsBuild', result['value'])
+                        if not result['value']['needsBuild']:
+                            # expect needsBuild to be set to True after a build
+                            # once this is found we can break
+                            self.assertEqual(result['value']['needsBuild'], False)
+                            break
+                        else:
+                            # needsBuild has not yet been updated. Read workspace
+                            # data again.
+                            time.sleep(1)
+                    else:
+                        # if no needsBuild parameter no need to repeat call to
+                        # check it.
+                        break
 
             # Test Submit Workspace
             new_submit_id = new_workspace_id + '_SUBMIT_' + str(new_uuid)
@@ -2394,13 +2409,20 @@ class TestCvpClient(TestCvpClientBase):
             time.sleep(1)
 
             # Test getting new workspace post submit
-            result = self.api.get_workspace(new_workspace_id)
-            self.assertIn('value', result)
-            self.assertIn('key', result['value'])
-            self.assertEqual(new_workspace_id,
-                             result['value']['key']['workspaceId'])
-            self.assertEqual('WORKSPACE_STATE_SUBMITTED',
-                             result['value']['state'])
+            # Attempt this up to three times to allow for operation to complete
+            # in slow environment
+            for _ in range(0, 2):
+                result = self.api.get_workspace(new_workspace_id)
+                self.assertIn('value', result)
+                self.assertIn('key', result['value'])
+                self.assertEqual(new_workspace_id,
+                                 result['value']['key']['workspaceId'])
+                if result['value']['state'] == 'WORKSPACE_STATE_PENDING':
+                    time.sleep(1)
+                else:
+                    self.assertEqual('WORKSPACE_STATE_SUBMITTED',
+                                     result['value']['state'])
+                    break
         else:
             pprint(f'SKIPPING TEST (test_api_tags) FOR API - {self.clnt.apiversion}')
             time.sleep(1)
