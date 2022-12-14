@@ -19,5 +19,4 @@ created_by = 'john.smith'
 # Delete service accounts created by user john.smith
 for account in svc_accounts:
     if account['value']['created_by'] == created_by:
-        acc_to_delete = account
-        clnt.api.svc_account_delete(acc_to_delete['value']['key']['name'])
+        clnt.api.svc_account_delete(account['value']['key']['name'])
