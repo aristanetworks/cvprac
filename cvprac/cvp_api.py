@@ -3875,7 +3875,7 @@ class CvpApi(object):
             return self.clnt.post(url, data=payload)
 
     def svc_account_get_all(self):
-        ''' Get all service account states using Resource APIs.
+        ''' Get all service account config/status states using Resource APIs.
             Supported versions: CVP 2021.3.0 or newer and CVaaS.
             Returns:
                 response (list): Returns a list of dictionaries that contains...
@@ -3886,12 +3886,12 @@ class CvpApi(object):
         '''
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
         if self.cvp_version_compare('>=', 7.0, msg):
-            url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/GetAll'
+            url = '/api/v3/services/arista.serviceaccount.v1.AccountService/GetAll'
             self.log.debug('v7 {} '.format(url))
             return self.clnt.post(url)
 
     def svc_account_get_one(self, username):
-        ''' Get a service account's state using Resource APIs
+        ''' Get a service account's config/status state using Resource APIs
             Supported versions: CVP 2021.3.0 or newer and CVaaS.
             Args:
                 username (string): The service account username.
@@ -3904,7 +3904,7 @@ class CvpApi(object):
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
         if self.cvp_version_compare('>=', 7.0, msg):
             payload = {"key": {"name": username}}
-            url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/GetOne'
+            url = '/api/v3/services/arista.serviceaccount.v1.AccountService/GetOne'
             self.log.debug('v7 {} {}'.format(url, payload))
             return self.clnt.post(url, data=payload)
 
