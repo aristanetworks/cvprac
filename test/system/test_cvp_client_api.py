@@ -247,6 +247,9 @@ class TestCvpClient(TestCvpClientBase):
                 self.assertIn('value', result[0])
                 self.assertIn('key', result[0]['value'])
                 self.assertIn('name', result[0]['value']['key'])
+                self.assertIn('status', result[0]['value'])
+                self.assertIn('created_by', result[0]['value'])
+                self.assertIn('last_access', result[0]['value'])
                 self.assertEqual(result[0]['value']['key']['name'], username)
                 initial_acc_status = result[0]['value']['status']
                 initial_groups = result[0]['value']['groups']['values']
@@ -278,6 +281,11 @@ class TestCvpClient(TestCvpClientBase):
 
             # Test Get all service account with new account
             result = self.api.svc_account_get_all()
+            self.assertIn('value', result[0])
+            self.assertIn('key', result[0]['value'])
+            self.assertIn('name', result[0]['value']['key'])
+            self.assertIn('created_by', result[0]['value'])
+            self.assertIn('last_access', result[0]['value'])
             self.assertIsNotNone(result)
             self.assertEqual(len(result), start_total + 1)
 
