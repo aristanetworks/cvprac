@@ -3790,15 +3790,71 @@ class CvpApi(object):
             self.log.debug('v7 ' + str(url))
             return self.clnt.post(url, data=payload, timeout=self.request_timeout)
 
+    def add_role(self, name, description, moduleList):
+        ''' Add new local role to the CVP UI.
+            Args:
+                name (str): local role name on CVP
+                description (str): role description
+                moduleList (list): list of modules (name (str) and mode (str))
+        '''
+        data = {"name": name,
+                "description": description,
+                "moduleList": moduleList}
+        return self.clnt.post('/role/createRole.do', data=data,
+                              timeout=self.request_timeout)
+
+    def update_role(self, rolekey, name, description, moduleList):
+        ''' Updates role information, like
+            role name, description and role modules.
+            Args:
+                rolekey (str): local role key on CVP
+                name (str): local role name on CVP
+                description (str): role description
+                moduleList (list): list of modules (name (str) and mode (str))
+        '''
+        data = {"key": rolekey,
+                "name": name,
+                "description": description,
+                "moduleList": moduleList}
+        return self.clnt.post('/role/updateRole.do', data=data,
+                              timeout=self.request_timeout)
+
+    def get_role(self, rolekey):
+        ''' Returns specified role information.
+            Args:
+                rolekey (str): role key on CVP
+            Returns:
+               response (dict): Returns a dict that contains the role.
+               Ex: {'name': 'Test Role', 'key': 'role_1599019487020581247', 'description': 'Test'...}
+        '''
+        return self.clnt.get('/role/getRole.do?roleId={}'.format(rolekey),
+                             timeout=self.request_timeout)
+
     def get_roles(self):
         ''' Get all the user roles in CloudVision.
             Returns:
                response (dict): Returns a dict that contains all the user role states..
                Ex: {'total': 7, 'roles': [{'name': 'Test Role', 'key': 'role_1599019487020581247',
-               'description': 'Test'...}
+               'description': 'Test'...}]}
         '''
         url = '/role/getRoles.do?startIndex=0&endIndex=0'
         return self.clnt.get(url, timeout=self.request_timeout)
+
+    def delete_role(self, rolekey):
+        ''' Remove specified role from CVP
+            Args:
+                rolekey (str): role key on CVP
+        '''
+        data = [rolekey]
+        return self.delete_roles(data)
+
+    def delete_roles(self, rolekeys):
+        ''' Remove specified roles from CVP
+            Args:
+                rolekeys (list): list of role keys (str) on CVP
+        '''
+        return self.clnt.post('/role/deleteRoles.do', data=rolekeys,
+                              timeout=self.request_timeout)
 
     def svc_account_token_get_all(self):
         ''' Get all service account token states using Resource APIs.
