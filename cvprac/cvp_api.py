@@ -2892,11 +2892,16 @@ class CvpApi(object):
         info = ('App %s reseting device %s and moving it to Undefined'
                 % (app_name, device['fqdn']))
         self.log.debug(info)
+
         if 'parentContainerId' in device:
             from_id = device['parentContainerId']
         else:
             parent_cont = self.get_parent_container_for_device(device['key'])
-            from_id = parent_cont['key']
+            if parent_cont and 'key' in parent_cont:
+                from_id = parent_cont['key']
+            else:
+                from_id = ''
+                
         data = {'data': [{'info': info,
                           'infoPreview': info,
                           'action': 'reset',
