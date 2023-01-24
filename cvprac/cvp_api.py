@@ -2879,7 +2879,6 @@ class CvpApi(object):
             Args:
                 app_name (str): String to specify info/signifier of calling app
                 device (dict): Device info
-                container (dict): Container info
                 create_task (bool): Determines whether or not to execute a save
                     and create the tasks (if any)
 
@@ -2889,7 +2888,7 @@ class CvpApi(object):
 
                     Ex: {u'data': {u'status': u'success', u'taskIds': []}}
         '''
-        info = ('App %s reseting device %s and moving it to Undefined'
+        info = ('App %s resetting device %s and moving it to Undefined'
                 % (app_name, device['fqdn']))
         self.log.debug(info)
 
