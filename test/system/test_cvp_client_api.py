@@ -234,7 +234,7 @@ class TestCvpClient(TestCvpClientBase):
 
         # Test Create Role
         result = self.api.add_role('test_cvp_role', 'role description',
-                                    [{'name': 'image', 'mode': 'rw'}])
+                                   [{'name': 'image', 'mode': 'rw'}])
         self.assertIsNotNone(result)
         self.assertIn('data', result)
         self.assertIn('key', result['data'])
@@ -250,10 +250,11 @@ class TestCvpClient(TestCvpClientBase):
         self.assertIn('moduleListSize', result['data'])
         self.assertEqual(result['data']['moduleListSize'], 1)
         self.assertIn('moduleList', result['data'])
-        self.assertEqual(result['data']['moduleList'], [{'name': 'image', 'mode': 'rw'}])
+        self.assertEqual(result['data']['moduleList'],
+                         [{'name': 'image', 'mode': 'rw'}])
 
         # Check created role
-        new_role_key = result['data']['key'];
+        new_role_key = result['data']['key']
         result = self.api.get_role(new_role_key)
         self.assertIsNotNone(result)
         self.assertIn('key', result)
@@ -269,7 +270,8 @@ class TestCvpClient(TestCvpClientBase):
         self.assertIn('moduleListSize', result)
         self.assertEqual(result['moduleListSize'], 1)
         self.assertIn('moduleList', result)
-        self.assertEqual(result['moduleList'], [{'name': 'image', 'mode': 'rw'}])
+        self.assertEqual(result['moduleList'],
+                         [{'name': 'image', 'mode': 'rw'}])
         initial_role_name = result['name']
         initial_role_description = result['description']
         initial_role_modules = result['moduleList']
@@ -291,7 +293,8 @@ class TestCvpClient(TestCvpClientBase):
 
         # Test Update Role
         result = self.api.update_role(new_role_key, update_role_name,
-                                      update_role_description, update_role_modules)
+                                      update_role_description,
+                                      update_role_modules)
         self.assertIsNotNone(result)
         self.assertIn('data', result)
         self.assertEqual(result['data'], 'success')
@@ -321,11 +324,11 @@ class TestCvpClient(TestCvpClientBase):
         # Create 2 more roles
         result = self.api.add_role('test_cvp_role_a', 'role description a', [])
         self.assertIsNotNone(result)
-        new_role_key2 = result['data']['key'];
+        new_role_key2 = result['data']['key']
 
         result = self.api.add_role('test_cvp_role_b', 'role description b', [])
         self.assertIsNotNone(result)
-        new_role_key3 = result['data']['key'];
+        new_role_key3 = result['data']['key']
 
         # Test Get All Roles with 2 more roles
         result = self.api.get_roles()
