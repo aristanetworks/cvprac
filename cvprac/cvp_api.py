@@ -2893,10 +2893,15 @@ class CvpApi(object):
                 % (app_name, device['fqdn']))
         self.log.debug(info)
 
-        parent_cont = self.get_parent_container_for_device(device['key'])
-        # it will throw error if get_parent_container_for_device() returns None, need to handle this
-        from_id = parent_cont['key']
-
+        if 'parentContainerId' in device:
+            from_id = device['parentContainerId']
+        else:
+            parent_cont = self.get_parent_container_for_device(device['key'])
+            if parent_cont and 'key' in parent_cont:
+                from_id = parent_cont['key']
+            else:
+                from_id = ''
+                
         data = {'data': [{'info': info,
                           'infoPreview': info,
                           'action': 'reset',
