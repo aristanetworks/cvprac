@@ -41,10 +41,16 @@ class TestCvpClientBase(DutSystemTest):
         password = dut.get("password", "")
         api_token = dut.get("api_token", None)
         is_cvaas = dut.get("is_cvaas", False)
+        connect_timeout = dut.get("connect_timeout", 10)
+        request_timeout = dut.get("request_timeout", 30)
 
-        cls.clnt.connect([dut['node']], username, password, 10,
+        cls.clnt.connect([dut['node']], username, password,
+                         connect_timeout, request_timeout,
                          cert=cert, is_cvaas=is_cvaas, api_token=api_token)
 
+        # Store user provided request_timeout for use during
+        # test_api_request_timeout testcase
+        cls.request_timeout = request_timeout
         cls.api = cls.clnt.api
         assert cls.api is not None
 

@@ -221,6 +221,156 @@ class TestCvpClient(TestCvpClientBase):
         self.assertIn('total', result)
         self.assertEqual(result['total'], start_total)
 
+    def test_api_role_operations(self):
+        ''' Verify get_role, add_role and update_role
+        '''
+        # pylint: disable=too-many-statements
+        # pylint: disable=too-many-branches
+        # Test Get All Roles
+        result = self.api.get_roles()
+        self.assertIsNotNone(result)
+        self.assertIn('total', result)
+        start_total = result['total']
+
+        # Test Create Role
+        result = self.api.add_role('test_cvp_role', 'role description',
+                                   [{'name': 'image', 'mode': 'rw'}])
+        self.assertIsNotNone(result)
+        self.assertIn('data', result)
+        self.assertIn('key', result['data'])
+        self.assertIsNotNone(result['data']['key'])
+        self.assertIn('name', result['data'])
+        self.assertEqual(result['data']['name'], 'test_cvp_role')
+        self.assertIn('description', result['data'])
+        self.assertEqual(result['data']['description'], 'role description')
+        self.assertIn('createdBy', result['data'])
+        self.assertIsNotNone(result['data']['createdBy'])
+        self.assertIn('createdOn', result['data'])
+        self.assertIsNotNone(result['data']['createdOn'])
+        self.assertIn('moduleListSize', result['data'])
+        self.assertEqual(result['data']['moduleListSize'], 1)
+        self.assertIn('moduleList', result['data'])
+        self.assertEqual(result['data']['moduleList'],
+                         [{'name': 'image', 'mode': 'rw'}])
+
+        # Check created role
+        new_role_key = result['data']['key']
+        result = self.api.get_role(new_role_key)
+        self.assertIsNotNone(result)
+        self.assertIn('key', result)
+        self.assertEqual(result['key'], new_role_key)
+        self.assertIn('name', result)
+        self.assertEqual(result['name'], 'test_cvp_role')
+        self.assertIn('description', result)
+        self.assertEqual(result['description'], 'role description')
+        self.assertIn('createdBy', result)
+        self.assertIsNotNone(result['createdBy'])
+        self.assertIn('createdOn', result)
+        self.assertIsNotNone(result['createdOn'])
+        self.assertIn('moduleListSize', result)
+        self.assertEqual(result['moduleListSize'], 1)
+        self.assertIn('moduleList', result)
+        self.assertEqual(result['moduleList'],
+                         [{'name': 'image', 'mode': 'rw'}])
+        initial_role_name = result['name']
+        initial_role_description = result['description']
+        initial_role_modules = result['moduleList']
+
+        if initial_role_name == 'test_cvp_role':
+            update_role_name = 'test_cvp_role2'
+        else:
+            update_role_name = 'test_cvp_role'
+
+        if initial_role_description == 'role description':
+            update_role_description = 'updated role description'
+        else:
+            update_role_description = 'role description'
+
+        if initial_role_modules == [{'name': 'image', 'mode': 'rw'}]:
+            update_role_modules = []
+        else:
+            update_role_modules = [{'name': 'image', 'mode': 'rw'}]
+
+        # Test Update Role
+        result = self.api.update_role(new_role_key, update_role_name,
+                                      update_role_description,
+                                      update_role_modules)
+        self.assertIsNotNone(result)
+        self.assertIn('data', result)
+        self.assertEqual(result['data'], 'success')
+        result = self.api.get_role(new_role_key)
+        self.assertIsNotNone(result)
+        self.assertIn('key', result)
+        self.assertEqual(result['key'], new_role_key)
+        self.assertIn('name', result)
+        self.assertEqual(result['name'], update_role_name)
+        self.assertIn('description', result)
+        self.assertEqual(result['description'], update_role_description)
+        self.assertIn('createdBy', result)
+        self.assertIsNotNone(result['createdBy'])
+        self.assertIn('createdOn', result)
+        self.assertIsNotNone(result['createdOn'])
+        self.assertIn('moduleListSize', result)
+        self.assertEqual(result['moduleListSize'], 0)
+        self.assertIn('moduleList', result)
+        self.assertEqual(result['moduleList'], update_role_modules)
+
+        # Test Get All Roles with New Role
+        result = self.api.get_roles()
+        self.assertIsNotNone(result)
+        self.assertIn('total', result)
+        self.assertEqual(result['total'], start_total + 1)
+
+        # Create 2 more roles
+        result = self.api.add_role('test_cvp_role_a', 'role description a', [])
+        self.assertIsNotNone(result)
+        new_role_key2 = result['data']['key']
+
+        result = self.api.add_role('test_cvp_role_b', 'role description b', [])
+        self.assertIsNotNone(result)
+        new_role_key3 = result['data']['key']
+
+        # Test Get All Roles with 2 more roles
+        result = self.api.get_roles()
+        self.assertIsNotNone(result)
+        self.assertIn('total', result)
+        self.assertEqual(result['total'], start_total + 3)
+
+        # Test Delete Role
+        result = self.api.delete_role(new_role_key)
+        self.assertIsNotNone(result)
+        self.assertIn('data', result)
+        self.assertEqual(result['data'], 'success')
+
+        # Verify the role successfully deleted and doesn't exist
+        with self.assertRaises(CvpApiError):
+            self.api.get_role(new_role_key)
+
+        # Test Get All Roles Final
+        result = self.api.get_roles()
+        self.assertIsNotNone(result)
+        self.assertIn('total', result)
+        self.assertEqual(result['total'], start_total + 2)
+
+        # Test Delete Roles
+        result = self.api.delete_roles([new_role_key2, new_role_key3])
+        self.assertIsNotNone(result)
+        self.assertIn('data', result)
+        self.assertEqual(result['data'], 'success')
+
+        # Verify the roles successfully deleted and don't exist
+        with self.assertRaises(CvpApiError):
+            self.api.get_role(new_role_key2)
+
+        with self.assertRaises(CvpApiError):
+            self.api.get_role(new_role_key3)
+
+        # Test Get All Roles Final
+        result = self.api.get_roles()
+        self.assertIsNotNone(result)
+        self.assertIn('total', result)
+        self.assertEqual(result['total'], start_total)
+
     def test_api_svc_account_operations(self):
         ''' Verify svc_account_get_all, svc_account_get_one,
             svc_account_set, svc_account_delete
@@ -247,6 +397,9 @@ class TestCvpClient(TestCvpClientBase):
                 self.assertIn('value', result[0])
                 self.assertIn('key', result[0]['value'])
                 self.assertIn('name', result[0]['value']['key'])
+                self.assertIn('status', result[0]['value'])
+                self.assertIn('created_by', result[0]['value'])
+                self.assertIn('last_access', result[0]['value'])
                 self.assertEqual(result[0]['value']['key']['name'], username)
                 initial_acc_status = result[0]['value']['status']
                 initial_groups = result[0]['value']['groups']['values']
@@ -278,6 +431,11 @@ class TestCvpClient(TestCvpClientBase):
 
             # Test Get all service account with new account
             result = self.api.svc_account_get_all()
+            self.assertIn('value', result[0])
+            self.assertIn('key', result[0]['value'])
+            self.assertIn('name', result[0]['value']['key'])
+            self.assertIn('created_by', result[0]['value'])
+            self.assertIn('last_access', result[0]['value'])
             self.assertIsNotNone(result)
             self.assertEqual(len(result), start_total + 1)
 
@@ -1509,11 +1667,11 @@ class TestCvpClient(TestCvpClientBase):
     def test_api_request_timeout(self):
         ''' Verify api timeout
         '''
-        self.assertEqual(self.api.request_timeout, 30)
+        self.assertEqual(self.api.request_timeout, self.request_timeout)
         self.api.request_timeout = 0.0001
         with self.assertRaises(Timeout):
             self.api.get_cvp_info()
-        self.api.request_timeout = 30.0
+        self.api.request_timeout = self.request_timeout
 
     def test_api_get_all_temp_actions(self):
         ''' Verify get_all_temp_actions
@@ -2370,12 +2528,27 @@ class TestCvpClient(TestCvpClientBase):
                     response['value']['requestParams']['requestId'], second_build_id)
 
                 # Test getting new workspace post second build
-                result = self.api.get_workspace(new_workspace_id)
-                self.assertIn('value', result)
-                # check needsBuild parameter added in CVP 2022.1.0
-                if self.clnt.apiversion > 7.0:
-                    self.assertIn('needsBuild', result['value'])
-                    self.assertEqual(result['value']['needsBuild'], False)
+                # Attempt this up to three times to allow for operation to complete
+                # in slow environment
+                for _ in range(0, 2):
+                    result = self.api.get_workspace(new_workspace_id)
+                    self.assertIn('value', result)
+                    # check needsBuild parameter added in CVP 2022.1.0
+                    if self.clnt.apiversion > 7.0:
+                        self.assertIn('needsBuild', result['value'])
+                        if not result['value']['needsBuild']:
+                            # expect needsBuild to be set to True after a build
+                            # once this is found we can break
+                            self.assertEqual(result['value']['needsBuild'], False)
+                            break
+                        else:
+                            # needsBuild has not yet been updated. Read workspace
+                            # data again.
+                            time.sleep(1)
+                    else:
+                        # if no needsBuild parameter no need to repeat call to
+                        # check it.
+                        break
 
             # Test Submit Workspace
             new_submit_id = new_workspace_id + '_SUBMIT_' + str(new_uuid)
@@ -2394,13 +2567,20 @@ class TestCvpClient(TestCvpClientBase):
             time.sleep(1)
 
             # Test getting new workspace post submit
-            result = self.api.get_workspace(new_workspace_id)
-            self.assertIn('value', result)
-            self.assertIn('key', result['value'])
-            self.assertEqual(new_workspace_id,
-                             result['value']['key']['workspaceId'])
-            self.assertEqual('WORKSPACE_STATE_SUBMITTED',
-                             result['value']['state'])
+            # Attempt this up to three times to allow for operation to complete
+            # in slow environment
+            for _ in range(0, 2):
+                result = self.api.get_workspace(new_workspace_id)
+                self.assertIn('value', result)
+                self.assertIn('key', result['value'])
+                self.assertEqual(new_workspace_id,
+                                 result['value']['key']['workspaceId'])
+                if result['value']['state'] == 'WORKSPACE_STATE_PENDING':
+                    time.sleep(1)
+                else:
+                    self.assertEqual('WORKSPACE_STATE_SUBMITTED',
+                                     result['value']['state'])
+                    break
         else:
             pprint(f'SKIPPING TEST (test_api_tags) FOR API - {self.clnt.apiversion}')
             time.sleep(1)

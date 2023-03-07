@@ -38,15 +38,18 @@ import os
 import unittest
 import yaml
 
+
 def get_fixtures_path():
     ''' Return the path to the fixtures directory.
     '''
     return os.path.join(os.path.dirname(__file__), '../fixtures')
 
+
 def get_fixture(filename):
     ''' Return a path with the fixtures directory prepended to the filename.
     '''
     return os.path.join(get_fixtures_path(), filename)
+
 
 class DutSystemTest(unittest.TestCase):
     ''' DutSystemTest class that provides information about the DUTs used.

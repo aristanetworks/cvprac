@@ -2739,14 +2739,23 @@ class CvpApi(object):
             Args:
                 cc_ids (list): A list of change control IDs to be deleted.
         '''
-        if self.clnt.apiversion is None:
-            self.get_cvp_info()
-        if self.clnt.apiversion >= 3.0:
+        msg = 'Change Control Resource APIs supported from 2021.2.0 or newer.'
+        if self.cvp_version_compare('>=', 6.0, msg):
+            self.log.debug(
+                'v6+ Using Resource API Change Control Delete API Call')
+            resp_list = []
+            for cc_id in cc_ids:
+                resp = self.change_control_delete(cc_id)
+                resp_list.append(resp)
+            return resp_list
+
+        msg = 'Change Control Service APIs supported from 2019.0.0 to 2021.2.0'
+        if self.cvp_version_compare('>=', 3.0, msg):
             self.log.debug(
                 'v3/v4/v5 /api/v3/services/ccapi.ChangeControl/Delete'
                 ' API Call')
+            resp_list = []
             for cc_id in cc_ids:
-                resp_list = []
                 data = {'cc_id': cc_id}
                 resp = self.clnt.post(
                     '/api/v3/services/ccapi.ChangeControl/Delete',
@@ -2870,7 +2879,6 @@ class CvpApi(object):
             Args:
                 app_name (str): String to specify info/signifier of calling app
                 device (dict): Device info
-                container (dict): Container info
                 create_task (bool): Determines whether or not to execute a save
                     and create the tasks (if any)
 
@@ -2880,14 +2888,19 @@ class CvpApi(object):
 
                     Ex: {u'data': {u'status': u'success', u'taskIds': []}}
         '''
-        info = ('App %s reseting device %s and moving it to Undefined'
+        info = ('App %s resetting device %s and moving it to Undefined'
                 % (app_name, device['fqdn']))
         self.log.debug(info)
+
         if 'parentContainerId' in device:
             from_id = device['parentContainerId']
         else:
             parent_cont = self.get_parent_container_for_device(device['key'])
-            from_id = parent_cont['key']
+            if parent_cont and 'key' in parent_cont:
+                from_id = parent_cont['key']
+            else:
+                from_id = ''
+                
         data = {'data': [{'info': info,
                           'infoPreview': info,
                           'action': 'reset',
@@ -3781,15 +3794,71 @@ class CvpApi(object):
             self.log.debug('v7 ' + str(url))
             return self.clnt.post(url, data=payload, timeout=self.request_timeout)
 
+    def add_role(self, name, description, moduleList):
+        ''' Add new local role to the CVP UI.
+            Args:
+                name (str): local role name on CVP
+                description (str): role description
+                moduleList (list): list of modules (name (str) and mode (str))
+        '''
+        data = {"name": name,
+                "description": description,
+                "moduleList": moduleList}
+        return self.clnt.post('/role/createRole.do', data=data,
+                              timeout=self.request_timeout)
+
+    def update_role(self, rolekey, name, description, moduleList):
+        ''' Updates role information, like
+            role name, description and role modules.
+            Args:
+                rolekey (str): local role key on CVP
+                name (str): local role name on CVP
+                description (str): role description
+                moduleList (list): list of modules (name (str) and mode (str))
+        '''
+        data = {"key": rolekey,
+                "name": name,
+                "description": description,
+                "moduleList": moduleList}
+        return self.clnt.post('/role/updateRole.do', data=data,
+                              timeout=self.request_timeout)
+
+    def get_role(self, rolekey):
+        ''' Returns specified role information.
+            Args:
+                rolekey (str): role key on CVP
+            Returns:
+               response (dict): Returns a dict that contains the role.
+               Ex: {'name': 'Test Role', 'key': 'role_1599019487020581247', 'description': 'Test'...}
+        '''
+        return self.clnt.get('/role/getRole.do?roleId={}'.format(rolekey),
+                             timeout=self.request_timeout)
+
     def get_roles(self):
         ''' Get all the user roles in CloudVision.
             Returns:
                response (dict): Returns a dict that contains all the user role states..
                Ex: {'total': 7, 'roles': [{'name': 'Test Role', 'key': 'role_1599019487020581247',
-               'description': 'Test'...}
+               'description': 'Test'...}]}
         '''
         url = '/role/getRoles.do?startIndex=0&endIndex=0'
         return self.clnt.get(url, timeout=self.request_timeout)
+
+    def delete_role(self, rolekey):
+        ''' Remove specified role from CVP
+            Args:
+                rolekey (str): role key on CVP
+        '''
+        data = [rolekey]
+        return self.delete_roles(data)
+
+    def delete_roles(self, rolekeys):
+        ''' Remove specified roles from CVP
+            Args:
+                rolekeys (list): list of role keys (str) on CVP
+        '''
+        return self.clnt.post('/role/deleteRoles.do', data=rolekeys,
+                              timeout=self.request_timeout)
 
     def svc_account_token_get_all(self):
         ''' Get all service account token states using Resource APIs.
@@ -3877,7 +3946,7 @@ class CvpApi(object):
         '''
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
         if self.cvp_version_compare('>=', 7.0, msg):
-            url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/GetAll'
+            url = '/api/v3/services/arista.serviceaccount.v1.AccountService/GetAll'
             self.log.debug('v7 {} '.format(url))
             return self.clnt.post(url)
 
@@ -3895,7 +3964,7 @@ class CvpApi(object):
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
         if self.cvp_version_compare('>=', 7.0, msg):
             payload = {"key": {"name": username}}
-            url = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/GetOne'
+            url = '/api/v3/services/arista.serviceaccount.v1.AccountService/GetOne'
             self.log.debug('v7 {} {}'.format(url, payload))
             return self.clnt.post(url, data=payload)
 

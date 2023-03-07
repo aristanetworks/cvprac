@@ -150,6 +150,7 @@ class CvpClient(object):
         self.api_token = None
         self.version = None
         self._last_used_node = None
+        self.proxies = None
 
         # Save proper headers
         self.headers = {'Accept': 'application/json',
@@ -258,7 +259,8 @@ class CvpClient(object):
 
     def connect(self, nodes, username, password, connect_timeout=10,
                 request_timeout=30, protocol='https', port=None, cert=False,
-                is_cvaas=False, tenant=None, api_token=None, cvaas_token=None):
+                is_cvaas=False, tenant=None, api_token=None, cvaas_token=None,
+                proxies=None):
         ''' Login to CVP and get a session ID and cookie.  Currently
             certificates are not verified if the https protocol is specified. A
             warning may be printed out from the requests module for this case.
@@ -291,6 +293,14 @@ class CvpClient(object):
                     for CVaaS.
                 api_token (string): API Token to use in place of UN/PW login
                     for CVP 2020.3.0 and beyond.
+                proxies (dict): A dictionary of proxy protocol to URL. Example:
+
+                    {'http': 'hostname.domain.com:8080',
+                     'https': 'hostname.domain.com:8080'}
+
+                     Proxies can also be set via environment variables.
+                     Please reference the below link for details of precedence.
+                     https://requests.readthedocs.io/en/latest/user/advanced/#proxies
 
             Raises:
                 CvpLoginError: A CvpLoginError is raised if a connection
@@ -345,6 +355,7 @@ class CvpClient(object):
                              ' generic')
             self.api_token = api_token
             self.cvaas_token = api_token
+        self.proxies = proxies
         self._create_session(all_nodes=True)
         # Verify that we can connect to at least one node
         if not self.session:
@@ -379,6 +390,8 @@ class CvpClient(object):
             be set to None.
         '''
         self.session = requests.Session()
+        if self.proxies:
+            self.session.proxies.update(self.proxies)
         return_error = None
         try:
             self._login()
@@ -703,9 +716,7 @@ class CvpClient(object):
             else:
                 self.log.error('Unknown format for JSONDecodeError - %s',
                                err_str)
-                # Suppressing context as per
-                # https://peps.python.org/pep-0409/
-                raise JSONDecodeError(err_str) from None
+                raise error
 
     def _send_request(self, req_type, full_url, timeout, data=None,
                       files=None):

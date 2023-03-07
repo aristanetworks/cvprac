@@ -33,6 +33,7 @@
 
 ''' Unit tests for the CvpClient class
 '''
+import json
 import unittest
 from itertools import cycle
 from mock import Mock
@@ -317,7 +318,8 @@ class TestClient(unittest.TestCase):
                                 b'"value":"TAGTESTINT"},' \
                                 b'"remove":false},' \
                                 b'"type":"INITIAL"}}\n'
-        response_mock.json.side_effect = JSONDecodeError("Extra data")
+        response_mock.json.side_effect = JSONDecodeError(
+            "Extra data", json.dumps({'key': 'value'}), 1)
         response_mock.text = '{"result":{"value":{' \
                              '"key":{"workspaceId":"CVPRACT1",' \
                              '"value":"T1"},' \
@@ -388,7 +390,8 @@ class TestClient(unittest.TestCase):
                      '{"workspaceId":"builtin-studios1vity-monitor"}' \
                      ',"createdAt":"2022-05-25T23:18:32.368Z",' \
                      '"Build bui1sfully"},"}}'
-        response_mock.json.side_effect = JSONDecodeError(long_error)
+        response_mock.json.side_effect = JSONDecodeError(
+            long_error, json.dumps({'key': 'value'}), 1)
         response_mock.text = '{"result":{"value":{' \
                              '"key":{"workspaceId":"CVPRACT1",' \
                              '"value":"T1"},' \
@@ -438,7 +441,8 @@ class TestClient(unittest.TestCase):
                                 b'"value":"TAGTESTINT"},' \
                                 b'"remove":false},' \
                                 b'"type":"INITIAL"\n'
-        response_mock.json.side_effect = JSONDecodeError("Unknown")
+        response_mock.json.side_effect = JSONDecodeError(
+            "Unknown", json.dumps({'key': 'value'}), 1)
         response_mock.text = '{"result":{"value":{' \
                              '"key":{"workspaceId":"CVPRACT1",' \
                              '"value":"T1"},' \
