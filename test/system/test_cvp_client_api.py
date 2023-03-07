@@ -789,9 +789,15 @@ class TestCvpClient(TestCvpClientBase):
                                 'SYS_TelemetryBuilderV4')
                         except CvpApiError as e:
                             if 'Entity does not exist' in e.msg:
-                                # Configlet Builder for 2022.2.0 +
-                                cfglt = self.api.get_configlet_by_name(
-                                    'SYS_TelemetryBuilderV5')
+                                # Configlet Builder for 2022.2.0 - 2022.3.X
+                                try:
+                                    cfglt = self.api.get_configlet_by_name(
+                                        'SYS_TelemetryBuilderV5')
+                                except CvpApiError as e:
+                                    if 'Entity does not exist' in e.msg:
+                                        # Configlet Builder for 2022.3.X+
+                                        cfglt = self.api.get_configlet_by_name(
+                                            'SYS_TelemetryBuilderV6')
                     else:
                         raise
             else:
