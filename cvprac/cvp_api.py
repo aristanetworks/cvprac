@@ -38,6 +38,7 @@ import time
 # pylint: disable=redefined-builtin
 from io import open
 from datetime import datetime
+from re import split
 
 from cvprac.cvp_client_errors import CvpApiError
 
@@ -1177,6 +1178,7 @@ class CvpApi(object):
                              % qplus(name), timeout=self.request_timeout)
         return data['key']
 
+
     def delete_configlet(self, name, key):
         ''' Delete the configlet.
 
@@ -1308,6 +1310,35 @@ class CvpApi(object):
         return self.clnt.post('/configlet/addNoteToConfiglet.do',
                               data=data, timeout=self.request_timeout)
 
+    def sanitize_warnings(self, data):
+        ''' Sanitize the warnings returned after validation.
+            
+            In some cases where the configlets has both errors
+            and warnings, CVP may split any warnings that have 
+            `,` across multiple strings.
+            This method concats the strings back into one string
+            per warning, and correct the warningCount. 
+
+            Args:
+                data (dict): A dict that contians the result
+                    of the validation operation
+            Returns:
+                response (dict): A dict that contains the result of the
+                    validation operation
+        '''
+        if "warnings" not in data:
+            return data
+        temp_warnings = ", ".join(data['warnings']).strip()
+        temp_warnings = split(
+            r'(.*?\\n), ',
+            temp_warnings
+        )
+        # Use filter to remove any empty strings
+        # that re.split inserted
+        data['warnings'] = list(filter(None, temp_warnings))
+        data['warningCount'] = len(data['warnings'])
+        return data
+
     def validate_config_for_device(self, device_mac, config):
         ''' Validate a config against a device
 
@@ -1322,8 +1353,13 @@ class CvpApi(object):
         self.log.debug('validate_config_for_device: device_mac: %s config: %s'
                        % (device_mac, config))
         body = {'netElementId': device_mac, 'config': config}
-        return self.clnt.post('/configlet/validateConfig.do', data=body,
-                              timeout=self.request_timeout)
+        return self.sanitize_warnings(
+            self.clnt.post(
+                '/configlet/validateConfig.do',
+                data=body,
+                timeout=self.request_timeout
+            )
+        )
 
     def validate_config(self, device_mac, config):
         ''' Validate a config against a device and parse response to
