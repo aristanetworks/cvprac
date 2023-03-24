@@ -690,12 +690,32 @@ class TestCvpClient(TestCvpClientBase):
         result = self.api.validate_config(self.device['key'], config)
         self.assertEqual(result, True)
 
+    def test_api_validate_config_warn(self):
+        ''' Verify config with only warnings returns True
+        '''
+        config = 'interface ethernet1\n description test\nspanning-tree portfast'
+        result = self.api.validate_config(self.device['key'], config)
+        self.assertEqual(result, True)
+
     def test_api_validate_config_error(self):
         ''' Verify an invalid config returns False
         '''
         config = 'interface ethernet1\n typocommand test'
         result = self.api.validate_config(self.device['key'], config)
         self.assertEqual(result, False)
+
+    def test_api_validate_config_device(self):
+        ''' Verify config with only warnings returns True
+        '''
+        config = 'interface ethernet1\n description test\nspanning-tree portfast\n!\nruter bgp something'
+        result = self.api.validate_config_for_device(self.device['key'], config)
+        expected_warning = "! portfast should only be enabled on ports connected to a single host. Connecting hubs, concentrators, switches, bridges, etc. to this interface when portfast is enabled can cause temporary bridging loops. Use with CAUTION. at line 3"
+        self.assertTrue(expected_warning in result["warnings"][0])
+        self.assertEqual(
+            result['errors'][0]["error"],
+            "> ruter bgp something% Invalid input (at token 0: 'ruter') at line 5",
+        )
+        self.assertEqual(result['warningCount'], 1)
 
     def test_api_get_task_by_id_bad(self):
         ''' Verify get_task_by_id with bad task id
