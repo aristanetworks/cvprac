@@ -1327,15 +1327,31 @@ class CvpApi(object):
                     validation operation
         '''
         if "warnings" not in data:
+            # nothing to do here, we can return as is
             return data
+        # Since there may be warnings incorrectly split on
+        # ', ' within the warning text by CVP, we join all the 
+        # warnings together using ', ' into one large string
         temp_warnings = ", ".join(data['warnings']).strip()
+
+        # To split the large string again we match on the 
+        # 'at line XXX' that should indicate the end of the warning.
+        # We capture as well the remaining \\n or whitespace and include
+        # the extra ', ' added in the previous step in the matching criteria.
+        # The extra ', ' is not included in the strings of the new list
         temp_warnings = split(
-            r'(.*?\\n), ',
+            r'(.*?at line \d+.*?),\s+',
             temp_warnings
         )
+
+        # The behaviour of re.split will add empty strings
+        # if the regex matches on the begging or ending of the lin.
+        # Refer to https://docs.python.org/3/library/re.html#re.split
+
         # Use filter to remove any empty strings
         # that re.split inserted
         data['warnings'] = list(filter(None, temp_warnings))
+        # Update the count of warnings to the correct value
         data['warningCount'] = len(data['warnings'])
         return data
 

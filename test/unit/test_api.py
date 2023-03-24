@@ -59,6 +59,7 @@ class TestAPI(unittest.TestCase):
         """Test sanitization if warnings are split"""
         input = {
             "warnings": [
+                "! \\nWARNING!\\nChanging TCAM profile will cause forwarding agent(s) to exit and restart.\\nAll traffic through the forwarding chip managed by the restarting\\nforwarding agent will be dropped.\\n at line 392",
                 "! portfast should only be enabled on ports connected to a single host. Connecting hubs",
                 "concentrators",
                 "switches",
@@ -69,9 +70,9 @@ class TestAPI(unittest.TestCase):
                 "switches",
                 "bridges",
                 "etc. to this interface when portfast is enabled can cause temporary bridging loops. Use with CAUTION. at line 4\\n",
-                "! portfast should only be enabled on ports connected to a single host. Connecting hubs, concentrators, switches, bridges, etc. to this interface when portfast is enabled can cause temporary bridging loops. Use with CAUTION. at line 6\\n\\n",
+                "! portfast should only be enabled on ports connected to a single host. Connecting hubs, concentrators, switches, bridges, etc. to this interface when portfast is enabled can cause temporary bridging loops. Use with CAUTION. at line 6\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n"
             ],
-            "warningCount": 10,
+            "warningCount": 11,
             "errors": [
                 {
                     "lineNo": " 6",
@@ -82,11 +83,12 @@ class TestAPI(unittest.TestCase):
         }
         expected = {
             "warnings": [
+                "! \\nWARNING!\\nChanging TCAM profile will cause forwarding agent(s) to exit and restart.\\nAll traffic through the forwarding chip managed by the restarting\\nforwarding agent will be dropped.\\n at line 392",
                 "! portfast should only be enabled on ports connected to a single host. Connecting hubs, concentrators, switches, bridges, etc. to this interface when portfast is enabled can cause temporary bridging loops. Use with CAUTION. at line 2\\n\\n",
                 "! portfast should only be enabled on ports connected to a single host. Connecting hubs, concentrators, switches, bridges, etc. to this interface when portfast is enabled can cause temporary bridging loops. Use with CAUTION. at line 4\\n",
-                "! portfast should only be enabled on ports connected to a single host. Connecting hubs, concentrators, switches, bridges, etc. to this interface when portfast is enabled can cause temporary bridging loops. Use with CAUTION. at line 6\\n\\n",
+                "! portfast should only be enabled on ports connected to a single host. Connecting hubs, concentrators, switches, bridges, etc. to this interface when portfast is enabled can cause temporary bridging loops. Use with CAUTION. at line 6\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n",
             ],
-            "warningCount": 3,
+            "warningCount": 4,
             "errors": [
                 {
                     "lineNo": " 6",
@@ -95,7 +97,6 @@ class TestAPI(unittest.TestCase):
             ],
             "errorCount": 1,
         }
-        print(self.api.sanitize_warnings(input))
         assert self.api.sanitize_warnings(input) == expected
 
     def test_sanitize_warnings_skip(self):
