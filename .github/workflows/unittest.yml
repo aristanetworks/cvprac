@@ -6,12 +6,23 @@ on: push
 jobs:
   run_unit_test:
     runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10"]
+
     steps:
-      # checkout the repo
-      - name: Checkout
-        uses: actions/checkout@v3
-      # run unittest
-      - name: run unit tests
-        uses: actions/github-script@v6
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
         with:
-          script: make unittest
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Lint with pylinit
+        run: |
+          make pylint
+      - name: Run unit tests
+        run: |
+          make unittest
