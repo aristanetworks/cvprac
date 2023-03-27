@@ -25,5 +25,6 @@ jobs:
         run: |
           make pylint
       - name: Run unit tests
+        if: success() || failure()
         run: |
           make unittest
