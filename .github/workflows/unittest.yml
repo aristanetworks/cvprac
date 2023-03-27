@@ -1,0 +1,15 @@
+---
+name: Run Unit-tests
+
+jobs:
+  run_unit_test:
+    runs-on: ubuntu-22.04
+    steps:
+      # checkout the repo
+      - name: Checkout
+        uses: actions/checkout@v3
+      # run unittest
+      - name: run unit tests
+        uses: actions/github-script@v6
+        with:
+          script: make unittest
