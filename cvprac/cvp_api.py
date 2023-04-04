@@ -1345,7 +1345,7 @@ class CvpApi(object):
         )
 
         # The behaviour of re.split will add empty strings
-        # if the regex matches on the begging or ending of the lin.
+        # if the regex matches on the begging or ending of the line.
         # Refer to https://docs.python.org/3/library/re.html#re.split
 
         # Use filter to remove any empty strings
