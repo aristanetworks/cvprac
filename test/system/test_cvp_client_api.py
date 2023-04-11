@@ -54,6 +54,7 @@ import sys
 import time
 import unittest
 import uuid
+from pkg_resources import parse_version
 from pprint import pprint
 import urllib3
 from test_cvp_base import TestCvpClientBase
@@ -707,14 +708,29 @@ class TestCvpClient(TestCvpClientBase):
     def test_api_validate_config_device(self):
         ''' Verify config with only warnings returns True
         '''
+        # The current APIVersions do not allow the cut off at CVP 2021.1.X
+        # that this error message changes. So this is version comparision and
+        # parsing is repetitive.
+        if not self.clnt.apiversion:
+            self.api.get_cvp_info()
+        version_components = self.clnt.version.split(".")
+        if len(version_components) < 3:
+            version_components.append("0")
+            self.log.info('Version found with less than 3 components.'
+                          ' Appending 0. Updated Version String - %s',
+                          ".".join(version_components))
+        full_version = ".".join(version_components)
+
         config = 'interface ethernet1\n description test\nspanning-tree portfast\n!\nruter bgp something'
         result = self.api.validate_config_for_device(self.device['key'], config)
         expected_warning = "! portfast should only be enabled on ports connected to a single host. Connecting hubs, concentrators, switches, bridges, etc. to this interface when portfast is enabled can cause temporary bridging loops. Use with CAUTION. at line 3"
         self.assertTrue(expected_warning in result["warnings"][0])
-        self.assertEqual(
-            result['errors'][0]["error"],
-            "> ruter bgp something% Invalid input (at token 0: 'ruter') at line 5",
-        )
+        expected_error = "> ruter bgp something% Invalid input "
+        # Error message format changes as of 2021.1.0 or 2021.1.1
+        if parse_version(full_version) >= parse_version("2021.1.0"):
+            expected_error += "(at token 0: 'ruter') "
+        expected_error += "at line 5"
+        self.assertEqual(result['errors'][0]["error"], expected_error)
         self.assertEqual(result['warningCount'], 1)
 
     def test_api_get_task_by_id_bad(self):
