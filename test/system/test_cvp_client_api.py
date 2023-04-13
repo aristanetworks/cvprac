@@ -54,6 +54,7 @@ import sys
 import time
 import unittest
 import uuid
+from pkg_resources import parse_version
 from pprint import pprint
 import urllib3
 from test_cvp_base import TestCvpClientBase
@@ -690,12 +691,47 @@ class TestCvpClient(TestCvpClientBase):
         result = self.api.validate_config(self.device['key'], config)
         self.assertEqual(result, True)
 
+    def test_api_validate_config_warn(self):
+        ''' Verify config with only warnings returns True
+        '''
+        config = 'interface ethernet1\n description test\nspanning-tree portfast'
+        result = self.api.validate_config(self.device['key'], config)
+        self.assertEqual(result, True)
+
     def test_api_validate_config_error(self):
         ''' Verify an invalid config returns False
         '''
         config = 'interface ethernet1\n typocommand test'
         result = self.api.validate_config(self.device['key'], config)
         self.assertEqual(result, False)
+
+    def test_api_validate_config_device(self):
+        ''' Verify config with only warnings returns True
+        '''
+        # The current APIVersions do not allow the cut off at CVP 2021.1.X
+        # that this error message changes. So this is version comparision and
+        # parsing is repetitive.
+        if not self.clnt.apiversion:
+            self.api.get_cvp_info()
+        version_components = self.clnt.version.split(".")
+        if len(version_components) < 3:
+            version_components.append("0")
+            self.log.info('Version found with less than 3 components.'
+                          ' Appending 0. Updated Version String - %s',
+                          ".".join(version_components))
+        full_version = ".".join(version_components)
+
+        config = 'interface ethernet1\n description test\nspanning-tree portfast\n!\nruter bgp something'
+        result = self.api.validate_config_for_device(self.device['key'], config)
+        expected_warning = "! portfast should only be enabled on ports connected to a single host. Connecting hubs, concentrators, switches, bridges, etc. to this interface when portfast is enabled can cause temporary bridging loops. Use with CAUTION. at line 3"
+        self.assertTrue(expected_warning in result["warnings"][0])
+        expected_error = "> ruter bgp something% Invalid input "
+        # Error message format changes as of 2021.1.0 or 2021.1.1
+        if parse_version(full_version) >= parse_version("2021.1.0"):
+            expected_error += "(at token 0: 'ruter') "
+        expected_error += "at line 5"
+        self.assertEqual(result['errors'][0]["error"], expected_error)
+        self.assertEqual(result['warningCount'], 1)
 
     def test_api_get_task_by_id_bad(self):
         ''' Verify get_task_by_id with bad task id
@@ -789,9 +825,15 @@ class TestCvpClient(TestCvpClientBase):
                                 'SYS_TelemetryBuilderV4')
                         except CvpApiError as e:
                             if 'Entity does not exist' in e.msg:
-                                # Configlet Builder for 2022.2.0 +
-                                cfglt = self.api.get_configlet_by_name(
-                                    'SYS_TelemetryBuilderV5')
+                                # Configlet Builder for 2022.2.0 - 2022.3.X
+                                try:
+                                    cfglt = self.api.get_configlet_by_name(
+                                        'SYS_TelemetryBuilderV5')
+                                except CvpApiError as e:
+                                    if 'Entity does not exist' in e.msg:
+                                        # Configlet Builder for 2022.3.X+
+                                        cfglt = self.api.get_configlet_by_name(
+                                            'SYS_TelemetryBuilderV6')
                     else:
                         raise
             else:
