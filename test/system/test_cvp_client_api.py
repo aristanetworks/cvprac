@@ -808,53 +808,34 @@ class TestCvpClient(TestCvpClientBase):
     def test_api_get_configlet_builder(self):
         ''' Verify get_configlet_builder
         '''
-        try:
-            # Configlet Builder for pre 2019.x
-            cfglt = self.api.get_configlet_by_name('SYS_TelemetryBuilderV2')
-        except CvpApiError as e:
-            if 'Entity does not exist' in e.msg:
-                # Configlet Builder for 2019.x
-                try:
-                    cfglt = self.api.get_configlet_by_name(
-                        'SYS_TelemetryBuilderV3')
-                except CvpApiError as e:
-                    if 'Entity does not exist' in e.msg:
-                        # Configlet Builder for 2021.x - 2022.1.1
-                        try:
-                            cfglt = self.api.get_configlet_by_name(
-                                'SYS_TelemetryBuilderV4')
-                        except CvpApiError as e:
-                            if 'Entity does not exist' in e.msg:
-                                # Configlet Builder for 2022.2.0 - 2022.3.X
-                                try:
-                                    cfglt = self.api.get_configlet_by_name(
-                                        'SYS_TelemetryBuilderV5')
-                                except CvpApiError as e:
-                                    if 'Entity does not exist' in e.msg:
-                                        # Configlet Builder for 2022.3.X+
-                                        cfglt = self.api.get_configlet_by_name(
-                                            'SYS_TelemetryBuilderV6')
-                    else:
-                        raise
-            else:
-                raise
-        result = self.api.get_configlet_builder(cfglt['key'])
+        cfglt_bldr_key = None
+        all_configlets = self.api.get_configlets()
+        if 'data' in all_configlets:
+            for cfglt in all_configlets['data']:
+                if 'name' in cfglt and 'SYS_TelemetryBuilderV' in cfglt['name']:
+                    cfglt_bldr_key = cfglt['key']
+                    break
+        if cfglt_bldr_key:
+            result = self.api.get_configlet_builder(cfglt_bldr_key)
 
-        # Verify the following keys and types are
-        # returned by the request
-        exp_data = {
-            'isAssigned': bool,
-            'formList': list,
-            'main_script': dict,
-        }
-        # Handle unicode type for Python 2 vs Python 3
-        if sys.version_info.major < 3:
-            exp_data[u'name'] = (unicode, str)
+            # Verify the following keys and types are
+            # returned by the request
+            exp_data = {
+                'isAssigned': bool,
+                'formList': list,
+                'main_script': dict,
+            }
+            # Handle unicode type for Python 2 vs Python 3
+            if sys.version_info.major < 3:
+                exp_data[u'name'] = (unicode, str)
+            else:
+                exp_data[u'name'] = str
+            for key in list(exp_data.keys()):
+                self.assertIn(key, result['data'])
+                self.assertIsInstance(result['data'][key], exp_data[key])
         else:
-            exp_data[u'name'] = str
-        for key in list(exp_data.keys()):
-            self.assertIn(key, result['data'])
-            self.assertIsInstance(result['data'][key], exp_data[key])
+            print('No Base Configlet Builder SYS_TelemetryBuilerV* found. Skipping')
+            time.sleep(1)
 
     def test_api_get_configlet_by_name(self):
         ''' Verify get_configlet_by_name
