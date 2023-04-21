@@ -2609,16 +2609,16 @@ class TestCvpClient(TestCvpClientBase):
             time.sleep(1)
 
             # Test getting new workspace post submit
-            # Attempt this up to three times to allow for operation to complete
+            # Attempt this up to four times to allow for operation to complete
             # in slow environment
-            for _ in range(0, 2):
+            for _ in range(0, 3):
                 result = self.api.get_workspace(new_workspace_id)
                 self.assertIn('value', result)
                 self.assertIn('key', result['value'])
                 self.assertEqual(new_workspace_id,
                                  result['value']['key']['workspaceId'])
                 if result['value']['state'] == 'WORKSPACE_STATE_PENDING':
-                    time.sleep(1)
+                    time.sleep(5)
                 else:
                     self.assertEqual('WORKSPACE_STATE_SUBMITTED',
                                      result['value']['state'])
