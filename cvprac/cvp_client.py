@@ -710,7 +710,7 @@ class CvpClient(object):
                            err_str)
             if 'Extra data' in str(error):
                 self.log.debug('Found multiple objects or NO objects in'
-                               'response data. Attempt to decode')
+                               ' response data. Attempt to decode')
                 decoded_data = json_decoder(response.text)
                 return {'data': decoded_data}
             else:
