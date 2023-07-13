@@ -572,7 +572,7 @@ class CvpApi(object):
                              '%s&queryparam=&startIndex=%d&endIndex=%d' %
                              (key, start, end), timeout=self.request_timeout)
 
-    def get_inventory(self, start=0, end=0, query=''):
+    def get_inventory(self, start=0, end=0, query='', provisioned=True):
         ''' Returns the a dict of the net elements known to CVP.
 
             Args:
@@ -595,7 +595,7 @@ class CvpApi(object):
                                  timeout=self.request_timeout)
             return data['netElementList']
         self.log.debug('v2 Inventory API Call')
-        data = self.clnt.get('/inventory/devices?provisioned=true',
+        data = self.clnt.get('/inventory/devices?provisioned=%s' % provisioned,
                              timeout=self.request_timeout)
         containers = self.get_containers()
         for dev in data:
@@ -1312,12 +1312,12 @@ class CvpApi(object):
 
     def sanitize_warnings(self, data):
         ''' Sanitize the warnings returned after validation.
-            
+
             In some cases where the configlets has both errors
-            and warnings, CVP may split any warnings that have 
+            and warnings, CVP may split any warnings that have
             `,` across multiple strings.
             This method concats the strings back into one string
-            per warning, and correct the warningCount. 
+            per warning, and correct the warningCount.
 
             Args:
                 data (dict): A dict that contians the result
@@ -1330,11 +1330,11 @@ class CvpApi(object):
             # nothing to do here, we can return as is
             return data
         # Since there may be warnings incorrectly split on
-        # ', ' within the warning text by CVP, we join all the 
+        # ', ' within the warning text by CVP, we join all the
         # warnings together using ', ' into one large string
         temp_warnings = ", ".join(data['warnings']).strip()
 
-        # To split the large string again we match on the 
+        # To split the large string again we match on the
         # 'at line XXX' that should indicate the end of the warning.
         # We capture as well the remaining \\n or whitespace and include
         # the extra ', ' added in the previous step in the matching criteria.
@@ -2952,7 +2952,7 @@ class CvpApi(object):
                 from_id = parent_cont['key']
             else:
                 from_id = ''
-                
+
         data = {'data': [{'info': info,
                           'infoPreview': info,
                           'action': 'reset',
@@ -3775,8 +3775,13 @@ class CvpApi(object):
                      'deviceId': 'BAD032986065E8DC14CBB6472EC314A6'},
                      'time': '2022-02-12T02:58:30.765459650Z'}
         '''
-        device_info = self.get_device_by_serial(device_id)
-        if device_info is not None and 'serialNumber' in device_info:
+        device_exists = False
+        inventory = self.get_inventory(provisioned=False)
+        for device in inventory:
+            if device['serialNumber'] == device_id:
+                device_exists = True
+                break
+        if device_exists:
             msg = 'Decommissioning via Resource APIs are supported from 2021.3.0 or newer.'
             # For on-prem check the version as it is only supported from 2021.3.0+
             if self.cvp_version_compare('>=', 7.0, msg):
