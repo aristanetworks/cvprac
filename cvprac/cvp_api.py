@@ -1463,7 +1463,7 @@ class CvpApi(object):
         return self.clnt.post(url, data=data, timeout=self.request_timeout)
 
     def apply_configlets_to_device(self, app_name, dev, new_configlets,
-                                   create_task=True, reorder_configlets=False):
+                                   create_task=True, reorder_configlets=False, validate=False):
         ''' Apply the configlets to the device.
 
             Args:
@@ -1484,6 +1484,12 @@ class CvpApi(object):
                     directly. Set this parameter to True only with the full
                     list of configlets being applied to the device provided
                     via the new_configlets parameter.
+                validate (bool): Defaults to False. If set to True, the function
+                    will validate and compare the configlets to be attached and
+                    pupulate the configCompareCount field in the data dict. In case
+                    all keys are 0, ie there is no difference between designed-config
+                    and running-config after applying the configlets, no task will be
+                    generated.
 
             Returns:
                 response (dict): A dict that contains a status and a list of
@@ -1536,6 +1542,19 @@ class CvpApi(object):
                           'nodeTargetIpAddress': dev['ipAddress'],
                           'childTasks': [],
                           'parentTask': ''}]}
+        if validate:
+            validation_result = self.validate_configlets_for_device(dev['systemMacAddress'], ckeys)
+            mismatch_count = validation_result['mismatch']
+            new_count = validation_result['new']
+            reconcile_count = validation_result['reconcile']
+            data['data'][0].update({
+                "configCompareCount": {
+                    "mismatch": mismatch_count,
+                    "reconcile": reconcile_count,
+                    "new": new_count
+                    }
+                }
+            )
         self.log.debug('apply_configlets_to_device: saveTopology data:\n%s' %
                        data['data'])
         self._add_temp_action(data)
