@@ -1434,6 +1434,7 @@ class TestCvpClient(TestCvpClientBase):
         ''' Verify apply_configlets_to_device and
             remove_configlets_from_device. Also test apply_configlets_to_device
             with reorder_configlets parameter set to True
+            and test validate parameter set to True
         '''
         # pylint: disable=too-many-statements
         # Create a new configlet
@@ -1531,6 +1532,34 @@ class TestCvpClient(TestCvpClientBase):
 
         # Delete the new configlet
         self.api.delete_configlet(name, key)
+
+        # Test configlet apply with configlet validate and compare
+        # where the designed-config will match the running-config
+        # the result should yield no tasks
+        running_config = self.api.get_device_configuration(self.device['systemMacAddress'])
+
+        # add new configlet and append to the list of configlets
+        new_configlet_name = self.device['fqdn'] + "_rc"
+        self.api.add_configlet(new_configlet_name, running_config)
+        new_configlet_data = self.api.get_configlet_by_name(new_configlet_name)
+
+        # Apply the configlet to the device
+        label = 'cvprac device configlet test with validation'
+        validate_and_apply = self.api.apply_configlets_to_device(
+            label,
+            self.device,
+            [new_configlet_data],
+            validate=True
+        )
+
+        # Check that no taskids have been generated
+        self.assertEqual(validate_and_apply['data']['taskIds'], [])
+        self.assertEqual(validate_and_apply['data']['status'], 'success')
+
+        # Delete the new configlet
+        param = {'name': new_configlet_name, 'key': new_configlet_data['key']}
+        self.api.remove_configlets_from_device(label, self.device, [param])
+        self.api.delete_configlet(new_configlet_name, new_configlet_data['key'])
 
         # Check compliance
         self.test_api_check_compliance()
