@@ -1556,6 +1556,11 @@ class TestCvpClient(TestCvpClientBase):
         self.assertEqual(validate_and_apply['data']['taskIds'], [])
         self.assertEqual(validate_and_apply['data']['status'], 'success')
 
+        # Delete the new configlet
+        param = {'name': new_configlet_name, 'key': new_configlet_data['key']}
+        self.api.remove_configlets_from_device(label, self.device, [param])
+        self.api.delete_configlet(new_configlet_name, new_configlet_data['key'])
+
         # Check compliance
         self.test_api_check_compliance()
 

@@ -1486,7 +1486,7 @@ class CvpApi(object):
                     via the new_configlets parameter.
                 validate (bool): Defaults to False. If set to True, the function
                     will validate and compare the configlets to be attached and
-                    pupulate the configCompareCount field in the data dict. In case
+                    populate the configCompareCount field in the data dict. In case
                     all keys are 0, ie there is no difference between designed-config
                     and running-config after applying the configlets, no task will be
                     generated.
@@ -1544,14 +1544,11 @@ class CvpApi(object):
                           'parentTask': ''}]}
         if validate:
             validation_result = self.validate_configlets_for_device(dev['systemMacAddress'], ckeys)
-            mismatch_count = validation_result['mismatch']
-            new_count = validation_result['new']
-            reconcile_count = validation_result['reconcile']
             data['data'][0].update({
                 "configCompareCount": {
-                    "mismatch": mismatch_count,
-                    "reconcile": reconcile_count,
-                    "new": new_count
+                    "mismatch": validation_result['mismatch'],
+                    "reconcile": validation_result['reconcile'],
+                    "new": validation_result['new']
                     }
                 }
             )
