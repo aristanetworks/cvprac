@@ -1558,7 +1558,7 @@ class TestCvpClient(TestCvpClientBase):
 
         # Delete the new configlet
         param = {'name': new_configlet_name, 'key': new_configlet_data['key']}
-        self.api.remove_configlets_from_device(label, self.device, [param])
+        self.api.remove_configlets_from_device(label, self.device, [param], validate=True)
         self.api.delete_configlet(new_configlet_name, new_configlet_data['key'])
 
         # Check compliance

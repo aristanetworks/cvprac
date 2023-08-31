@@ -1561,7 +1561,7 @@ class CvpApi(object):
 
     # pylint: disable=too-many-locals
     def remove_configlets_from_device(self, app_name, dev, del_configlets,
-                                      create_task=True):
+                                      create_task=True, validate=False):
         ''' Remove the configlets from the device.
 
             Args:
@@ -1570,6 +1570,12 @@ class CvpApi(object):
                 del_configlets (list): List of configlet name and key pairs
                 create_task (bool): Determines whether or not to execute a save
                     and create the tasks (if any)
+                validate (bool): Defaults to False. If set to True, the function
+                    will validate and compare the configlets to be attached and
+                    populate the configCompareCount field in the data dict. In case
+                    all keys are 0, ie there is no difference between designed-config
+                    and running-config after applying the configlets, no task will be
+                    generated.
 
             Returns:
                 response (dict): A dict that contains a status and a list of
@@ -1628,6 +1634,16 @@ class CvpApi(object):
                           'nodeTargetIpAddress': dev['ipAddress'],
                           'childTasks': [],
                           'parentTask': ''}]}
+        if validate:
+            validation_result = self.validate_configlets_for_device(dev['systemMacAddress'], keep_keys)
+            data['data'][0].update({
+                "configCompareCount": {
+                    "mismatch": validation_result['mismatch'],
+                    "reconcile": validation_result['reconcile'],
+                    "new": validation_result['new']
+                    }
+                }
+            )
         self.log.debug('remove_configlets_from_device: saveTopology data:\n%s'
                        % data['data'])
         self._add_temp_action(data)
