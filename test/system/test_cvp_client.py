@@ -47,7 +47,6 @@ import unittest
 from pprint import pprint
 from requests.exceptions import Timeout
 sys.path.append(os.path.join(os.path.dirname(__file__), '../lib'))
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../'))
 from systestlib import DutSystemTest
 from cvprac.cvp_client import CvpClient
 from cvprac.cvp_client_errors import CvpApiError, CvpLoginError, \
