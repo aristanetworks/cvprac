@@ -97,7 +97,7 @@ import logging
 from logging.handlers import SysLogHandler
 from itertools import cycle
 from pkg_resources import parse_version
-
+import epdb
 import requests
 from requests.exceptions import ConnectionError, HTTPError, Timeout, \
     ReadTimeout, TooManyRedirects, JSONDecodeError
@@ -557,6 +557,7 @@ class CvpClient(object):
         self.headers['APP_SESSION_ID'] = response.json()['sessionId']
 
     def _set_headers_api_token(self):
+        # epdb.serve(port=9999)
         ''' Sets headers with API token instead of making a call to login API.
         '''
         # If using an API token there is no need to run a Login API.
@@ -565,6 +566,19 @@ class CvpClient(object):
         # Alternative to adding token to headers it can be added to
         # cookies as shown below.
         # self.cookies = {'access_token': self.api_token}
+        url = self.url_prefix_short + '/cvpservice/cvpInfo/getCvpInfo.do'
+        # response = self._send_request('GET', url, self.connect_timeout)
+        # response = self.session.get(url,
+                                    # headers=self.headers,
+                                    # timeout=self.connect_timeout,
+                                    # verify=self.cert)
+        response = self.session.get(url,
+                            cookies=self.cookies,
+                            headers=self.headers,
+                            timeout=self.connect_timeout,
+                            verify=self.cert)
+        self._is_good_response(response, 'Authenticate: %s' % url)
+
 
     def logout(self):
         '''
