@@ -10,3 +10,7 @@
   username: CvpRacTest
   password: AristaInnovates
   device: python-test-2
+  # The below fields can be defined to test the token test cases.
+  # If they are undefined, the tests are skipped
+  # api_token: <token here>
+  # api_token_expired: <expired token here>

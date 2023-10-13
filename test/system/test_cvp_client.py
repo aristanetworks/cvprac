@@ -151,6 +151,15 @@ class TestCvpClient(DutSystemTest):
         dut = self.duts[0]
         self.clnt.connect([dut['node']], dut['username'], dut['password'])
 
+    def test_connect_token_good(self):
+        ''' Verify https connection succeeds to a single CVP node
+            Uses https protocol and port with a valid token.
+        '''
+        dut = self.duts[0]
+        if 'api_token' not in dut:
+            raise unittest.SkipTest('No API token found for DUT. Skipping test.')
+        self.clnt.connect([dut['node']], dut['username'], dut['password'], api_token=dut['api_token'])
+
     def test_connect_set_request_timeout(self):
         ''' Verify API request timeout is set when provided to
             client connect method.
@@ -173,6 +182,22 @@ class TestCvpClient(DutSystemTest):
         dut = self.duts[0]
         with self.assertRaises(CvpLoginError):
             self.clnt.connect([dut['node']], dut['username'], 'password')
+
+    def test_connect_token_bad(self):
+        ''' Verify connect fails with bad token.
+        '''
+        dut = self.duts[0]
+        with self.assertRaises(CvpLoginError):
+            self.clnt.connect([dut['node']], dut['username'], 'password', api_token='bad_token')
+
+    def test_connect_token_expired(self):
+        ''' Verify connect fails with an expired token.
+        '''
+        dut = self.duts[0]
+        if 'expired_api_token' not in dut:
+            raise unittest.SkipTest('No Expired token given. Skipping test.')
+        with self.assertRaises(CvpLoginError):
+            self.clnt.connect([dut['node']], dut['username'], 'password', api_token=dut['api_token_expired'])
 
     def test_connect_node_bad(self):
         ''' Verify connection fails to a single bogus CVP node

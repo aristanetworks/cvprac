@@ -565,6 +565,14 @@ class CvpClient(object):
         # Alternative to adding token to headers it can be added to
         # cookies as shown below.
         # self.cookies = {'access_token': self.api_token}
+        url = self.url_prefix_short + '/api/v1/rest/'
+        response = self.session.get(url,
+                            cookies=self.cookies,
+                            headers=self.headers,
+                            timeout=self.connect_timeout,
+                            verify=self.cert)
+        # Verify that the generic request was successful
+        self._is_good_response(response, 'Authenticate: %s' % url)
 
     def logout(self):
         '''
