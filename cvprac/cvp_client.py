@@ -564,7 +564,7 @@ class CvpClient(object):
         # Alternative to adding token to headers it can be added to
         # cookies as shown below.
         # self.cookies = {'access_token': self.api_token}
-        url = self.url_prefix_short + '/api/v1/rest'
+        url = self.url_prefix_short + '/api/v1/rest/'
         response = self.session.get(url,
                             cookies=self.cookies,
                             headers=self.headers,
