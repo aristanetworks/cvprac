@@ -97,6 +97,7 @@ import logging
 from logging.handlers import SysLogHandler
 from itertools import cycle
 from pkg_resources import parse_version
+
 import requests
 from requests.exceptions import ConnectionError, HTTPError, Timeout, \
     ReadTimeout, TooManyRedirects, JSONDecodeError
