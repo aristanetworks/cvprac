@@ -4,25 +4,31 @@
 
 ## Table of Contents
 
-1. [Overview](#overview)
+- [Arista Cloudvision® Portal RESTful API Client](#arista-cloudvision-portal-restful-api-client)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
     - [Requirements](#requirements)
-1. [Installation](#installation)
+  - [Installation](#installation)
     - [Development: Run from Source](#development-run-from-source)
-1. [Getting Started](#getting-started)
+      - [Step 1: Clone the cvprac Github repo](#step-1-clone-the-cvprac-github-repo)
+      - [Step 2: Check out the desired version or branch](#step-2-check-out-the-desired-version-or-branch)
+      - [Step 3: Install cvprac using Pip with -e switch](#step-3-install-cvprac-using-pip-with--e-switch)
+      - [Step 4: Install cvprac development requirements](#step-4-install-cvprac-development-requirements)
+  - [Getting Started](#getting-started)
     - [Connecting](#connecting)
     - [CVP On Premises](#cvp-on-premises)
     - [CVaaS](#cvaas)
     - [CVP Version Handling](#cvp-version-handling)
     - [Examples](#examples)
-1. [Notes For API Class Usage](#notes-for-api-class-usage)
+  - [Notes for API Class Usage](#notes-for-api-class-usage)
     - [Containers](#containers)
-1. [Testing](#testing)
-1. [Contact or Questions](#contact-or-questions)
-1. [Contributing](#contributing)
+  - [Testing](#testing)
+  - [Contact or Questions](#contact-or-questions)
+  - [Contributing](#contributing)
     - [Working With Git](#working-with-git)
     - [Submitting Pull Requests](#submitting-pull-requests)
     - [Pull Request Semantics](#pull-request-semantics)
-1. [License](#license)
+  - [License](#license)
 
 ## Overview
 
@@ -151,7 +157,7 @@ examples below demonstrate connecting to CVP On Premises setups.
 ### CVaaS
 
 CVaaS is CloudVision as a Service. Users with CVaaS must use a REST API
-token for accessing CVP with REST APIs.
+token (service account tokens) for accessing CVP with REST APIs.
 
 - In the case where users authenticate with CVP (CVaaS) using Oauth a
 - REST API token is required to be generated and used for running REST
@@ -169,6 +175,22 @@ with On Prem CVP deployments. The api\_token parameter name is more
 generic in this sense. If you are using the cvaas\_token parameter
 please convert to api\_token because the cvaas\_token parameter will be
 deprecated in the future.
+
+Please note that the correct regional URL where the CVaaS tenant is deployed must be used. The following are the
+cluster URLs used in production:
+
+| Region | URL |
+|--------|-----|
+| United States 1a | [www.arista.io](https://www.arista.io) |
+| United States 1c| [www.cv-prod-us-central1-c.arista.io](https://www.cv-prod-us-central1-c.arista.io)|
+| Canada | [www.cv-prod-na-northeast1-b.arista.io](https://www.cv-prod-na-northeast1-b.arista.io)|
+| Europe West 2| [www.cv-prod-euwest-2.arista.io](https://www.cv-prod-euwest-2.arista.io)|
+| Japan| [www.cv-prod-apnortheast-1.arista.io](https://www.cv-prod-apnortheast-1.arista.io)|
+| Australia | [www.cv-prod-ausoutheast-1.arista.io](https://www.cv-prod-ausoutheast-1.arista.io)|
+
+!!! Warning
+
+    URLs without `www` are not supported.
 
 ### CVP Version Handling
 

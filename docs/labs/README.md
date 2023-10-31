@@ -5,10 +5,12 @@ to help users interact with Arista CloudVision easily and automate the provision
 
 ## Table of Contents
 
-1. [Authentication](#authentication)
+- [cvprac labs](#cvprac-labs)
+  - [Table of Contents](#table-of-contents)
+  - [Authentication](#authentication)
     - [Password Authentication](#password-authentication)
     - [Service Account Token Authentication](#service-account-token-authentication)
-1. [Known Limitations](#known-limitations)
+  - [Known Limitations](#known-limitations)
 
 ## Authentication
 
@@ -59,6 +61,8 @@ with open("token.tok") as f:
 clnt = CvpClient()
 clnt.connect(nodes=['10.83.13.33'], username='',password='',api_token=token)
 ```
+
+> Note that for CVaaS the correct regional URL must be used including `www.`. Please refer to the main page's [README.md](../../README.md#cvaas)
 
 ## Known Limitations
 
