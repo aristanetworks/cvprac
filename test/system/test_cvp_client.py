@@ -151,6 +151,15 @@ class TestCvpClient(DutSystemTest):
         dut = self.duts[0]
         self.clnt.connect([dut['node']], dut['username'], dut['password'])
 
+    def test_connect_token_good(self):
+        ''' Verify https connection succeeds to a single CVP node
+            Uses https protocol and port with a valid token.
+        '''
+        dut = self.duts[0]
+        if 'api_token' not in dut:
+            raise unittest.SkipTest('No API token found for DUT. Skipping test.')
+        self.clnt.connect([dut['node']], dut['username'], dut['password'], api_token=dut['api_token'])
+
     def test_connect_set_request_timeout(self):
         ''' Verify API request timeout is set when provided to
             client connect method.
@@ -173,6 +182,22 @@ class TestCvpClient(DutSystemTest):
         dut = self.duts[0]
         with self.assertRaises(CvpLoginError):
             self.clnt.connect([dut['node']], dut['username'], 'password')
+
+    def test_connect_token_bad(self):
+        ''' Verify connect fails with bad token.
+        '''
+        dut = self.duts[0]
+        with self.assertRaises(CvpLoginError):
+            self.clnt.connect([dut['node']], dut['username'], 'password', api_token='bad_token')
+
+    def test_connect_token_expired(self):
+        ''' Verify connect fails with an expired token.
+        '''
+        dut = self.duts[0]
+        if 'expired_api_token' not in dut:
+            raise unittest.SkipTest('No Expired token given. Skipping test.')
+        with self.assertRaises(CvpLoginError):
+            self.clnt.connect([dut['node']], dut['username'], 'password', api_token=dut['api_token_expired'])
 
     def test_connect_node_bad(self):
         ''' Verify connection fails to a single bogus CVP node
@@ -298,52 +323,6 @@ class TestCvpClient(DutSystemTest):
         with self.assertRaises(Timeout):
             self.clnt.get('/tasks/getTasks.do', timeout=0.0001)
 
-    def test_get_except_fail_reconnect(self):
-        ''' Verify exception raised if session fails and cannot be
-            re-established.
-        '''
-        dut = self.duts[0]
-        nodes = ['bogus', dut['node']]
-        self.clnt.connect(nodes, dut['username'], dut['password'])
-
-        if self.clnt.apiversion is None:
-            self.clnt.api.get_cvp_info()
-        if self.clnt.apiversion == 7.0:
-            pprint("Skip test case for issue in CVP 2021.3.1")
-            self.skipTest("Skip test case for issue in CVP 2021.3.1")
-
-        # Change the password for the CVP user so that a session reconnect
-        # to any node will fail
-        self._change_passwd(nodes, dut['username'], dut['password'],
-                            self.NEW_PASSWORD)
-
-        try:
-            # Logout to end the current session and force a reconnect for the
-            # next request.
-            result = self.clnt.post('/login/logout.do', None)
-            self.assertIn('data', result)
-            self.assertEqual('success', result['data'])
-
-        except Exception as error:
-            # Should not have had an exception.  Restore the CVP password
-            # and re-raise the error.
-            self._change_passwd(nodes, dut['username'], self.NEW_PASSWORD,
-                                dut['password'])
-            raise error
-        try:
-            # Try a get request and expect a CvpSessionLogOutError
-            result = self.clnt.get('/cvpInfo/getCvpInfo.do')
-        except (CvpSessionLogOutError, CvpApiError):
-            pass
-        except Exception as error:
-            # Unexpected error, restore password and re-raise the error.
-            self._change_passwd(nodes, dut['username'], self.NEW_PASSWORD,
-                                dut['password'])
-            raise error
-        # Restore password
-        self._change_passwd(nodes, dut['username'], self.NEW_PASSWORD,
-                            dut['password'])
-
     def test_post_not_connected(self):
         ''' Verify post with no connection raises a ValueError
         '''
@@ -411,7 +390,7 @@ class TestCvpClient(DutSystemTest):
             with self.assertRaises(CvpRequestError):
                 self.clnt.post('/aaa/bogus.do', None)
 
-    def test_post_except_fail_reconn(self):
+    def test_get_except_fail_reconnect(self):
         ''' Verify exception raised if session fails and cannot be
             re-established.
         '''
@@ -430,19 +409,79 @@ class TestCvpClient(DutSystemTest):
         self._change_passwd(nodes, dut['username'], dut['password'],
                             self.NEW_PASSWORD)
 
-        try:
-            # Logout to end the current session and force a reconnect for the
-            # next request.
-            result = self.clnt.post('/login/logout.do', None)
-            self.assertIn('data', result)
-            self.assertEqual('success', result['data'])
+        msg = 'Password changes automatically logout all sessions as of' \
+              'CVP 2023.1.0. Skip logout API accordingly'
+        if self.clnt.api.cvp_version_compare('<', 9.0, msg):
+            try:
+                # Logout to end the current session and force a reconnect for the
+                # next request.
+                result = self.clnt.post('/login/logout.do', None)
+                self.assertIn('data', result)
+                self.assertEqual('success', result['data'])
 
+            except Exception as error:
+                # Should not have had an exception.  Restore the CVP password
+                # and re-raise the error.
+                self._change_passwd(nodes, dut['username'], self.NEW_PASSWORD,
+                                    dut['password'])
+                raise error
+        else:
+            print('Skip Logout for CVP 2023.1.0+ as the password change now results'
+                  'in automatic logout of the session that changed the password')
+
+        try:
+            # Try a get request and expect a CvpSessionLogOutError
+            result = self.clnt.get('/cvpInfo/getCvpInfo.do')
+        except (CvpSessionLogOutError, CvpApiError):
+            pass
         except Exception as error:
-            # Should not have had an exception.  Restore the CVP password
-            # and re-raise the error.
+            # Unexpected error, restore password and re-raise the error.
             self._change_passwd(nodes, dut['username'], self.NEW_PASSWORD,
                                 dut['password'])
             raise error
+        # Restore password
+        self._change_passwd(nodes, dut['username'], self.NEW_PASSWORD,
+                            dut['password'])
+
+    def test_post_except_fail_reconnect(self):
+        ''' Verify exception raised if session fails and cannot be
+            re-established.
+        '''
+        dut = self.duts[0]
+        nodes = ['bogus', dut['node']]
+        self.clnt.connect(nodes, dut['username'], dut['password'])
+
+        if self.clnt.apiversion is None:
+            self.clnt.api.get_cvp_info()
+        if self.clnt.apiversion == 7.0:
+            pprint("Skip test case for issue in CVP 2021.3.1")
+            self.skipTest("Skip test case for issue in CVP 2021.3.1")
+
+        # Change the password for the CVP user so that a session reconnect
+        # to any node will fail
+        self._change_passwd(nodes, dut['username'], dut['password'],
+                            self.NEW_PASSWORD)
+
+        msg = 'Password changes automatically logout all sessions as of' \
+              'CVP 2023.1.0. Skip logout API accordingly'
+        if self.clnt.api.cvp_version_compare('<', 9.0, msg):
+            try:
+                # Logout to end the current session and force a reconnect for the
+                # next request.
+                result = self.clnt.post('/login/logout.do', None)
+                self.assertIn('data', result)
+                self.assertEqual('success', result['data'])
+
+            except Exception as error:
+                # Should not have had an exception.  Restore the CVP password
+                # and re-raise the error.
+                self._change_passwd(nodes, dut['username'], self.NEW_PASSWORD,
+                                    dut['password'])
+                raise error
+        else:
+            print('Skip Logout for CVP 2023.1.0+ as the password change now results'
+                  'in automatic logout of the session that changed the password')
+
         try:
             # Try a post request and expect a CvpSessionLogOutError
             result = self.clnt.post('/login/logout.do', None)

@@ -572,7 +572,7 @@ class CvpApi(object):
                              '%s&queryparam=&startIndex=%d&endIndex=%d' %
                              (key, start, end), timeout=self.request_timeout)
 
-    def get_inventory(self, start=0, end=0, query=''):
+    def get_inventory(self, start=0, end=0, query='', provisioned=True):
         ''' Returns the a dict of the net elements known to CVP.
 
             Args:
@@ -595,7 +595,7 @@ class CvpApi(object):
                                  timeout=self.request_timeout)
             return data['netElementList']
         self.log.debug('v2 Inventory API Call')
-        data = self.clnt.get('/inventory/devices?provisioned=true',
+        data = self.clnt.get('/inventory/devices?provisioned=%s' % provisioned,
                              timeout=self.request_timeout)
         containers = self.get_containers()
         for dev in data:
@@ -1312,12 +1312,12 @@ class CvpApi(object):
 
     def sanitize_warnings(self, data):
         ''' Sanitize the warnings returned after validation.
-            
+
             In some cases where the configlets has both errors
-            and warnings, CVP may split any warnings that have 
+            and warnings, CVP may split any warnings that have
             `,` across multiple strings.
             This method concats the strings back into one string
-            per warning, and correct the warningCount. 
+            per warning, and correct the warningCount.
 
             Args:
                 data (dict): A dict that contians the result
@@ -1330,11 +1330,11 @@ class CvpApi(object):
             # nothing to do here, we can return as is
             return data
         # Since there may be warnings incorrectly split on
-        # ', ' within the warning text by CVP, we join all the 
+        # ', ' within the warning text by CVP, we join all the
         # warnings together using ', ' into one large string
         temp_warnings = ", ".join(data['warnings']).strip()
 
-        # To split the large string again we match on the 
+        # To split the large string again we match on the
         # 'at line XXX' that should indicate the end of the warning.
         # We capture as well the remaining \\n or whitespace and include
         # the extra ', ' added in the previous step in the matching criteria.
@@ -1463,7 +1463,7 @@ class CvpApi(object):
         return self.clnt.post(url, data=data, timeout=self.request_timeout)
 
     def apply_configlets_to_device(self, app_name, dev, new_configlets,
-                                   create_task=True, reorder_configlets=False):
+                                   create_task=True, reorder_configlets=False, validate=False):
         ''' Apply the configlets to the device.
 
             Args:
@@ -1484,6 +1484,12 @@ class CvpApi(object):
                     directly. Set this parameter to True only with the full
                     list of configlets being applied to the device provided
                     via the new_configlets parameter.
+                validate (bool): Defaults to False. If set to True, the function
+                    will validate and compare the configlets to be attached and
+                    populate the configCompareCount field in the data dict. In case
+                    all keys are 0, ie there is no difference between designed-config
+                    and running-config after applying the configlets, no task will be
+                    generated.
 
             Returns:
                 response (dict): A dict that contains a status and a list of
@@ -1536,6 +1542,16 @@ class CvpApi(object):
                           'nodeTargetIpAddress': dev['ipAddress'],
                           'childTasks': [],
                           'parentTask': ''}]}
+        if validate:
+            validation_result = self.validate_configlets_for_device(dev['systemMacAddress'], ckeys)
+            data['data'][0].update({
+                "configCompareCount": {
+                    "mismatch": validation_result['mismatch'],
+                    "reconcile": validation_result['reconcile'],
+                    "new": validation_result['new']
+                    }
+                }
+            )
         self.log.debug('apply_configlets_to_device: saveTopology data:\n%s' %
                        data['data'])
         self._add_temp_action(data)
@@ -1545,7 +1561,7 @@ class CvpApi(object):
 
     # pylint: disable=too-many-locals
     def remove_configlets_from_device(self, app_name, dev, del_configlets,
-                                      create_task=True):
+                                      create_task=True, validate=False):
         ''' Remove the configlets from the device.
 
             Args:
@@ -1554,6 +1570,12 @@ class CvpApi(object):
                 del_configlets (list): List of configlet name and key pairs
                 create_task (bool): Determines whether or not to execute a save
                     and create the tasks (if any)
+                validate (bool): Defaults to False. If set to True, the function
+                    will validate and compare the configlets to be attached and
+                    populate the configCompareCount field in the data dict. In case
+                    all keys are 0, ie there is no difference between designed-config
+                    and running-config after applying the configlets, no task will be
+                    generated.
 
             Returns:
                 response (dict): A dict that contains a status and a list of
@@ -1612,6 +1634,16 @@ class CvpApi(object):
                           'nodeTargetIpAddress': dev['ipAddress'],
                           'childTasks': [],
                           'parentTask': ''}]}
+        if validate:
+            validation_result = self.validate_configlets_for_device(dev['systemMacAddress'], keep_keys)
+            data['data'][0].update({
+                "configCompareCount": {
+                    "mismatch": validation_result['mismatch'],
+                    "reconcile": validation_result['reconcile'],
+                    "new": validation_result['new']
+                    }
+                }
+            )
         self.log.debug('remove_configlets_from_device: saveTopology data:\n%s'
                        % data['data'])
         self._add_temp_action(data)
@@ -2952,7 +2984,7 @@ class CvpApi(object):
                 from_id = parent_cont['key']
             else:
                 from_id = ''
-                
+
         data = {'data': [{'info': info,
                           'infoPreview': info,
                           'action': 'reset',
@@ -3775,8 +3807,13 @@ class CvpApi(object):
                      'deviceId': 'BAD032986065E8DC14CBB6472EC314A6'},
                      'time': '2022-02-12T02:58:30.765459650Z'}
         '''
-        device_info = self.get_device_by_serial(device_id)
-        if device_info is not None and 'serialNumber' in device_info:
+        device_exists = False
+        inventory = self.get_inventory(provisioned=False)
+        for device in inventory:
+            if device['serialNumber'] == device_id:
+                device_exists = True
+                break
+        if device_exists:
             msg = 'Decommissioning via Resource APIs are supported from 2021.3.0 or newer.'
             # For on-prem check the version as it is only supported from 2021.3.0+
             if self.cvp_version_compare('>=', 7.0, msg):

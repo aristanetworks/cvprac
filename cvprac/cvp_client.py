@@ -114,7 +114,7 @@ class CvpClient(object):
     # Maximum number of times to retry a get or post to the same
     # CVP node.
     NUM_RETRY_REQUESTS = 3
-    LATEST_API_VERSION = 8.0
+    LATEST_API_VERSION = 9.0
 
     def __init__(self, logger='cvprac', syslog=False, filename=None,
                  log_level='INFO'):
@@ -212,7 +212,8 @@ class CvpClient(object):
         self.version = version
         self.log.info('Version %s', version)
         # Set apiversion to latest available API version for CVaaS
-        # Set apiversion to 8.0 for 2022.1.x
+        # Set apiversion to 9.0 for 2023.1.x
+        # Set apiversion to 8.0 for 2022.1.x - 2022.3.x
         # Set apiversion to 7.0 for 2021.3.x
         # Set apiversion to 6.0 for 2021.2.x
         # Set apiversion to 5.0 for 2020.2.4 through 2021.1.x
@@ -232,7 +233,10 @@ class CvpClient(object):
                               ' Appending 0. Updated Version String - %s',
                               ".".join(version_components))
             full_version = ".".join(version_components)
-            if parse_version(full_version) >= parse_version('2022.1.0'):
+            if parse_version(full_version) >= parse_version('2023.1.0'):
+                self.log.info('Setting API version to v9')
+                self.apiversion = 9.0
+            elif parse_version(full_version) >= parse_version('2022.1.0'):
                 self.log.info('Setting API version to v8')
                 self.apiversion = 8.0
             elif parse_version(full_version) >= parse_version('2021.3.0'):
@@ -561,6 +565,14 @@ class CvpClient(object):
         # Alternative to adding token to headers it can be added to
         # cookies as shown below.
         # self.cookies = {'access_token': self.api_token}
+        url = self.url_prefix_short + '/api/v1/rest/'
+        response = self.session.get(url,
+                            cookies=self.cookies,
+                            headers=self.headers,
+                            timeout=self.connect_timeout,
+                            verify=self.cert)
+        # Verify that the generic request was successful
+        self._is_good_response(response, 'Authenticate: %s' % url)
 
     def logout(self):
         '''
@@ -710,7 +722,7 @@ class CvpClient(object):
                            err_str)
             if 'Extra data' in str(error):
                 self.log.debug('Found multiple objects or NO objects in'
-                               'response data. Attempt to decode')
+                               ' response data. Attempt to decode')
                 decoded_data = json_decoder(response.text)
                 return {'data': decoded_data}
             else:
