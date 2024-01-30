@@ -220,7 +220,7 @@ class CvpApi(object):
             Args:
                 username (str): username on CVP
         '''
-        return self.clnt.get('/user/getUser.do?userId={}'.format(username),
+        return self.clnt.get('/user/getUser.do?userId={}'.format(qplus(username)),
                              timeout=self.request_timeout)
 
     def get_users(self, query='', start=0, end=0):
