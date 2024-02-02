@@ -7,7 +7,7 @@
 import argparse
 import ssl
 import sys
-from pkg_resources import parse_version
+from packaging.version import parse
 from getpass import getpass
 from cvprac.cvp_client import CvpClient
 import requests.packages.urllib3
@@ -56,7 +56,7 @@ def main():
 
         # Get the current CVP version
         cvp_release = clnt.api.get_cvp_info()['version']
-        if parse_version(cvp_release) < parse_version('2020.3.0'):
+        if parse(cvp_release) < parse('2020.3.0'):
             # For older CVP, we manually trigger a compliance check
             try:
                 clnt.api.check_compliance('root', 'container')

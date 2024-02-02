@@ -1,1 +1,2 @@
 requests[socks]>=2.27.0
+packaging>=23.2
