@@ -233,7 +233,16 @@ class CvpClient(object):
                               ' Appending 0. Updated Version String - %s',
                               ".".join(version_components))
             full_version = ".".join(version_components)
-            if parse_version(full_version) >= parse_version('2023.1.0'):
+            if parse_version(full_version) >= parse_version('2024.1.0'):
+                self.log.info('Setting API version to v12')
+                self.apiversion = 12.0
+            elif parse_version(full_version) >= parse_version('2023.3.0'):
+                self.log.info('Setting API version to v11')
+                self.apiversion = 11.0
+            elif parse_version(full_version) >= parse_version('2023.2.0'):
+                self.log.info('Setting API version to v10')
+                self.apiversion = 10.0
+            elif parse_version(full_version) >= parse_version('2023.1.0'):
                 self.log.info('Setting API version to v9')
                 self.apiversion = 9.0
             elif parse_version(full_version) >= parse_version('2022.1.0'):
