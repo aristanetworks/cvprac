@@ -3061,30 +3061,33 @@ class CvpApi(object):
                devices (list): list of device Serial Numbers for which the
                    token should be generated. The default is all devices.
                duration (string): the token's validity time (max 1 month),
-                  accepted formats are: "24h", "86400s", "60m"
+                  accepted formats for the legacy endpoint: "24h", "86400s", "60m"
+                  accepted format for the new endpoint: "86400s" (only seconds)
             Returns:
                 response (list) on CVaaS: A list that contains the generated
                     enrollment token.
 
                     Ex: [{'enrollmentToken':{'token': <token>, 'groups': [],
                     'reenrollDevices': <devices list>,
-                    'validFor': <duration e.g 24h>, 'field_mask': None}}]
+                    'validFor': <duration e.g 86400s>, 'field_mask': None}}]
                 response (dict) on CV on-prem: A dictionary that contains the
                     generated enrollment token.
 
                     Ex: {'data': <token>}
         '''
+        endpoint_legacy = '/cvpservice/enroll/createToken'
+        endpoint = '/api/resources/admin.Enrollment/AddEnrollmentToken'
         if not devices:
             devices = ["*"]
         # For on-prem check the version as it is only supported from 2021.2.0+
         if not self.clnt.is_cvaas:
             if self.clnt.apiversion is None:
                 self.get_cvp_info()
+            # TODO: update this check when 2024.2.0 is released
             if self.clnt.apiversion >= 6.0:
                 self.log.debug('v6 /cvpservice/enroll/createToken')
                 data = {"reenrollDevices": devices, "duration": duration}
-                return self.clnt.post('/cvpservice/enroll/createToken',
-                                      data=data, timeout=self.request_timeout)
+                return self.clnt.post(endpoint_legacy, data=data, timeout=self.request_timeout)
             self.log.warning(
                 'Enrollment Tokens only supported on CVP 2021.2.0+')
             return None
@@ -3092,9 +3095,7 @@ class CvpApi(object):
             "enrollmentToken": {"reenrollDevices": devices,
                                 "validFor": duration}
         }
-        return self.clnt.post(
-            '/api/v3/services/admin.Enrollment/AddEnrollmentToken',
-            data=data, timeout=self.request_timeout)
+        return self.clnt.post(endpoint, data=data, timeout=self.request_timeout)
 
     def get_all_tags(self, element_type='ELEMENT_TYPE_UNSPECIFIED', workspace_id=''):
         ''' Get all device and/or interface tags from the mainline workspace or all other workspaces
