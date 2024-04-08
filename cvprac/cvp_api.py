@@ -464,7 +464,8 @@ class CvpApi(object):
         '''
         self.log.debug(
             'get_configlets_and_mappers: getConfigletsAndAssociatedMappers')
-        return self.clnt.get('/configlet/getConfigletsAndAssociatedMappers.do')
+        return self.clnt.get('/configlet/getConfigletsAndAssociatedMappers.do',
+                             timeout=self.request_timeout)
 
     def get_configlet_builder(self, c_id):
         ''' Returns the configlet builder data for the given configlet ID.
