@@ -50,11 +50,10 @@
 '''
 import os
 import shutil
-import sys
 import time
 import unittest
 import uuid
-from pkg_resources import parse_version
+from packaging.version import parse
 from pprint import pprint
 import urllib3
 from test_cvp_base import TestCvpClientBase
@@ -727,7 +726,7 @@ class TestCvpClient(TestCvpClientBase):
         self.assertTrue(expected_warning in result["warnings"][0])
         expected_error = "> ruter bgp something% Invalid input "
         # Error message format changes as of 2021.1.0 or 2021.1.1
-        if parse_version(full_version) >= parse_version("2021.1.0"):
+        if parse(full_version) >= parse("2021.1.0"):
             expected_error += "(at token 0: 'ruter') "
         expected_error += "at line 5"
         self.assertEqual(result['errors'][0]["error"], expected_error)
