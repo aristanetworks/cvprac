@@ -96,7 +96,7 @@ import json
 import logging
 from logging.handlers import SysLogHandler
 from itertools import cycle
-from pkg_resources import parse_version
+from packaging.version import parse
 
 import requests
 from requests.exceptions import ConnectionError, HTTPError, Timeout, \
@@ -233,37 +233,37 @@ class CvpClient(object):
                               ' Appending 0. Updated Version String - %s',
                               ".".join(version_components))
             full_version = ".".join(version_components)
-            if parse_version(full_version) >= parse_version('2024.1.0'):
+            if parse(full_version) >= parse('2024.1.0'):
                 self.log.info('Setting API version to v12')
                 self.apiversion = 12.0
-            elif parse_version(full_version) >= parse_version('2023.3.0'):
+            elif parse(full_version) >= parse('2023.3.0'):
                 self.log.info('Setting API version to v11')
                 self.apiversion = 11.0
-            elif parse_version(full_version) >= parse_version('2023.2.0'):
+            elif parse(full_version) >= parse('2023.2.0'):
                 self.log.info('Setting API version to v10')
                 self.apiversion = 10.0
-            elif parse_version(full_version) >= parse_version('2023.1.0'):
+            elif parse(full_version) >= parse('2023.1.0'):
                 self.log.info('Setting API version to v9')
                 self.apiversion = 9.0
-            elif parse_version(full_version) >= parse_version('2022.1.0'):
+            elif parse(full_version) >= parse('2022.1.0'):
                 self.log.info('Setting API version to v8')
                 self.apiversion = 8.0
-            elif parse_version(full_version) >= parse_version('2021.3.0'):
+            elif parse(full_version) >= parse('2021.3.0'):
                 self.log.info('Setting API version to v7')
                 self.apiversion = 7.0
-            elif parse_version(full_version) >= parse_version('2021.2.0'):
+            elif parse(full_version) >= parse('2021.2.0'):
                 self.log.info('Setting API version to v6')
                 self.apiversion = 6.0
-            elif parse_version(full_version) >= parse_version('2020.2.4'):
+            elif parse(full_version) >= parse('2020.2.4'):
                 self.log.info('Setting API version to v5')
                 self.apiversion = 5.0
-            elif parse_version(full_version) >= parse_version('2020.1.1'):
+            elif parse(full_version) >= parse('2020.1.1'):
                 self.log.info('Setting API version to v4')
                 self.apiversion = 4.0
-            elif parse_version(full_version) >= parse_version('2019.0.0'):
+            elif parse(full_version) >= parse('2019.0.0'):
                 self.log.info('Setting API version to v3')
                 self.apiversion = 3.0
-            elif parse_version(full_version) >= parse_version('2018.2.0'):
+            elif parse(full_version) >= parse('2018.2.0'):
                 self.log.info('Setting API version to v2')
                 self.apiversion = 2.0
             else:
