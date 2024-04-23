@@ -31,6 +31,8 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
+# pylint: disable=line-too-long
+
 """ Unit tests for the CvpAPI class
 """
 import unittest

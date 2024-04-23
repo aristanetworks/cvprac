@@ -107,7 +107,7 @@ from cvprac.cvp_client_errors import CvpApiError, CvpLoginError, \
     CvpRequestError, CvpSessionLogOutError
 
 
-class CvpClient(object):
+class CvpClient():
     ''' Use this class to create a persistent connection to CVP.
     '''
     # pylint: disable=too-many-instance-attributes
@@ -387,13 +387,12 @@ class CvpClient(object):
         self.error_msg = '\n'
         for _ in range(0, num_nodes):
             host = next(self.node_pool)
-            self.url_prefix = ('https://%s:%d/web' % (host, self.port or 443))
-            self.url_prefix_short = ('https://%s:%d'
-                                     % (host, self.port or 443))
+            self.url_prefix = f"https://{host}:{self.port or 443}/web"
+            self.url_prefix_short = f"https://{host}:{self.port or 443}"
             error = self._reset_session()
             if error is None:
                 break
-            self.error_msg += '%s: %s\n' % (host, error)
+            self.error_msg += f"{host}: {error}\n"
 
     def _reset_session(self):
         ''' Get a new request session and try logging into the current
@@ -437,23 +436,20 @@ class CvpClient(object):
             if 'Unauthorized' in response.reason:
                 # Check for 'Unauthorized' User error because this is how
                 # CVP responds to a logged out users requests in 2018.x.
-                msg = '%s: Request Error: %s' % (prefix, response.reason)
+                msg = f"{prefix}: Request Error: {response.reason}"
                 self.log.error(msg)
                 raise CvpApiError(msg)
             if 'User is unauthorized' in response.text:
                 # Check for 'User is unauthorized' response text because this
                 # is how CVP responds to a logged out users requests in 2019.x.
-                msg = '%s: Request Error: User is unauthorized' % prefix
+                msg = f"{prefix}: Request Error: User is unauthorized"
                 self.log.error(msg)
                 raise CvpApiError(msg)
-            else:
-                msg = '%s: Request Error: %s - %s' % (prefix, response.reason,
-                                                      response.text)
-                self.log.error(msg)
-                raise CvpRequestError(msg)
+            msg = f"{prefix}: Request Error: {response.reason} - {response.text}"
+            raise CvpRequestError(msg)
 
         if 'LOG OUT MESSAGE' in response.text:
-            msg = ('%s: Request Error: session logged out' % prefix)
+            msg = f"{prefix}: Request Error: session logged out"
             raise CvpSessionLogOutError(msg)
 
         joutput = json_decoder(response.text)
@@ -469,9 +465,9 @@ class CvpClient(object):
                 # Build the error message from all the errors.
                 err_msg = error_list[0]
                 for idx in range(1, len(error_list)):
-                    err_msg = '%s\n%s' % (err_msg, error_list[idx])
+                    err_msg = f"{err_msg}\n{error_list[idx]}"
 
-            msg = ('%s: Request Error: %s' % (prefix, err_msg))
+            msg = f"{prefix}: Request Error: {err_msg}"
             self.log.error(msg)
             raise CvpApiError(msg)
 
@@ -486,8 +482,7 @@ class CvpClient(object):
                 response status is not OK.
         '''
         if not response.ok:
-            msg = '%s: Request Error: %s - %s' % (prefix, response.reason,
-                                                  response.text)
+            msg = f"{prefix}: Request Error: {response.reason} - {response.text}"
             self.log.error(msg)
             raise CvpRequestError(msg)
 
@@ -521,7 +516,7 @@ class CvpClient(object):
         self.headers.pop('APP_SESSION_ID', None)
         if self.api_token is not None:
             return self._set_headers_api_token()
-        elif self.is_cvaas:
+        if self.is_cvaas:
             raise CvpLoginError('CVaaS only supports API token authentication.'
                                 ' Please create an API token and provide it'
                                 ' via the api_token parameter in combination'
@@ -560,7 +555,7 @@ class CvpClient(object):
                                      headers=self.headers,
                                      timeout=self.connect_timeout,
                                      verify=self.cert)
-        self._is_good_response(response, 'Authenticate: %s' % url)
+        self._is_good_response(response, f"Authenticate: {url}")
 
         self.cookies = response.cookies
         self.headers['APP_SESSION_ID'] = response.json()['sessionId']
@@ -570,7 +565,7 @@ class CvpClient(object):
         '''
         # If using an API token there is no need to run a Login API.
         # Simply add the token into the headers or cookies
-        self.headers['Authorization'] = 'Bearer %s' % self.api_token
+        self.headers['Authorization'] = f"Bearer {self.api_token}"
         # Alternative to adding token to headers it can be added to
         # cookies as shown below.
         # self.cookies = {'access_token': self.api_token}
@@ -581,7 +576,7 @@ class CvpClient(object):
                             timeout=self.connect_timeout,
                             verify=self.cert)
         # Verify that the generic request was successful
-        self._is_good_response(response, 'Authenticate: %s' % url)
+        self._is_good_response(response, f"Authenticate: {url}")
 
     def logout(self):
         '''
@@ -593,7 +588,7 @@ class CvpClient(object):
             self.log.info('User logged out.')
             self.session = None
         else:
-            err = 'Error trying to logout %s' % response
+            err = f"Error trying to logout {response}"
             self.log.error(err)
 
     def _make_request(self, req_type, url, timeout, data=None,
@@ -734,10 +729,9 @@ class CvpClient(object):
                                ' response data. Attempt to decode')
                 decoded_data = json_decoder(response.text)
                 return {'data': decoded_data}
-            else:
-                self.log.error('Unknown format for JSONDecodeError - %s',
-                               err_str)
-                raise error
+            self.log.error('Unknown format for JSONDecodeError - %s',
+                            err_str)
+            raise error
 
     def _send_request(self, req_type, full_url, timeout, data=None,
                       files=None):
@@ -804,7 +798,7 @@ class CvpClient(object):
                                                      timeout=timeout,
                                                      verify=self.cert)
                     else:
-                        fhs = dict()
+                        fhs = {}
                         fhs['Accept'] = self.headers['Accept']
                         if 'APP_SESSION_ID' in self.headers:
                             fhs['APP_SESSION_ID'] = self.headers[
@@ -839,8 +833,7 @@ class CvpClient(object):
                 continue
 
             try:
-                self._is_good_response(response, '%s: %s ' %
-                                       (req_type, full_url))
+                self._is_good_response(response, f"{req_type}: {full_url} ")
             except CvpSessionLogOutError as error:
                 self.log.debug(error)
                 # Retry the request to the same node if there was a CVP session
@@ -849,11 +842,10 @@ class CvpClient(object):
                 # be retried on the same node.
                 if req_try + 1 == self.NUM_RETRY_REQUESTS:
                     raise error
-                else:
-                    self._reset_session()
-                    if not self.session:
-                        raise error
-                    continue
+                self._reset_session()
+                if not self.session:
+                    raise error
+                continue
             except CvpApiError as error:
                 self.log.debug(error)
                 if ('Unauthorized' in error.msg or
@@ -868,14 +860,12 @@ class CvpClient(object):
                     # will be retried on the same node.
                     if req_try + 1 == self.NUM_RETRY_REQUESTS:
                         raise error
-                    else:
-                        self._reset_session()
-                        if not self.session:
-                            raise error
-                        continue
-                else:
-                    # pylint: disable=raising-bad-type
-                    raise error
+                    self._reset_session()
+                    if not self.session:
+                        raise error
+                    continue
+                # pylint: disable=raising-bad-type
+                raise error
             return response
 
     def get(self, url, timeout=30):
