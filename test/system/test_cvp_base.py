@@ -58,8 +58,8 @@ class TestCvpClientBase(DutSystemTest):
         if len(result) < 1:
             raise AssertionError(err_msg)
         assert len(result) >= 1
-        device = [res for res in result if res['hostname']
-                  == dut.get("device", "")]
+        device = [res for res in result if res['hostname'] ==
+                  dut.get("device", "")]
         cls.device = device[0]
         # Get the container for the device on the list and
         # use that container as the parent container.

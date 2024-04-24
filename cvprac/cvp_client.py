@@ -579,11 +579,13 @@ class CvpClient():
         # cookies as shown below.
         # self.cookies = {'access_token': self.api_token}
         url = self.url_prefix_short + '/api/v1/rest/'
-        response = self.session.get(url,
-                            cookies=self.cookies,
-                            headers=self.headers,
-                            timeout=self.connect_timeout,
-                            verify=self.cert)
+        response = self.session.get(
+            url,
+            cookies=self.cookies,
+            headers=self.headers,
+            timeout=self.connect_timeout,
+            verify=self.cert
+        )
         # Verify that the generic request was successful
         self._is_good_response(response, f"Authenticate: {url}")
 
@@ -713,8 +715,8 @@ class CvpClient():
 
         try:
             resp_data = response.json()
-            if (resp_data is not None and 'result' in resp_data
-                    and '/resources/' in full_url):
+            if (resp_data is not None and 'result' in resp_data and
+                    '/resources/' in full_url):
                 # Resource APIs use JSON streaming and will return
                 # multiple JSON objects during GetAll type API
                 # calls. We are wrapping the multiple objects into
@@ -738,8 +740,7 @@ class CvpClient():
                                ' response data. Attempt to decode')
                 decoded_data = json_decoder(response.text)
                 return {'data': decoded_data}
-            self.log.error('Unknown format for JSONDecodeError - %s',
-                            err_str)
+            self.log.error('Unknown format for JSONDecodeError - %s', err_str)
             raise error
 
     def _send_request(self, req_type, full_url, timeout, data=None,

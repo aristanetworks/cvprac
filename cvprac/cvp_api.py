@@ -1207,7 +1207,6 @@ class CvpApi():
                              timeout=self.request_timeout)
         return data['key']
 
-
     def delete_configlet(self, name, key):
         ''' Delete the configlet.
 
@@ -1513,11 +1512,13 @@ class CvpApi():
                           'parentTask': ''}]}
         if validate:
             validation_result = self.validate_configlets_for_device(dev['systemMacAddress'], ckeys)
-            data['data'][0].update({
-                "configCompareCount": {
-                    "mismatch": validation_result['mismatch'],
-                    "reconcile": validation_result['reconcile'],
-                    "new": validation_result['new']
+            data['data'][0].update(
+                {
+                    "configCompareCount":
+                    {
+                        "mismatch": validation_result['mismatch'],
+                        "reconcile": validation_result['reconcile'],
+                        "new": validation_result['new']
                     }
                 }
             )
@@ -1604,11 +1605,12 @@ class CvpApi():
         if validate:
             validation_result = self.validate_configlets_for_device(dev['systemMacAddress'],
                                                                     keep_keys)
-            data['data'][0].update({
-                "configCompareCount": {
-                    "mismatch": validation_result['mismatch'],
-                    "reconcile": validation_result['reconcile'],
-                    "new": validation_result['new']
+            data['data'][0].update(
+                {
+                    "configCompareCount": {
+                        "mismatch": validation_result['mismatch'],
+                        "reconcile": validation_result['reconcile'],
+                        "new": validation_result['new']
                     }
                 }
             )
