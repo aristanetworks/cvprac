@@ -1,4 +1,4 @@
-# pylint: disable=wrong-import-position
+# pylint: disable=wrong-import-position,line-too-long
 #
 # Copyright (c) 2017, Arista Networks, Inc.
 # All rights reserved.
@@ -31,14 +31,12 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-# pylint: disable=line-too-long
-
 """ Unit tests for the CvpAPI class
 """
 import unittest
 from itertools import cycle
 from cvprac.cvp_client import CvpClient
-from cvprac.cvp_api import CvpApi
+from cvprac.cvp_api import CvpApi, sanitize_warnings
 
 
 class TestAPI(unittest.TestCase):
@@ -106,7 +104,7 @@ class TestAPI(unittest.TestCase):
             ],
             "errorCount": 1,
         }
-        assert self.api.sanitize_warnings(test_input) == expected
+        self.assertEqual(sanitize_warnings(test_input), expected)
 
     def test_sanitize_warnings_skip(self):
         """Test sanitization if no warnings need changing"""
@@ -128,4 +126,4 @@ class TestAPI(unittest.TestCase):
             "jsonrpc": "2.0",
         }
         # The result should not change
-        assert self.api.sanitize_warnings(test_input) == test_input
+        self.assertEqual(sanitize_warnings(test_input), test_input)

@@ -58,6 +58,52 @@ OPERATOR_DICT = {
 }
 
 
+def sanitize_warnings(data):
+    ''' Sanitize the warnings returned after validation.
+
+        In some cases where the configlets has both errors
+        and warnings, CVP may split any warnings that have
+        `,` across multiple strings.
+        This method concats the strings back into one string
+        per warning, and correct the warningCount.
+
+        Args:
+            data (dict): A dict that contians the result
+                of the validation operation
+        Returns:
+            response (dict): A dict that contains the result of the
+                validation operation
+    '''
+    if "warnings" not in data:
+        # nothing to do here, we can return as is
+        return data
+    # Since there may be warnings incorrectly split on
+    # ', ' within the warning text by CVP, we join all the
+    # warnings together using ', ' into one large string
+    temp_warnings = ", ".join(data['warnings']).strip()
+
+    # To split the large string again we match on the
+    # 'at line XXX' that should indicate the end of the warning.
+    # We capture as well the remaining \\n or whitespace and include
+    # the extra ', ' added in the previous step in the matching criteria.
+    # The extra ', ' is not included in the strings of the new list
+    temp_warnings = split(
+        r'(.*?at line \d+.*?),\s+',
+        temp_warnings
+    )
+
+    # The behaviour of re.split will add empty strings
+    # if the regex matches on the begging or ending of the line.
+    # Refer to https://docs.python.org/3/library/re.html#re.split
+
+    # Use filter to remove any empty strings
+    # that re.split inserted
+    data['warnings'] = list(filter(None, temp_warnings))
+    # Update the count of warnings to the correct value
+    data['warningCount'] = len(data['warnings'])
+    return data
+
+
 class CvpApi():
     ''' CvpApi class contains calls to CVP RESTful API.  The RESTful API
         parameters are passed in as parameters to the method.  The results of
@@ -1286,51 +1332,6 @@ class CvpApi():
         return self.clnt.post('/configlet/addNoteToConfiglet.do',
                               data=data, timeout=self.request_timeout)
 
-    def sanitize_warnings(self, data):
-        ''' Sanitize the warnings returned after validation.
-
-            In some cases where the configlets has both errors
-            and warnings, CVP may split any warnings that have
-            `,` across multiple strings.
-            This method concats the strings back into one string
-            per warning, and correct the warningCount.
-
-            Args:
-                data (dict): A dict that contians the result
-                    of the validation operation
-            Returns:
-                response (dict): A dict that contains the result of the
-                    validation operation
-        '''
-        if "warnings" not in data:
-            # nothing to do here, we can return as is
-            return data
-        # Since there may be warnings incorrectly split on
-        # ', ' within the warning text by CVP, we join all the
-        # warnings together using ', ' into one large string
-        temp_warnings = ", ".join(data['warnings']).strip()
-
-        # To split the large string again we match on the
-        # 'at line XXX' that should indicate the end of the warning.
-        # We capture as well the remaining \\n or whitespace and include
-        # the extra ', ' added in the previous step in the matching criteria.
-        # The extra ', ' is not included in the strings of the new list
-        temp_warnings = split(
-            r'(.*?at line \d+.*?),\s+',
-            temp_warnings
-        )
-
-        # The behaviour of re.split will add empty strings
-        # if the regex matches on the begging or ending of the line.
-        # Refer to https://docs.python.org/3/library/re.html#re.split
-
-        # Use filter to remove any empty strings
-        # that re.split inserted
-        data['warnings'] = list(filter(None, temp_warnings))
-        # Update the count of warnings to the correct value
-        data['warningCount'] = len(data['warnings'])
-        return data
-
     def validate_config_for_device(self, dev_mac, config):
         ''' Validate a config against a device
 
@@ -1344,7 +1345,7 @@ class CvpApi():
         '''
         self.log.debug(f"validate_config_for_device: dev_mac: {dev_mac} config: {config}")
         body = {'netElementId': dev_mac, 'config': config}
-        return self.sanitize_warnings(
+        return sanitize_warnings(
             self.clnt.post(
                 '/configlet/validateConfig.do',
                 data=body,
