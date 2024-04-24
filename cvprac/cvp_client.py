@@ -102,8 +102,14 @@ from itertools import cycle
 from packaging.version import parse
 
 import requests
-from requests.exceptions import ConnectionError, HTTPError, Timeout, \
-    ReadTimeout, TooManyRedirects, JSONDecodeError
+from requests.exceptions import ( # pylint: disable=redefined-builtin
+    ConnectionError,
+    HTTPError,
+    Timeout,
+    ReadTimeout,
+    TooManyRedirects,
+    JSONDecodeError
+)
 
 from cvprac.cvp_api import CvpApi
 from cvprac.cvp_client_errors import CvpApiError, CvpLoginError, \

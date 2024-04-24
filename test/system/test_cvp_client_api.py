@@ -716,9 +716,9 @@ class TestCvpClient(TestCvpClientBase):
         version_components = self.clnt.version.split(".")
         if len(version_components) < 3:
             version_components.append("0")
-            self.log.info('Version found with less than 3 components.'
-                          ' Appending 0. Updated Version String - %s',
-                          ".".join(version_components))
+            full_version = ".".join(version_components)
+            pprint(f"Version found with less than 3 components."
+                   f" Appending 0. Updated Version String - {full_version}")
         full_version = ".".join(version_components)
 
         config = ("interface ethernet1\n description test\nspanning-tree"
@@ -833,7 +833,7 @@ class TestCvpClient(TestCvpClientBase):
                 self.assertIn(key, result['data'])
                 self.assertIsInstance(result['data'][key], exp_data[key])
         else:
-            print('No Base Configlet Builder SYS_TelemetryBuilerV* found. Skipping')
+            pprint('No Base Configlet Builder SYS_TelemetryBuilerV* found. Skipping')
             time.sleep(1)
 
     def test_api_get_configlet_by_name(self):
@@ -1916,7 +1916,7 @@ class TestCvpClient(TestCvpClientBase):
         original_name = f'test_image_bundle_{time.time()}'
         result = self.api.save_image_bundle(original_name, images)
         expected = r"Bundle\s*:\s+%s successfully created" % original_name
-        self.assertRegexpMatches(result['data'], expected)
+        self.assertRegex(result['data'], expected)
 
         # Assert bundle added
         new_bundles = self.api.get_image_bundles()
@@ -1931,8 +1931,7 @@ class TestCvpClient(TestCvpClientBase):
         updated_name = original_name + "_updated"
         result = self.api.update_image_bundle(bundle_id, updated_name, images,
                                               certified=False)
-        self.assertRegexpMatches(result['data'],
-                                 'Image bundle updated successfully')
+        self.assertRegex(result['data'], 'Image bundle updated successfully')
 
         # Verify the updated bundle name has the correct bundle ID
         # and is not a certified image bundle
@@ -2213,10 +2212,10 @@ class TestCvpClient(TestCvpClientBase):
     #         if len(chg_ctrl) > 0:
     #             if 'id' in chg_ctrl[0]:
     #                 cc_id = chg_ctrl[0]['id']
-    #         print('')
-    #         print(chg_ctrl)
-    #         print(cc_id)
-    #         print('')
+    #         pprint('')
+    #         pprint(chg_ctrl)
+    #         pprint(cc_id)
+    #         pprint('')
     #
     #         if cc_id != '':
     #             # Verify the pending change control information
@@ -2224,9 +2223,9 @@ class TestCvpClient(TestCvpClientBase):
     #                          'getChangeControlInformation.do?' \
     #                          'startIndex=0&endIndex=0&ccId={}'.format(cc_id)
     #             chg_ctrl_pending = self.clnt.get(status_url)
-    #             print('')
-    #             print(chg_ctrl_pending)
-    #             print('')
+    #             pprint('')
+    #             pprint(chg_ctrl_pending)
+    #             pprint('')
     #     else:
     #         pprint('SKIPPING TEST FOR API - {0}'.format(
     #             self.clnt.apiversion))

@@ -140,7 +140,7 @@ class TestCvpClientBase(DutSystemTest):
                 (task_id, config)
                 task_id (str): Task ID
                 config (str): Previous configlets contents
-        '''
+        ''' # pylint: disable=duplicate-code
         task_id = self._get_next_task_id()
         # Update the lldp time in the first configlet in the list.
         configlet = None
