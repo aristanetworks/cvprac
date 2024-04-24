@@ -1,5 +1,6 @@
-# pylint: disable=wrong-import-position
-# pylint: disable=too-many-lines
+# pylint: disable=wrong-import-position,too-many-lines
+# pylint: disable=consider-using-f-string,fixme
+# pylint: disable=too-many-branches,too-many-statements,too-many-locals
 #
 # Copyright (c) 2017, Arista Networks, Inc.
 # All rights reserved.
@@ -53,8 +54,8 @@ import shutil
 import time
 import unittest
 import uuid
-from packaging.version import parse
 from pprint import pprint
+from packaging.version import parse
 import urllib3
 from test_cvp_base import TestCvpClientBase
 from requests.exceptions import Timeout
@@ -720,9 +721,13 @@ class TestCvpClient(TestCvpClientBase):
                           ".".join(version_components))
         full_version = ".".join(version_components)
 
-        config = 'interface ethernet1\n description test\nspanning-tree portfast\n!\nruter bgp something'
+        config = ("interface ethernet1\n description test\nspanning-tree"
+                  " portfast\n!\nruter bgp something")
         result = self.api.validate_config_for_device(self.device['key'], config)
-        expected_warning = "! portfast should only be enabled on ports connected to a single host. Connecting hubs, concentrators, switches, bridges, etc. to this interface when portfast is enabled can cause temporary bridging loops. Use with CAUTION. at line 3"
+        expected_warning = ("! portfast should only be enabled on ports connected to a single host."
+                            " Connecting hubs, concentrators, switches, bridges, etc. to this"
+                            " interface when portfast is enabled can cause temporary bridging"
+                            " loops. Use with CAUTION. at line 3")
         self.assertTrue(expected_warning in result["warnings"][0])
         expected_error = "> ruter bgp something% Invalid input "
         # Error message format changes as of 2021.1.0 or 2021.1.1
@@ -1910,7 +1915,7 @@ class TestCvpClient(TestCvpClientBase):
         # Create a new bundle with the same images
         original_name = f'test_image_bundle_{time.time()}'
         result = self.api.save_image_bundle(original_name, images)
-        expected = r'Bundle\s*:\s+%s successfully created' % original_name
+        expected = r"Bundle\s*:\s+%s successfully created" % original_name
         self.assertRegexpMatches(result['data'], expected)
 
         # Assert bundle added
@@ -2127,8 +2132,7 @@ class TestCvpClient(TestCvpClientBase):
                                                       test_dev, orig_configlets,
                                                       create_task=True)
         # execute returned task and wait for it to complete
-        task_res = self.api.execute_task(results['data']['taskIds'][0])
-        self.assertEqual(task_res, None)
+        self.api.execute_task(results['data']['taskIds'][0])
         task_status = self.api.get_task_by_id(results['data']['taskIds'][0])
         while task_status['taskStatus'] != 'COMPLETED':
             task_status = self.api.get_task_by_id(
@@ -2587,10 +2591,9 @@ class TestCvpClient(TestCvpClientBase):
                             # once this is found we can break
                             self.assertEqual(result['value']['needsBuild'], False)
                             break
-                        else:
-                            # needsBuild has not yet been updated. Read workspace
-                            # data again.
-                            time.sleep(1)
+                        # needsBuild has not yet been updated. Read workspace
+                        # data again.
+                        time.sleep(1)
                     else:
                         # if no needsBuild parameter no need to repeat call to
                         # check it.

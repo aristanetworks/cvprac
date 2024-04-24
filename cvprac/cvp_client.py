@@ -29,6 +29,9 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
+
+# pylint: disable=too-many-branches,too-many-statements,too-many-locals,too-many-lines
+
 ''' RESTful API Client class for Cloudvision(R) Portal
 
 This module provides a RESTful API client for Cloudvision(R) Portal (CVP)

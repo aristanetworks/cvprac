@@ -59,7 +59,7 @@ class TestAPI(unittest.TestCase):
 
     def test_sanitize_warnings(self):
         """Test sanitization if warnings are split"""
-        input = {
+        test_input = {
             "warnings": [
                 "! Change will take effect only after switch reboot at line 11\\n\\n",
                 "! \\nWARNING!\\nChanging TCAM profile will cause forwarding agent(s) to exit and restart.\\nAll traffic through the forwarding chip managed by the restarting\\nforwarding agent will be dropped.\\n at line 392",
@@ -106,11 +106,11 @@ class TestAPI(unittest.TestCase):
             ],
             "errorCount": 1,
         }
-        assert self.api.sanitize_warnings(input) == expected
+        assert self.api.sanitize_warnings(test_input) == expected
 
     def test_sanitize_warnings_skip(self):
         """Test sanitization if no warnings need changing"""
-        input = {
+        test_input = {
             "result": [
                 {
                     "output": "enter input line by line; when done enter one or more control-d\n\n> spanning-tree portfast\n! portfast should only be enabled on ports connected to a single host. Connecting hubs, concentrators, switches, bridges, etc. to this interface when portfast is enabled can cause temporary bridging loops. Use with CAUTION. at line 2\nCopy completed successfully.\n",
@@ -128,4 +128,4 @@ class TestAPI(unittest.TestCase):
             "jsonrpc": "2.0",
         }
         # The result should not change
-        assert self.api.sanitize_warnings(input) == input
+        assert self.api.sanitize_warnings(test_input) == test_input

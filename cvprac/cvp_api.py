@@ -1,3 +1,5 @@
+# pylint: disable=fixme
+# pylint: disable=too-many-locals
 #
 # Copyright (c) 2017, Arista Networks, Inc.
 # All rights reserved.
@@ -1429,7 +1431,7 @@ class CvpApi():
         url = '/provisioning/v2/saveTopology.do'
         return self.clnt.post(url, data=data, timeout=self.request_timeout)
 
-    def apply_configlets_to_device(self, app_name, dev, new_configlets,
+    def apply_configlets_to_device(self, app_name, dev, new_configlets, # pylint: disable=too-many-locals
                                    create_task=True, reorder_configlets=False, validate=False):
         ''' Apply the configlets to the device.
 
@@ -1599,7 +1601,8 @@ class CvpApi():
                           'childTasks': [],
                           'parentTask': ''}]}
         if validate:
-            validation_result = self.validate_configlets_for_device(dev['systemMacAddress'], keep_keys)
+            validation_result = self.validate_configlets_for_device(dev['systemMacAddress'],
+                                                                    keep_keys)
             data['data'][0].update({
                 "configCompareCount": {
                     "mismatch": validation_result['mismatch'],
@@ -2059,7 +2062,7 @@ class CvpApi():
         if self.clnt.apiversion is None:
             self.get_cvp_info()
         if self.clnt.apiversion >= 2.0:
-            if resp['complianceIndication'] == u'':
+            if resp['complianceIndication'] == '':
                 resp['complianceIndication'] = 'NONE'
         return resp
 
@@ -3751,7 +3754,7 @@ class CvpApi():
                 request_id (string): Key identifies the request to decommission the device.
                     Recommended to generate uuid with str(uuid.uuid4()).
             Returns:
-                response (dict): Returns None if the device is not found else returns A dict that contains...
+                response (dict): Returns None if device is not found else return dict that contains
                 Ex: {'value': {'key': {'requestId': '4a4ba5a2-9886-4cd5-84d6-bdaf85a9f091'},
                      'deviceId': 'BAD032986065E8DC14CBB6472EC314A6'},
                      'time': '2022-02-12T02:58:30.765459650Z'}
@@ -3867,7 +3870,8 @@ class CvpApi():
                 rolekey (str): role key on CVP
             Returns:
                response (dict): Returns a dict that contains the role.
-               Ex: {'name': 'Test Role', 'key': 'role_1599019487020581247', 'description': 'Test'...}
+               Ex: {'name': 'Test Role', 'key': 'role_1599019487020581247',
+                    'description': 'Test'...}
         '''
         return self.clnt.get(f"/role/getRole.do?roleId={rolekey}",
                              timeout=self.request_timeout)

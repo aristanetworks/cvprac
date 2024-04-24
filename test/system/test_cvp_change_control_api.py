@@ -1,3 +1,4 @@
+# pylint: disable=too-many-public-methods
 '''
     Tests for change control apis
 '''
@@ -160,16 +161,6 @@ class TestCvpClientCC(TestCvpClientBase):
         assert stop_chg_ctrl['value']['start']['notes'] == STOP_NOTE
         assert stop_chg_ctrl['value']['key']['id'] == self.cc_id
         return stop_chg_ctrl
-
-    def delete_change_control(self, cc_id):
-        """ Delete change control
-        """
-        pprint('DELETING CHANGE CONTROL...')
-        delete_chg_ctrl = self.api.change_control_delete(
-            cc_id)
-        assert delete_chg_ctrl is not None
-        assert delete_chg_ctrl['key']['id'] == self.cc_id
-        return delete_chg_ctrl
 
     def change_control_get_one(self, cc_id):
         """ Change control get one
@@ -431,7 +422,8 @@ class TestCvpClientCC(TestCvpClientBase):
             #     err_msg = "POST: https://" + node + "/api/resources/changecontrol/v1/" \
             #                                         "ChangeControlConfig : Request Error: " \
             #                                         "Bad Request -" \
-            #                                         " {\"code\":9,[ ]?\"message\":\"not approved\"}"
+            #                                         " {\"code\":9,[ ]?
+            #                                            \"message\":\"not approved\"}"
             # with self.assertRaisesRegex(CvpRequestError, err_msg):
             with self.assertRaises(CvpRequestError):
                 self.start_change_control(CHANGE_CONTROL_ID_INVALID)
@@ -494,7 +486,7 @@ class TestCvpClientCC(TestCvpClientBase):
                 "CHANGE CONTROL GET ONE WITHOUT CC_ID...")
             err_msg = "change_control_get_one() missing 1 required positional argument: 'cc_id'"
             with self.assertRaises(TypeError) as ex:
-                self.change_control_get_one()
+                self.change_control_get_one() # pylint: disable=no-value-for-parameter
                 self.assertEqual(
                     err_msg, ex.exception)
 
