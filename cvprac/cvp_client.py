@@ -740,7 +740,7 @@ class CvpClient():
                                ' response data. Attempt to decode')
                 decoded_data = json_decoder(response.text)
                 return {'data': decoded_data}
-            self.log.error('Unknown format for JSONDecodeError - %s', err_str)
+            self.log.error("Unknown format for JSONDecodeError - %s", err_str)
             raise error
 
     def _send_request(self, req_type, full_url, timeout, data=None,

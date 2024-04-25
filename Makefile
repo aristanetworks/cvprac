@@ -49,7 +49,9 @@ coverage_report:
 
 pep8:
 	-pep8 -r --max-line-length=120 --ignore=$(PEP8_IGNORE) cvprac/
-	-pep8 -r --max-line-length=120 --ignore=$(PEP8_IGNORE),E402,E501 test/
+	-pep8 -r --max-line-length=120 --ignore=$(PEP8_IGNORE),E402 test/lib/
+	-pep8 -r --max-line-length=120 --ignore=$(PEP8_IGNORE),E402 test/system/
+	-pep8 -r --ignore=$(PEP8_IGNORE),E402,E501 test/unit/
 
 pyflakes:
 	pyflakes cvprac/ test/

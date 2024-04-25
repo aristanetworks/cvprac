@@ -1,5 +1,4 @@
-# pylint: disable=fixme
-# pylint: disable=too-many-locals
+# pylint: disable=fixme,too-many-locals,redefined-builtin
 #
 # Copyright (c) 2017, Arista Networks, Inc.
 # All rights reserved.
@@ -37,7 +36,6 @@ import operator
 import os
 import time
 # This import is for proper file IO handling support for both Python 2 and 3
-# pylint: disable=redefined-builtin
 from io import open
 from datetime import datetime
 from re import split
@@ -61,11 +59,11 @@ OPERATOR_DICT = {
 def sanitize_warnings(data):
     ''' Sanitize the warnings returned after validation.
 
-        In some cases where the configlets has both errors
-        and warnings, CVP may split any warnings that have
+        In some cases where the configlets have both errors
+        and warnings, CVP may split warnings that have
         `,` across multiple strings.
-        This method concats the strings back into one string
-        per warning, and correct the warningCount.
+        This method concatenates the strings back into one string
+        per warning, and corrects the warningCount.
 
         Args:
             data (dict): A dict that contians the result
@@ -158,7 +156,7 @@ class CvpApi():
                     running CVP version to.
         '''
         if opr not in OPERATOR_DICT:
-            self.log.error("{opr} is an invalid operation for version comparison")
+            self.log.error("%s is an invalid operation for version comparison", opr)
             return False
 
         # Since CVaaS is automatically the latest version of the API, if
@@ -460,8 +458,7 @@ class CvpApi():
         '''
         self.log.debug(f"execute_task: task_id: {task_id}")
         data = {'data': [task_id]}
-        self.clnt.post('/task/executeTask.do', data=data,
-                       timeout=self.request_timeout)
+        self.clnt.post('/task/executeTask.do', data=data, timeout=self.request_timeout)
 
     def cancel_task(self, task_id):
         ''' Cancel the task
@@ -581,9 +578,8 @@ class CvpApi():
                 scope (string) the session scope (true or false).
         '''
         if scope not in ('true', 'false'):
-            self.log.error(f"scope value must be true or false."
-                           f" {scope} is an invalid value."
-                           f" Defaulting back to false")
+            self.log.error("scope value must be true or false. %s is an invalid value."
+                           " Defaulting back to false", scope)
             scope = 'false'
         return self.clnt.get(f"/provisioning/getImageBundleByContainerId.do?"
                              f"containerId={container_id}&startIndex={start}&endIndex={end}"
@@ -3781,8 +3777,9 @@ class CvpApi():
                 url = '/api/resources/inventory/v1/DeviceDecommissioningConfig'
                 self.log.debug('v7 ' + str(url) + ' ' + str(payload))
                 return self.clnt.post(url, data=payload, timeout=self.request_timeout)
-        self.log.warning(f"Device with {device_id} serial number does not exist"
-                         f" (or is not registered) to decommission")
+        else:
+            self.log.warning("Device with %s serial number does not exist (or is not registered)"
+                             " to decommission", device_id)
         return None
 
     def device_decommissioning_status_get_one(self, request_id):
