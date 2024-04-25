@@ -1,3 +1,4 @@
+# pylint: disable=too-many-public-methods
 '''
     Tests for change control apis
 '''
@@ -160,16 +161,6 @@ class TestCvpClientCC(TestCvpClientBase):
         assert stop_chg_ctrl['value']['start']['notes'] == STOP_NOTE
         assert stop_chg_ctrl['value']['key']['id'] == self.cc_id
         return stop_chg_ctrl
-
-    def delete_change_control(self, cc_id):
-        """ Delete change control
-        """
-        pprint('DELETING CHANGE CONTROL...')
-        delete_chg_ctrl = self.api.change_control_delete(
-            cc_id)
-        assert delete_chg_ctrl is not None
-        assert delete_chg_ctrl['key']['id'] == self.cc_id
-        return delete_chg_ctrl
 
     def change_control_get_one(self, cc_id):
         """ Change control get one
@@ -348,8 +339,7 @@ class TestCvpClientCC(TestCvpClientBase):
             pprint(
                 'CREATE CHANGE CONTROL FOR LIST OF NONE TASK IDs...')
             with self.assertRaises(CvpRequestError):
-                self.create_change_control_for_task([
-                                                     None])
+                self.create_change_control_for_task([None])
 
     def test_api_change_control_create_for_none_task_ids_not_list(self):
         """ Verify change_control_create_for_tasks for none task ids list
@@ -431,7 +421,8 @@ class TestCvpClientCC(TestCvpClientBase):
             #     err_msg = "POST: https://" + node + "/api/resources/changecontrol/v1/" \
             #                                         "ChangeControlConfig : Request Error: " \
             #                                         "Bad Request -" \
-            #                                         " {\"code\":9,[ ]?\"message\":\"not approved\"}"
+            #                                         " {\"code\":9,[ ]?
+            #                                            \"message\":\"not approved\"}"
             # with self.assertRaisesRegex(CvpRequestError, err_msg):
             with self.assertRaises(CvpRequestError):
                 self.start_change_control(CHANGE_CONTROL_ID_INVALID)
@@ -466,17 +457,17 @@ class TestCvpClientCC(TestCvpClientBase):
             assert chg_ctrl_get_one is not None
             assert chg_ctrl_get_one['value']['key']['id'] == self.cc_id
             assert chg_ctrl_get_one['value']['change']['name'] == self.cc_name
-            assert chg_ctrl_get_one['value']['change']['stages']['values']['stage0'] \
-                ['action']['args']['values']['TaskID'] == task_id
+            assert chg_ctrl_get_one['value']['change']['stages']['values']['stage0'][
+                'action']['args']['values']['TaskID'] == task_id
             # verify with actual api output
             response = self.get_cc_status(
                 self.cc_id)
             assert chg_ctrl_get_one['value']['key']['id'] == response['value']['key']['id']
             assert chg_ctrl_get_one['value']['change']['name'] == response['value']['change'][
                 'name']
-            assert chg_ctrl_get_one['value']['change']['stages']['values']['stage0']['action'] \
-                ['args']['values']['TaskID'] == response['value']['change']['stages']['values'] \
-                ['stage0']['action']['args']['values']['TaskID']
+            assert chg_ctrl_get_one['value']['change']['stages']['values']['stage0']['action'][
+                'args']['values']['TaskID'] == response['value']['change']['stages']['values'][
+                    'stage0']['action']['args']['values']['TaskID']
 
             # Delete CC
             self.delete_change_control(self.cc_id)
@@ -494,7 +485,7 @@ class TestCvpClientCC(TestCvpClientBase):
                 "CHANGE CONTROL GET ONE WITHOUT CC_ID...")
             err_msg = "change_control_get_one() missing 1 required positional argument: 'cc_id'"
             with self.assertRaises(TypeError) as ex:
-                self.change_control_get_one()
+                self.change_control_get_one() # pylint: disable=no-value-for-parameter
                 self.assertEqual(
                     err_msg, ex.exception)
 
@@ -661,27 +652,37 @@ class TestCvpClientCC(TestCvpClientBase):
                                                  }
                                         },
                                   '1a': {'action': {'args': {'values': {'DeviceID': device_id_1,
-                                                                    'TemplateID': template_id[0]}},
+                                                                        'TemplateID': template_id[0]
+                                                                        }
+                                                             },
                                                     'name': 'snapshot',
                                                     'timeout': 3000},
                                          'name': 'stage 1a'},
                                   '1b': {'action': {'args': {'values': {'DeviceID': device_id_1,
-                                                                    'TemplateID': template_id[0]}},
+                                                                        'TemplateID': template_id[0]
+                                                                        }
+                                                             },
                                                     'name': 'snapshot',
                                                     'timeout': 3000},
                                          'name': 'stage 1b'},
                                   '2a': {'action': {'args': {'values': {'DeviceID': device_id_1,
-                                                                    'TemplateID': template_id[0]}},
+                                                                        'TemplateID': template_id[0]
+                                                                        }
+                                                             },
                                                     'name': 'snapshot',
                                                     'timeout': 3000},
                                          'name': 'stage 2a'},
                                   '2b': {'action': {'args': {'values': {'DeviceID': device_id_2,
-                                                                    'TemplateID': template_id[1]}},
+                                                                        'TemplateID': template_id[1]
+                                                                        }
+                                                             },
                                                     'name': 'snapshot',
                                                     'timeout': 3000},
                                          'name': 'stage 2a'},
                                   '3': {'action': {'args': {'values': {'DeviceID': device_id_2,
-                                                                    'TemplateID': template_id[1]}},
+                                                                       'TemplateID': template_id[1]
+                                                                       }
+                                                            },
                                                    'name': 'snapshot',
                                                    'timeout': 3000},
                                         'name': 'stage 3'},

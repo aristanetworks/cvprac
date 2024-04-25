@@ -55,7 +55,7 @@ class DutSystemTest(unittest.TestCase):
     ''' DutSystemTest class that provides information about the DUTs used.
     '''
     def __init__(self, *args, **kwargs):
-        super(DutSystemTest, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     @classmethod
     def setUpClass(cls):
@@ -67,6 +67,6 @@ class DutSystemTest(unittest.TestCase):
         '''
         cls.duts = {}
         filename = get_fixture('cvp_nodes.yaml')
-        with open(filename, 'r') as stream:
+        with open(filename, 'r', encoding="utf-8") as stream:
             cls.duts = yaml.safe_load(stream)
             stream.close()

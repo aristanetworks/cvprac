@@ -1,3 +1,5 @@
+# pylint: disable=wrong-import-position
+
 ''' Base class for TestCvpClient and TestCvpClientCC class.
 '''
 from pprint import pprint
@@ -7,18 +9,13 @@ import re
 import time
 import uuid
 import urllib3
-from cvprac.cvp_client import CvpClient
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../lib'))
 from systestlib import DutSystemTest
-
+from cvprac.cvp_client import CvpClient
 
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-#
-# sys.path.append(os.path.join(os.path.dirname(__file__), '../lib'))
-# from systestlib import DutSystemTest
 
 
 class TestCvpClientBase(DutSystemTest):
@@ -61,8 +58,8 @@ class TestCvpClientBase(DutSystemTest):
         if len(result) < 1:
             raise AssertionError(err_msg)
         assert len(result) >= 1
-        device = [res for res in result if res['hostname']
-                  == dut.get("device", "")]
+        device = [res for res in result if res['hostname'] ==
+                  dut.get("device", "")]
         cls.device = device[0]
         # Get the container for the device on the list and
         # use that container as the parent container.
@@ -143,7 +140,7 @@ class TestCvpClientBase(DutSystemTest):
                 (task_id, config)
                 task_id (str): Task ID
                 config (str): Previous configlets contents
-        '''
+        ''' # pylint: disable=duplicate-code
         task_id = self._get_next_task_id()
         # Update the lldp time in the first configlet in the list.
         configlet = None
@@ -188,3 +185,13 @@ class TestCvpClientBase(DutSystemTest):
         self.assertGreater(cnt, 0, msg=err_msg)
         self.task_id = task_id
         return task_id, org_config
+
+    def delete_change_control(self, cc_id):
+        """ Delete change control
+        """
+        pprint('DELETING CHANGE CONTROL...')
+        delete_chg_ctrl = self.api.change_control_delete(
+            cc_id)
+        assert delete_chg_ctrl is not None
+        assert delete_chg_ctrl['key']['id'] == self.cc_id
+        return delete_chg_ctrl
