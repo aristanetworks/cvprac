@@ -36,7 +36,7 @@
 import json
 import unittest
 from itertools import cycle
-from mock import Mock
+from unittest.mock import Mock
 from requests.exceptions import HTTPError, ReadTimeout, JSONDecodeError
 from cvprac.cvp_client import CvpClient
 from cvprac.cvp_client_errors import CvpApiError, CvpSessionLogOutError
