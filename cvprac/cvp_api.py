@@ -2017,7 +2017,7 @@ class CvpApi():
             req_url = (f"/provisioning/searchTopology.do?queryParam={qplus(query)}&"
                        f"startIndex={start}&endIndex={end}")
         else:
-            # Newer CVP versions should use the V3 version of serach topology endpoint
+            # Newer CVP versions should use the V3 version of search topology endpoint
             req_url = (f"/provisioning/v3/searchTopology.do?queryParam={qplus(query)}&"
                        f"startIndex={start}&endIndex={end}")
 
