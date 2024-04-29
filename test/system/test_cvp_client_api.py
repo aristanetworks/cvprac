@@ -931,6 +931,9 @@ class TestCvpClient(TestCvpClientBase):
         '''
         result = self.api.get_device_by_name(self.device['fqdn'])
         self.assertIsNotNone(result)
+        # Remove hasZTR key as it is not in inventory data. This key was added
+        # in searchTopology V3 API return data.
+        result.pop('hasZTR', '')
         for key in result:
             self.assertIn(key, self.device)
             # Some differences in result values between inventory
