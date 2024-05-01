@@ -1995,7 +1995,7 @@ class CvpApi():
             return self._save_topology_v2([])
         return None
 
-    def search_topology(self, query, start=0, end=0): # pylint: disable=too-many-branches
+    def search_topology(self, query, start=0, end=0):
         ''' Search the topology for items matching the query parameter.
 
             Args:
