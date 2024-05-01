@@ -2010,17 +2010,34 @@ class CvpApi():
                     netelement lists.
         '''
         self.log.debug(f"search_topology: query: {query} start: {start} end: {end}")
-        data = self.clnt.get(f"/provisioning/searchTopology.do?queryParam={qplus(query)}&"
-                             f"startIndex={start}&endIndex={end}",
-                             timeout=self.request_timeout)
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        if self.clnt.apiversion <= 8.0:
+            # Original search topology endpoint
+            req_url = (f"/provisioning/searchTopology.do?queryParam={qplus(query)}&"
+                       f"startIndex={start}&endIndex={end}")
+        else:
+            # Newer CVP versions should use the V3 version of search topology endpoint
+            req_url = (f"/provisioning/v3/searchTopology.do?queryParam={qplus(query)}&"
+                       f"startIndex={start}&endIndex={end}")
+
+        data = self.clnt.get(req_url, timeout=self.request_timeout)
         if 'netElementList' in data:
             for device in data['netElementList']:
                 device['status'] = device['deviceStatus']
-                device['mlagEnabled'] = device['isMLAGEnabled']
-                device['danzEnabled'] = device['isDANZEnabled']
                 device['parentContainerKey'] = device['parentContainerId']
-                device['bootupTimestamp'] = device['bootupTimeStamp']
-                device['internalBuild'] = device['internalBuildId']
+                if 'isMLAGEnabled' in device:
+                    # original key was mlagEnabled but it changed to isMLAGEnabled
+                    device['mlagEnabled'] = device['isMLAGEnabled']
+                elif 'mlagEnabled' in device:
+                    # Key for V3 search topology changes back to mlagEnabled again
+                    device['isMLAGEnabled'] = device['mlagEnabled']
+                # Key isDANZEnabled for V3 search topology is no longer in return data.
+                device['danzEnabled'] = device.get('isDANZEnabled', '')
+                # Key bootupTimeStamp for V3 search topology is no longer in return data.
+                device['bootupTimestamp'] = device.get('bootupTimeStamp', '')
+                # Key internalBuildId for V3 search topology is no longer in return data.
+                device['internalBuild'] = device.get('internalBuildId', '')
         return data
 
     def filter_topology(self, node_id='root', fmt='topology',
