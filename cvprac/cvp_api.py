@@ -2012,7 +2012,7 @@ class CvpApi():
         self.log.debug(f"search_topology: query: {query} start: {start} end: {end}")
         if self.clnt.apiversion is None:
             self.get_cvp_info()
-        if self.clnt.apiversion <= 8.0:
+        if self.clnt.apiversion <= 6.0:
             # Original search topology endpoint
             req_url = (f"/provisioning/searchTopology.do?queryParam={qplus(query)}&"
                        f"startIndex={start}&endIndex={end}")
