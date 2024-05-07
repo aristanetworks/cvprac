@@ -64,14 +64,14 @@ class TestCvpClient(DutSystemTest):
         ''' Instantiate the CvpClient class.
             Log messages to the /tmp/TestCvpClient.log
         '''
-        super(TestCvpClient, self).setUp()
+        super().setUp()
         self.clnt = CvpClient(filename='/tmp/TestCvpClient.log')
         self.assertIsNotNone(self.clnt)
 
     def tearDown(self):
         ''' Destroy the CvpClient class.
         '''
-        super(TestCvpClient, self).tearDown()
+        super().tearDown()
         self.clnt = None
 
     def _change_passwd(self, nodes, username, old_password, new_password):
@@ -158,7 +158,8 @@ class TestCvpClient(DutSystemTest):
         dut = self.duts[0]
         if 'api_token' not in dut:
             raise unittest.SkipTest('No API token found for DUT. Skipping test.')
-        self.clnt.connect([dut['node']], dut['username'], dut['password'], api_token=dut['api_token'])
+        self.clnt.connect([dut['node']], dut['username'], dut['password'],
+                          api_token=dut['api_token'])
 
     def test_connect_set_request_timeout(self):
         ''' Verify API request timeout is set when provided to
@@ -197,7 +198,8 @@ class TestCvpClient(DutSystemTest):
         if 'expired_api_token' not in dut:
             raise unittest.SkipTest('No Expired token given. Skipping test.')
         with self.assertRaises(CvpLoginError):
-            self.clnt.connect([dut['node']], dut['username'], 'password', api_token=dut['api_token_expired'])
+            self.clnt.connect([dut['node']], dut['username'], 'password',
+                              api_token=dut['api_token_expired'])
 
     def test_connect_node_bad(self):
         ''' Verify connection fails to a single bogus CVP node

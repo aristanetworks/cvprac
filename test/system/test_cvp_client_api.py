@@ -1,5 +1,6 @@
-# pylint: disable=wrong-import-position
-# pylint: disable=too-many-lines
+# pylint: disable=wrong-import-position,too-many-lines
+# pylint: disable=consider-using-f-string,fixme
+# pylint: disable=too-many-branches,too-many-statements,too-many-locals
 #
 # Copyright (c) 2017, Arista Networks, Inc.
 # All rights reserved.
@@ -50,12 +51,11 @@
 '''
 import os
 import shutil
-import sys
 import time
 import unittest
 import uuid
-from pkg_resources import parse_version
 from pprint import pprint
+from packaging.version import parse
 import urllib3
 from test_cvp_base import TestCvpClientBase
 from requests.exceptions import Timeout
@@ -716,18 +716,22 @@ class TestCvpClient(TestCvpClientBase):
         version_components = self.clnt.version.split(".")
         if len(version_components) < 3:
             version_components.append("0")
-            self.log.info('Version found with less than 3 components.'
-                          ' Appending 0. Updated Version String - %s',
-                          ".".join(version_components))
+            full_version = ".".join(version_components)
+            pprint(f"Version found with less than 3 components."
+                   f" Appending 0. Updated Version String - {full_version}")
         full_version = ".".join(version_components)
 
-        config = 'interface ethernet1\n description test\nspanning-tree portfast\n!\nruter bgp something'
+        config = ("interface ethernet1\n description test\nspanning-tree"
+                  " portfast\n!\nruter bgp something")
         result = self.api.validate_config_for_device(self.device['key'], config)
-        expected_warning = "! portfast should only be enabled on ports connected to a single host. Connecting hubs, concentrators, switches, bridges, etc. to this interface when portfast is enabled can cause temporary bridging loops. Use with CAUTION. at line 3"
+        expected_warning = ("! portfast should only be enabled on ports connected to a single host."
+                            " Connecting hubs, concentrators, switches, bridges, etc. to this"
+                            " interface when portfast is enabled can cause temporary bridging"
+                            " loops. Use with CAUTION. at line 3")
         self.assertTrue(expected_warning in result["warnings"][0])
         expected_error = "> ruter bgp something% Invalid input "
         # Error message format changes as of 2021.1.0 or 2021.1.1
-        if parse_version(full_version) >= parse_version("2021.1.0"):
+        if parse(full_version) >= parse("2021.1.0"):
             expected_error += "(at token 0: 'ruter') "
         expected_error += "at line 5"
         self.assertEqual(result['errors'][0]["error"], expected_error)
@@ -829,7 +833,7 @@ class TestCvpClient(TestCvpClientBase):
                 self.assertIn(key, result['data'])
                 self.assertIsInstance(result['data'][key], exp_data[key])
         else:
-            print('No Base Configlet Builder SYS_TelemetryBuilerV* found. Skipping')
+            pprint('No Base Configlet Builder SYS_TelemetryBuilerV* found. Skipping')
             time.sleep(1)
 
     def test_api_get_configlet_by_name(self):
@@ -927,6 +931,9 @@ class TestCvpClient(TestCvpClientBase):
         '''
         result = self.api.get_device_by_name(self.device['fqdn'])
         self.assertIsNotNone(result)
+        # Remove hasZTR key as it is not in inventory data. This key was added
+        # in searchTopology V3 API return data.
+        result.pop('hasZTR', '')
         for key in result:
             self.assertIn(key, self.device)
             # Some differences in result values between inventory
@@ -1911,8 +1918,8 @@ class TestCvpClient(TestCvpClientBase):
         # Create a new bundle with the same images
         original_name = f'test_image_bundle_{time.time()}'
         result = self.api.save_image_bundle(original_name, images)
-        expected = r'Bundle\s*:\s+%s successfully created' % original_name
-        self.assertRegexpMatches(result['data'], expected)
+        expected = r"Bundle\s*:\s+%s successfully created" % original_name
+        self.assertRegex(result['data'], expected)
 
         # Assert bundle added
         new_bundles = self.api.get_image_bundles()
@@ -1927,8 +1934,7 @@ class TestCvpClient(TestCvpClientBase):
         updated_name = original_name + "_updated"
         result = self.api.update_image_bundle(bundle_id, updated_name, images,
                                               certified=False)
-        self.assertRegexpMatches(result['data'],
-                                 'Image bundle updated successfully')
+        self.assertRegex(result['data'], 'Image bundle updated successfully')
 
         # Verify the updated bundle name has the correct bundle ID
         # and is not a certified image bundle
@@ -2128,8 +2134,7 @@ class TestCvpClient(TestCvpClientBase):
                                                       test_dev, orig_configlets,
                                                       create_task=True)
         # execute returned task and wait for it to complete
-        task_res = self.api.execute_task(results['data']['taskIds'][0])
-        self.assertEqual(task_res, None)
+        self.api.execute_task(results['data']['taskIds'][0])
         task_status = self.api.get_task_by_id(results['data']['taskIds'][0])
         while task_status['taskStatus'] != 'COMPLETED':
             task_status = self.api.get_task_by_id(
@@ -2210,10 +2215,10 @@ class TestCvpClient(TestCvpClientBase):
     #         if len(chg_ctrl) > 0:
     #             if 'id' in chg_ctrl[0]:
     #                 cc_id = chg_ctrl[0]['id']
-    #         print('')
-    #         print(chg_ctrl)
-    #         print(cc_id)
-    #         print('')
+    #         pprint('')
+    #         pprint(chg_ctrl)
+    #         pprint(cc_id)
+    #         pprint('')
     #
     #         if cc_id != '':
     #             # Verify the pending change control information
@@ -2221,9 +2226,9 @@ class TestCvpClient(TestCvpClientBase):
     #                          'getChangeControlInformation.do?' \
     #                          'startIndex=0&endIndex=0&ccId={}'.format(cc_id)
     #             chg_ctrl_pending = self.clnt.get(status_url)
-    #             print('')
-    #             print(chg_ctrl_pending)
-    #             print('')
+    #             pprint('')
+    #             pprint(chg_ctrl_pending)
+    #             pprint('')
     #     else:
     #         pprint('SKIPPING TEST FOR API - {0}'.format(
     #             self.clnt.apiversion))
@@ -2588,10 +2593,9 @@ class TestCvpClient(TestCvpClientBase):
                             # once this is found we can break
                             self.assertEqual(result['value']['needsBuild'], False)
                             break
-                        else:
-                            # needsBuild has not yet been updated. Read workspace
-                            # data again.
-                            time.sleep(1)
+                        # needsBuild has not yet been updated. Read workspace
+                        # data again.
+                        time.sleep(1)
                     else:
                         # if no needsBuild parameter no need to repeat call to
                         # check it.
