@@ -123,7 +123,7 @@ class CvpClient():
     # Maximum number of times to retry a get or post to the same
     # CVP node.
     NUM_RETRY_REQUESTS = 3
-    LATEST_API_VERSION = 9.0
+    LATEST_API_VERSION = 14.0
 
     def __init__(self, logger='cvprac', syslog=False, filename=None,
                  log_level='INFO'):
@@ -242,7 +242,13 @@ class CvpClient():
                               ' Appending 0. Updated Version String - %s',
                               ".".join(version_components))
             full_version = ".".join(version_components)
-            if parse(full_version) >= parse('2024.1.0'):
+            if parse(full_version) >= parse('2024.3.0'):
+                self.log.info('Setting API version to v14')
+                self.apiversion = 14.0
+            elif parse(full_version) >= parse('2024.2.0'):
+                self.log.info('Setting API version to v13')
+                self.apiversion = 13.0
+            elif parse(full_version) >= parse('2024.1.0'):
                 self.log.info('Setting API version to v12')
                 self.apiversion = 12.0
             elif parse(full_version) >= parse('2023.3.0'):
