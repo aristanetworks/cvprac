@@ -3934,7 +3934,7 @@ class CvpApi():
             url = '/api/resources/serviceaccount/v1/Token/all'
             self.log.debug(f"v12 {url}")
             return self.clnt.get(url)
-        elif self.cvp_version_compare('>=', 7.0, msg):
+        if self.cvp_version_compare('>=', 7.0, msg):
             url = '/api/v3/services/arista.serviceaccount.v1.TokenService/GetAll'
             self.log.debug(f"v7 {url}")
             return self.clnt.post(url)
@@ -3958,10 +3958,10 @@ class CvpApi():
             query_param = f"?key.id={token_id}"
             self.log.debug(f'v12 {endpoint + query_param}')
             return self.clnt.get(endpoint + query_param)
-        elif self.cvp_version_compare('>=', 7.0, msg):
+        if self.cvp_version_compare('>=', 7.0, msg):
             endpoint = '/api/v3/services/arista.serviceaccount.v1.TokenService/GetOne'
             payload = {"key": {"id": token_id}}
-            self.log.debug('v7 {} {}'.format(endpoint, payload))
+            self.log.debug(f'v7 {endpoint} {payload}')
             return self.clnt.post(endpoint, data=payload)
         return None
 
@@ -3977,13 +3977,13 @@ class CvpApi():
         '''
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
         if self.cvp_version_compare('>=', 12.0, msg):
-            endpoint = '/api/resources/serviceaccount/v1/TokenConfig?key.id={}'.format(token_id)
-            self.log.debug('v12 {}'.format(endpoint))
+            endpoint = f'/api/resources/serviceaccount/v1/TokenConfig?key.id={token_id}'
+            self.log.debug(f'v12 {endpoint}')
             return self.clnt.delete(endpoint)
-        elif self.cvp_version_compare('>=', 7.0, msg):
+        if self.cvp_version_compare('>=', 7.0, msg):
             endpoint = '/api/v3/services/arista.serviceaccount.v1.TokenConfigService/Delete'
             payload = {"key": {"id": token_id}}
-            self.log.debug('v7 {} {}'.format(endpoint, payload))
+            self.log.debug(f'v7 {endpoint} {payload}')
             return self.clnt.post(endpoint, data=payload)
         return None
 
@@ -4014,9 +4014,9 @@ class CvpApi():
                 'token': ''
             }
             endpoint = '/api/resources/serviceaccount/v1/TokenConfig'
-            self.log.debug('v12 {} {}'.format(endpoint, payload))
+            self.log.debug(f'v12 {endpoint} {payload}')
             return self.clnt.post(endpoint, data=payload)
-        elif self.cvp_version_compare('>=', 7.0, msg):
+        if self.cvp_version_compare('>=', 7.0, msg):
             payload = {
                 'value': {
                     'description': description,
@@ -4025,7 +4025,7 @@ class CvpApi():
                 }
             }
             endpoint = '/api/v3/services/arista.serviceaccount.v1.TokenConfigService/Set'
-            self.log.debug('v7 {} {}'.format(endpoint, payload))
+            self.log.debug(f'v7 {endpoint} {payload}')
             return self.clnt.post(endpoint, data=payload)
         return None
 
@@ -4043,7 +4043,7 @@ class CvpApi():
             endpoint = '/api/resources/serviceaccount/v1/Account/all'
             self.log.debug(f"v12 {endpoint}")
             return self.clnt.get(endpoint)
-        elif self.cvp_version_compare('>=', 7.0, msg):
+        if self.cvp_version_compare('>=', 7.0, msg):
             endpoint = '/api/v3/services/arista.serviceaccount.v1.AccountService/GetAll'
             self.log.debug(f"v7 {endpoint}")
             return self.clnt.post(endpoint)
@@ -4066,7 +4066,7 @@ class CvpApi():
             query_param = f"?key.name={username}"
             self.log.debug(f"v12 {endpoint + query_param}")
             return self.clnt.get(endpoint + query_param)
-        elif self.cvp_version_compare('>=', 7.0, msg):
+        if self.cvp_version_compare('>=', 7.0, msg):
             endpoint = '/api/v3/services/arista.serviceaccount.v1.AccountService/GetOne'
             payload = {"key": {"name": username}}
             self.log.debug(f"v7 {endpoint} {payload}")
@@ -4074,7 +4074,7 @@ class CvpApi():
         return None
 
     def _get_valid_role_ids(self, roles):
-        ''' Helper function to validate and retrieve role IDs based on provided roles..
+        ''' Helper function to validate and retrieve role IDs based on provided roles.
             Args:
                 roles (list): The list of role names.
             Returns:
@@ -4087,7 +4087,7 @@ class CvpApi():
                 role_ids.append(role['key'])
         if len(roles) != len(role_ids):
             self.log.warning(f"Not all provided roles {roles} are valid. "
-                                f"Only using the found valid roles {role_ids}")
+                             f"Only using the found valid roles {role_ids}")
         return role_ids
 
     def svc_account_set(self, username, description, roles, status):
@@ -4125,7 +4125,7 @@ class CvpApi():
             endpoint = '/api/resources/serviceaccount/v1/AccountConfig'
             self.log.debug(f"v12 {endpoint} {payload}")
             return self.clnt.post(endpoint, data=payload)
-        elif self.cvp_version_compare('>=', 7.0, msg):
+        if self.cvp_version_compare('>=', 7.0, msg):
             payload = {'value': {'description': description,
                                  'groups': {'values': role_ids},
                                  'key': {'name': username},
@@ -4152,7 +4152,7 @@ class CvpApi():
             endpoint = '/api/resources/serviceaccount/v1/AccountConfig/deletesome'
             self.log.debug(f"v7 {endpoint} {payload}")
             return self.clnt.post(endpoint, data=payload)
-        elif self.cvp_version_compare('>=', 7.0, msg):
+        if self.cvp_version_compare('>=', 7.0, msg):
             payload = {"key": {"name": username}}
             endpoint = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/Delete'
             self.log.debug(f"v12 {endpoint} {payload}")
@@ -4178,13 +4178,15 @@ class CvpApi():
             if isinstance(tokens, dict) and "data" in tokens:
                 for item in tokens["data"]:
                     token = item["result"]["value"]
-                    if datetime.strptime(token["validUntil"], "%Y-%m-%dT%H:%M:%SZ") < datetime.utcnow():
+                    if (datetime.strptime(token["validUntil"], "%Y-%m-%dT%H:%M:%SZ") <
+                        datetime.utcnow()):
                         self.svc_account_token_delete(token["key"]["id"])
                         expired_tokens.append(token)
-        elif self.cvp_version_compare('<', 7.0, msg):
+        if self.cvp_version_compare('<', 7.0, msg):
             for tok in tokens:
                 token = tok['value']
-                if datetime.strptime(token['valid_until'], "%Y-%m-%dT%H:%M:%SZ") < datetime.utcnow():
+                if (datetime.strptime(token['valid_until'], "%Y-%m-%dT%H:%M:%SZ") <
+                    datetime.utcnow()):
                     self.svc_account_token_delete(token['key']['id'])
                     expired_tokens.append(tok)
         return expired_tokens
