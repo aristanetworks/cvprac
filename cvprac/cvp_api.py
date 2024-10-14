@@ -3933,7 +3933,12 @@ class CvpApi():
         if self.cvp_version_compare('>=', 12.0, msg):
             url = '/api/resources/serviceaccount/v1/Token/all'
             self.log.debug(f"v12 {url}")
-            return self.clnt.get(url)
+            # Pull list of tokens out of data key of return for new resource APIs
+            resp = self.clnt.get(url)
+            tokens = []
+            if "data" in resp:
+                tokens = resp["data"]
+            return tokens
         if self.cvp_version_compare('>=', 7.0, msg):
             url = '/api/v3/services/arista.serviceaccount.v1.TokenService/GetAll'
             self.log.debug(f"v7 {url}")
@@ -4042,7 +4047,12 @@ class CvpApi():
         if self.cvp_version_compare('>=', 12.0, msg):
             endpoint = '/api/resources/serviceaccount/v1/Account/all'
             self.log.debug(f"v12 {endpoint}")
-            return self.clnt.get(endpoint)
+            # Pull list of accounts out of data key of return for new resource APIs
+            resp = self.clnt.get(endpoint)
+            svc_accounts = []
+            if "data" in resp:
+                svc_accounts = resp["data"]
+            return svc_accounts
         if self.cvp_version_compare('>=', 7.0, msg):
             endpoint = '/api/v3/services/arista.serviceaccount.v1.AccountService/GetAll'
             self.log.debug(f"v7 {endpoint}")
@@ -4172,21 +4182,20 @@ class CvpApi():
                 {'value': {'key': {'id': '2f6325d9c'},...]
         '''
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
+        valid_until_format = "valid_until"
+        resource_api_schema = False
+        if self.cvp_version_compare('>=', 12.0, msg):
+            resource_api_schema = True
+            valid_until_format = "validUntil"
         tokens = self.svc_account_token_get_all()
         expired_tokens = []
-        if self.cvp_version_compare('>=', 12.0, msg):
-            if isinstance(tokens, dict) and "data" in tokens:
-                for item in tokens["data"]:
-                    token = item["result"]["value"]
-                    if (datetime.strptime(token["validUntil"], "%Y-%m-%dT%H:%M:%SZ") <
-                        datetime.utcnow()):
-                        self.svc_account_token_delete(token["key"]["id"])
-                        expired_tokens.append(token)
-        if self.cvp_version_compare('<', 7.0, msg):
-            for tok in tokens:
-                token = tok['value']
-                if (datetime.strptime(token['valid_until'], "%Y-%m-%dT%H:%M:%SZ") <
-                    datetime.utcnow()):
-                    self.svc_account_token_delete(token['key']['id'])
-                    expired_tokens.append(tok)
+        for tok in tokens:
+            if resource_api_schema:
+                token_data = tok['result']['value']
+            else:
+                token_data = tok['value']
+            if (datetime.strptime(token_data[valid_until_format], "%Y-%m-%dT%H:%M:%SZ") <
+                datetime.utcnow()):
+                self.svc_account_token_delete(token_data['key']['id'])
+                expired_tokens.append(tok)
         return expired_tokens
