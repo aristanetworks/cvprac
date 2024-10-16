@@ -2398,8 +2398,6 @@ class TestCvpClient(TestCvpClientBase):
         # Set client apiversion if it is not already set
         if self.clnt.apiversion is None:
             self.api.get_cvp_info()
-        if self.clnt.apiversion >= 14.0:
-            print("SKIPPING FOR BUG")
         elif self.clnt.apiversion >= 6.0:
             system_tags = self.api.get_all_tags()
             if 'data' in system_tags:
@@ -2552,12 +2550,32 @@ class TestCvpClient(TestCvpClientBase):
             }
             self.assertIn(response['value']['state'], build_state_options)
 
+            # Test Unassign tag to device
+            response = self.api.tag_assignment_config("ELEMENT_TYPE_DEVICE", new_workspace_id,
+                                                      "cvpractestdev", "TAGTESTDEV",
+                                                      self.device['serialNumber'], "",
+                                                      remove=True)
+            self.assertEqual(response['value']['key']
+                             ['deviceId'], self.device['serialNumber'])
+            self.assertEqual(response['value']['key']['interfaceId'], "")
+
+            # Test Unassign tag to interface
+            response = self.api.tag_assignment_config("ELEMENT_TYPE_INTERFACE", new_workspace_id,
+                                                      "cvpractestint", "TAGTESTINT",
+                                                      self.device['serialNumber'], "Ethernet1",
+                                                      remove=True)
+            self.assertEqual(response['value']['key']
+                             ['deviceId'], self.device['serialNumber'])
+            self.assertEqual(response['value']['key']
+                             ['interfaceId'], "Ethernet1")
+
             # Test Remove Device Tag
             response = self.api.tag_config("ELEMENT_TYPE_DEVICE", new_workspace_id,
                                            "cvpractestdev", "TAGTESTDEV", remove=True)
             self.assertIn('value', response)
             self.assertEqual(response['value']['remove'], True)
 
+            # Test Remove Interface Tag
             response = self.api.tag_config("ELEMENT_TYPE_INTERFACE", new_workspace_id,
                                            "cvpractestint", "TAGTESTINT", remove=True)
             self.assertIn('value', response)
