@@ -2398,7 +2398,7 @@ class TestCvpClient(TestCvpClientBase):
         # Set client apiversion if it is not already set
         if self.clnt.apiversion is None:
             self.api.get_cvp_info()
-        elif self.clnt.apiversion >= 6.0:
+        if self.clnt.apiversion >= 6.0:
             system_tags = self.api.get_all_tags()
             if 'data' in system_tags:
                 self.assertNotEqual(len(system_tags['data']), 0,
