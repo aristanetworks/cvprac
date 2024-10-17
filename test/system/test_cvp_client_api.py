@@ -228,10 +228,6 @@ class TestCvpClient(TestCvpClientBase):
         # pylint: disable=too-many-statements
         # pylint: disable=too-many-branches
         # Test Get All Roles
-        skip = True
-        if skip:
-            print("SKIPPING")
-            return
         result = self.api.get_roles()
         self.assertIsNotNone(result)
         self.assertIn('total', result)
@@ -2462,10 +2458,6 @@ class TestCvpClient(TestCvpClientBase):
         '''
         # pylint: disable=too-many-statements
         # Set client apiversion if it is not already set
-        skip = True
-        if skip:
-            print("SKIPPING")
-            return
         if self.clnt.apiversion is None:
             self.api.get_cvp_info()
         if self.clnt.apiversion >= 6.0:
