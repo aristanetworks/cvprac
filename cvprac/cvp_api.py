@@ -4158,12 +4158,11 @@ class CvpApi():
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
         if self.cvp_version_compare('>=', 14.0, msg):
             # deletesome is only available in 2024.3.0+
-            # Current but requires us to use delete to AccountConfig path instead of new
+            # Current bug requires us to use delete to AccountConfig path instead of new
             # deletesome path.
             # endpoint = '/api/resources/serviceaccount/v1/AccountConfig/deletesome'
             # payload = {"keys":[{"name": username}]}
-
-            # Using Delete with AccountConfig endpoint username in query param
+            # Using Delete with AccountConfig endpoint requires username in query param
             endpoint = f'/api/resources/serviceaccount/v1/AccountConfig?key.name={username}'
             self.log.debug(f"v7 {endpoint}")
             return self.clnt.delete(endpoint)
