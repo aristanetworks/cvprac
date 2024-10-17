@@ -473,9 +473,11 @@ class TestCvpClient(TestCvpClientBase):
             # Test delete service account
             result = self.api.svc_account_delete(username)
             self.assertIsNotNone(result)
-            self.assertIn('key', result[0])
-            self.assertIn('name', result[0]['key'])
-            self.assertIn('time', result[0])
+            if isinstance(result, list):
+                    result = result[0]
+            self.assertIn('key', result)
+            self.assertIn('name', result['key'])
+            self.assertIn('time', result)
 
             # Verify the service account was successfully deleted and doesn't exist
             with self.assertRaises(CvpRequestError):

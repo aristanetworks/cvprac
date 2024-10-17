@@ -4157,11 +4157,16 @@ class CvpApi():
         '''
         msg = 'Service Account Resource APIs are supported from 2021.3.0+.'
         if self.cvp_version_compare('>=', 14.0, msg):
-            payload = {"keys":[{"name": username}]}
             # deletesome is only available in 2024.3.0+
-            endpoint = '/api/resources/serviceaccount/v1/AccountConfig/deletesome'
-            self.log.debug(f"v7 {endpoint} {payload}")
-            return self.clnt.post(endpoint, data=payload)
+            # Current but requires us to use delete to AccountConfig path instead of new
+            # deletesome path.
+            # endpoint = '/api/resources/serviceaccount/v1/AccountConfig/deletesome'
+            # payload = {"keys":[{"name": username}]}
+
+            # Using Delete with AccountConfig endpoint username in query param
+            endpoint = f'/api/resources/serviceaccount/v1/AccountConfig?key.name={username}'
+            self.log.debug(f"v7 {endpoint}")
+            return self.clnt.delete(endpoint)
         if self.cvp_version_compare('>=', 7.0, msg):
             payload = {"key": {"name": username}}
             endpoint = '/api/v3/services/arista.serviceaccount.v1.AccountConfigService/Delete'
