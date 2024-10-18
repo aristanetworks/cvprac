@@ -20,3 +20,4 @@ exclude Jenkinsfile
 exclude pre-commit.sh
 exclude report
 exclude htmlcov
+recursive-exclude .arista *.yaml
