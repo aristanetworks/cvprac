@@ -277,10 +277,16 @@ class TestCvpClient(TestCvpClientBase):
         initial_role_description = result['description']
         initial_role_modules = result['moduleList']
 
-        if initial_role_name == 'test_cvp_role':
-            update_role_name = 'test_cvp_role2'
+        if self.clnt.apiversion is None:
+            self.api.get_cvp_info()
+        if self.clnt.apiversion >= 14.0:
+            # Role name can't be updated in 2024.3.0
+            update_role_name = initial_role_name
         else:
-            update_role_name = 'test_cvp_role'
+            if initial_role_name == 'test_cvp_role':
+                update_role_name = 'test_cvp_role2'
+            else:
+                update_role_name = 'test_cvp_role'
 
         if initial_role_description == 'role description':
             update_role_description = 'updated role description'
@@ -2544,12 +2550,32 @@ class TestCvpClient(TestCvpClientBase):
             }
             self.assertIn(response['value']['state'], build_state_options)
 
+            # Test Unassign tag to device
+            response = self.api.tag_assignment_config("ELEMENT_TYPE_DEVICE", new_workspace_id,
+                                                      "cvpractestdev", "TAGTESTDEV",
+                                                      self.device['serialNumber'], "",
+                                                      remove=True)
+            self.assertEqual(response['value']['key']
+                             ['deviceId'], self.device['serialNumber'])
+            self.assertEqual(response['value']['key']['interfaceId'], "")
+
+            # Test Unassign tag to interface
+            response = self.api.tag_assignment_config("ELEMENT_TYPE_INTERFACE", new_workspace_id,
+                                                      "cvpractestint", "TAGTESTINT",
+                                                      self.device['serialNumber'], "Ethernet1",
+                                                      remove=True)
+            self.assertEqual(response['value']['key']
+                             ['deviceId'], self.device['serialNumber'])
+            self.assertEqual(response['value']['key']
+                             ['interfaceId'], "Ethernet1")
+
             # Test Remove Device Tag
             response = self.api.tag_config("ELEMENT_TYPE_DEVICE", new_workspace_id,
                                            "cvpractestdev", "TAGTESTDEV", remove=True)
             self.assertIn('value', response)
             self.assertEqual(response['value']['remove'], True)
 
+            # Test Remove Interface Tag
             response = self.api.tag_config("ELEMENT_TYPE_INTERFACE", new_workspace_id,
                                            "cvpractestint", "TAGTESTINT", remove=True)
             self.assertIn('value', response)
