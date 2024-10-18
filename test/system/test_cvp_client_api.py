@@ -476,7 +476,7 @@ class TestCvpClient(TestCvpClientBase):
             result = self.api.svc_account_delete(username)
             self.assertIsNotNone(result)
             if isinstance(result, list):
-                    result = result[0]
+                result = result[0]
             self.assertIn('key', result)
             self.assertIn('name', result['key'])
             self.assertIn('time', result)
