@@ -410,7 +410,7 @@ class TestCvpClient(TestCvpClientBase):
                 self.assertIn('name', result['value']['key'])
                 self.assertIn('status', result['value'])
                 # New Resource API changes two paramters to camelCase
-                if self.api.cvp_version_compare('>=', 12.0, msg):
+                if self.api.cvp_version_compare('>=', 14.0, msg):
                     self.assertIn('createdBy', result['value'])
                     self.assertIn('lastAccess', result['value'])
                 else:
@@ -459,7 +459,7 @@ class TestCvpClient(TestCvpClientBase):
             # Handle schema change for new resource API which nests each value of a getall
             # into a result key block. Also resource API changes two parameter names to
             # camelCase
-            if self.api.cvp_version_compare('>=', 12.0, msg):
+            if self.api.cvp_version_compare('>=', 14.0, msg):
                 result = all_svc_accnts[0]["result"]
                 self.assertIn('createdBy', result['value'])
                 self.assertIn('lastAccess', result['value'])
