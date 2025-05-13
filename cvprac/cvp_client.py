@@ -123,7 +123,7 @@ class CvpClient():
     # Maximum number of times to retry a get or post to the same
     # CVP node.
     NUM_RETRY_REQUESTS = 3
-    LATEST_API_VERSION = 9.0
+    LATEST_API_VERSION = 14.0
 
     def __init__(self, logger='cvprac', syslog=False, filename=None,
                  log_level='INFO'):
@@ -213,7 +213,13 @@ class CvpClient():
             For CVP versions 2020.2.4 through 2021.1.x, use api version 5.0
             For CVP versions 2021.2.x, use api version 6.0
             For CVP versions 2021.3.x, use api version 7.0
-            For CVP versions 2022.1.0 and beyond, use api version 8.0
+            For CVP versions 2022.x.x, use api version 8.0
+            For CVP versions 2023.1.x, use api version 9.0
+            For CVP versions 2023.2.x, use api version 10.0
+            For CVP versions 2023.3.x, use api version 11.0
+            For CVP versions 2024.1.x, use api version 12.0
+            For CVP versions 2024.2.x, use api version 13.0
+            For CVP versions 2024.3.x and beyond, use api version 14.0
 
             Args:
                 version (str): The CVP version in use.
@@ -221,6 +227,11 @@ class CvpClient():
         self.version = version
         self.log.info('Version %s', version)
         # Set apiversion to latest available API version for CVaaS
+        # Set apiversion to 14.0 for 2024.3.x
+        # Set apiversion to 13.0 for 2024.2.x
+        # Set apiversion to 12.0 for 2024.1.x
+        # Set apiversion to 11.0 for 2023.3.x
+        # Set apiversion to 10.0 for 2023.2.x
         # Set apiversion to 9.0 for 2023.1.x
         # Set apiversion to 8.0 for 2022.1.x - 2022.3.x
         # Set apiversion to 7.0 for 2021.3.x
@@ -242,7 +253,13 @@ class CvpClient():
                               ' Appending 0. Updated Version String - %s',
                               ".".join(version_components))
             full_version = ".".join(version_components)
-            if parse(full_version) >= parse('2024.1.0'):
+            if parse(full_version) >= parse('2024.3.0'):
+                self.log.info('Setting API version to v14')
+                self.apiversion = 14.0
+            elif parse(full_version) >= parse('2024.2.0'):
+                self.log.info('Setting API version to v13')
+                self.apiversion = 13.0
+            elif parse(full_version) >= parse('2024.1.0'):
                 self.log.info('Setting API version to v12')
                 self.apiversion = 12.0
             elif parse(full_version) >= parse('2023.3.0'):

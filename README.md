@@ -75,9 +75,10 @@ using the API methods.
 
 ### Requirements
 
-- Python 2.7 or later
+- Python 3.7 or later
 - Python logging module
-- Python requests module version 1.0.0 or later
+- Python requests module with socks version 2.27.0 or later
+- Python packaging module version 23.2 or later
 
 ## Installation
 
