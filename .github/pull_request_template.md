@@ -1,4 +1,4 @@
-_(Ensure that your PR has a descriptive title and that you are marked as the assignee)_
+<!-- Ensure that your PR has a descriptive title and that you are marked as the assignee -->
 
 ## Type of Change
 - [ ] New feature
@@ -8,29 +8,30 @@ _(Ensure that your PR has a descriptive title and that you are marked as the ass
 - [ ] Hotfix
 - [ ] Security patch
 - [ ] UI/UX improvement
+- [ ] Version Bump
 
 ## Closes
-_(Section is optional)_ 
-_(Make sure closes are specified in a form GitHub recognises to auto-close issues)_
+<!-- Section is optional -->
+<!-- Make sure closes are specified in a form GitHub recognises to auto-close issues -->
 Closes X
 
 ## Depends On
-_(Section is optional)_
+<!-- Section is optional -->
 Depends on X
 
 ## Description
-_(Detailed explanation of the changes made. Include the reasons behind these changes and any relevant context. Link any related issues.)_
+<!-- Detailed explanation of the changes made. Include the reasons behind these changes and any relevant context. Link any related issues. -->
 
 ## Testing
-_(Detail the testing you have performed to ensure that these changes function as intended. Include information about any added tests.)_
+<!-- Detail the testing you have performed to ensure that these changes function as intended. Include information about any added tests. -->
 
 ## Impact
-_(Section is optional)_
-_(Discuss the impact of your changes on the project. This might include effects on performance, new dependencies, or changes in behaviour.)_
+<!-- Section is optional -->
+<!-- Discuss the impact of your changes on the project. This might include effects on performance, new dependencies, or changes in behaviour. -->
 
 ## Additional Information
-_(Section is optional)_
-_(Any additional information that reviewers should be aware of.)_
+<!-- Section is optional -->
+<!-- Any additional information that reviewers should be aware of.) -->
 
 ## Effort required on reviewer's end
 - [ ] Easy
