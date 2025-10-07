@@ -217,8 +217,8 @@ cvprac is shown below.
 #### CVP 2025.2.X+
 
 As of CVP 2025.2.0 and beyond the network provisioning service is disabled by default for new
-installations of CVP. If you have upgraded to CVP 2025.2.X+ from a previous verision then the
-network provisioning serivce should be running as usual.
+installations of CVP. If you have upgraded to CVP 2025.2.X+ from a previous version then the
+network provisioning service should be running as usual.
 
 If you have done a fresh install of CVP 2025.2.X+ and you want to continue to use provisioning APIs
 you will have to enable and start the networkprovisioning service.
@@ -226,7 +226,7 @@ you will have to enable and start the networkprovisioning service.
 SSH to CVP and run the following commands:
 
 `cvpi enable networkprovisioning`
-`cvpi start network provisioning`
+`cvpi start networkprovisioning`
 
 ### Examples
 
