@@ -684,8 +684,9 @@ class CvpApi():
                 dev['containerName'] = ''
         return data
 
-    def add_devices_to_inventory(self, device_list, wait=False):
-        ''' Add a list of devices to the specified parent container.
+    # pylint: disable=too-many-locals
+    def add_devices_to_inventory(self, device_list, wait=False, move_to_container=True):
+        ''' Add a list of devices inventory and optionall move them to specified parent container.
 
             Args:
                 device_list (list): A list of devices to be added in the
@@ -697,6 +698,8 @@ class CvpApi():
                 wait (boolean): Specifies whether to allow a wait time for
                     devices to appear in inventory before moving them to
                     the specified container. Applies to v2 API only.
+                move_to_container (boolean): Specifies if the devices should be moved to container
+                    within device_list data in addition to adding the devices to the inventory.
 
             Example device list:
                 device_list = [
@@ -713,7 +716,7 @@ class CvpApi():
                 ]
         '''
 
-        self.log.debug('add_device_to_inventory: called')
+        self.log.debug('add_devices_to_inventory: called')
         if self.clnt.apiversion is None:
             self.get_cvp_info()
         if self.clnt.apiversion == 1.0:
@@ -763,19 +766,20 @@ class CvpApi():
                     missing_ips = ', '.join(device_ips)
                     raise RuntimeError(f"Devices {missing_ips} failed to appear in inventory")
 
-            # Move the devices to their specified containers
-            for device in device_list:
-                devs = [dev for dev in inv if 'ipAddress' in dev and
-                        device['device_ip'] in dev['ipAddress']]
-                dev = devs[0]
-                container = {'key': device['parent_key'],
-                             'name': device['parent_name']}
-                self.move_device_to_container('add_device_to_inventory API v2',
-                                              dev, container, False)
+            if move_to_container:
+                # Move the devices to their specified containers
+                for device in device_list:
+                    devs = [dev for dev in inv if 'ipAddress' in dev and
+                            device['device_ip'] in dev['ipAddress']]
+                    dev = devs[0]
+                    container = {'key': device['parent_key'],
+                                 'name': device['parent_name']}
+                    self.move_device_to_container('add_devices_to_inventory API v2',
+                                                  dev, container, False)
 
     def add_device_to_inventory(self, device_ip, parent_name,
-                                parent_key, wait=False):
-        ''' Add the device to the specified parent container.
+                                parent_key, wait=False, move_to_container=True):
+        ''' Add device to inventory and optionally move device to the specified parent container.
 
             Args:
                 device_ip (str): ip address of device we are adding
@@ -788,7 +792,7 @@ class CvpApi():
             'parent_name': parent_name,
             'parent_key': parent_key
         }
-        self.add_devices_to_inventory([device], wait=wait)
+        self.add_devices_to_inventory([device], wait=wait, move_to_container=move_to_container)
 
     def retry_add_to_inventory(self, dev_mac, device_ip, username,
                                password):

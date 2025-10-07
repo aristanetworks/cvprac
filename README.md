@@ -208,11 +208,25 @@ API calls directly if they want to avoid the potential time delay of
 some API functions. The current API version information handled by
 cvprac is shown below.
 
-- Current latest API version is 4.0 API version is set to latest
+- Current latest API version is 14.0 API version is set to latest (2024.3.X+)
 - available version for CVaaS API version is set to 4.0 for 2020.1.1 and
 - beyond. API version is set to 3.0 for 2019.0.0 through 2020.1.0 API
 - version is set to 2.0 for 2018.2.X API version is set to 1.0 for
 - 2018.1.X and prior
+
+#### CVP 2025.2.X+
+
+As of CVP 2025.2.0 and beyond the network provisioning service is disabled by default for new
+installations of CVP. If you have upgraded to CVP 2025.2.X+ from a previous verision then the
+network provisioning serivce should be running as usual.
+
+If you have done a fresh install of CVP 2025.2.X+ and you want to continue to use provisioning APIs
+you will have to enable and start the networkprovisioning service.
+
+SSH to CVP and run the following commands:
+
+`cvpi enable networkprovisioning`
+`cvpi start network provisioning`
 
 ### Examples
 
