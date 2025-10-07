@@ -40,7 +40,7 @@ from io import open
 from datetime import datetime
 from re import split
 
-from cvprac.cvp_client_errors import CvpApiError
+from cvprac.cvp_client_errors import CvpApiError, CvpRequestError
 
 try:
     from urllib import quote_plus as qplus
@@ -550,9 +550,18 @@ class CvpApi():
                 end (int): End index for the pagination. If end index is 0
                     then all the records will be returned. Default is 0.
         '''
-        return self.clnt.get(f"/provisioning/getConfigletsByContainerId.do?"
-                             f"containerId={c_id}&startIndex={start}&endIndex={end}",
-                             timeout=self.request_timeout)
+        response = None
+        try:
+            response = self.clnt.get(f"/provisioning/getConfigletsByContainerId.do?"
+                                     f"containerId={c_id}&startIndex={start}&endIndex={end}",
+                                     timeout=self.request_timeout)
+        except CvpRequestError as err:
+            err_str = (f"Error reading configlets for container {c_id}: {err}. There is potentially"
+                       " an issue with networkprovisioning service or one of its dependencies."
+                       " If running CVP 2025.2.X+ then the networkprovisioning sevice likely needs"
+                       " to be enabled and started.")
+            self.log.error(err_str)
+        return response
 
     def get_configlets_by_netelement_id(self, d_id, start=0, end=0):
         ''' Returns a list of configlets applied to the given device.
@@ -563,9 +572,18 @@ class CvpApi():
                 end (int): End index for the pagination. If end index is 0
                     then all the records will be returned. Default is 0.
         '''
-        return self.clnt.get(f"/provisioning/getConfigletsByNetElementId.do?"
-                             f"netElementId={d_id}&startIndex={start}&endIndex={end}",
-                             timeout=self.request_timeout)
+        response = None
+        try:
+            response = self.clnt.get(f"/provisioning/getConfigletsByNetElementId.do?"
+                                     f"netElementId={d_id}&startIndex={start}&endIndex={end}",
+                                     timeout=self.request_timeout)
+        except CvpRequestError as err:
+            err_str = (f"Error reading configlets by device id {d_id}: {err}. There is potentially"
+                       " an issue with networkprovisioning service or one of its dependencies."
+                       " If running CVP 2025.2.X+ then the networkprovisioning sevice likely needs"
+                       " to be enabled and started.")
+            self.log.error(err_str)
+        return response
 
     def get_image_bundle_by_container_id(self, container_id, start=0, end=0,
                                          scope='false'):
@@ -581,10 +599,18 @@ class CvpApi():
             self.log.error("scope value must be true or false. %s is an invalid value."
                            " Defaulting back to false", scope)
             scope = 'false'
-        return self.clnt.get(f"/provisioning/getImageBundleByContainerId.do?"
-                             f"containerId={container_id}&startIndex={start}&endIndex={end}"
-                             f"&sessionScope={scope}",
-                             timeout=self.request_timeout)
+        response = None
+        try:
+            response = self.clnt.get(f"/provisioning/getImageBundleByContainerId.do?"
+                                     f"containerId={container_id}&startIndex={start}&endIndex={end}"
+                                     f"&sessionScope={scope}", timeout=self.request_timeout)
+        except CvpRequestError as err:
+            err_str = (f"Error reading image bundle for container id {container_id}: {err}."
+                       " There is potentially an issue with networkprovisioning service or one"
+                       " of its dependencies. If running CVP 2025.2.X+ then the"
+                       " networkprovisioning sevice likely needs to be enabled and started.")
+            self.log.error(err_str)
+        return response
 
     def get_configlet_history(self, key, start=0, end=0):
         ''' Returns the configlet history.
@@ -1027,17 +1053,24 @@ class CvpApi():
                     if found. Otherwise returns None.
         '''
         self.log.debug(f"Attempt to get net element data for {dev_mac}")
+        response = None
         try:
-            device_image_info = self.clnt.get(
+            response = self.clnt.get(
                 f"/provisioning/getNetElementInfoById.do?netElementId={qplus(dev_mac)}",
                 timeout=self.request_timeout)
+        except CvpRequestError as err:
+            err_str = (f"Error reading device image info {dev_mac}: {err}. There is potentially"
+                       " an issue with networkprovisioning service or one of its dependencies."
+                       " If running CVP 2025.2.X+ then the networkprovisioning sevice likely needs"
+                       " to be enabled and started.")
+            self.log.error(err_str)
         except CvpApiError as error:
             # Catch error when device for provided MAC is not found
             if 'Invalid Netelement id' in str(error):
                 self.log.debug(f"Device with MAC {dev_mac} not found")
                 return None
             raise error
-        return device_image_info
+        return response
 
     def get_containers(self, start=0, end=0):
         ''' Returns a list of all the containers.
@@ -1097,10 +1130,19 @@ class CvpApi():
                 container (dict): Container info in dictionary format or None
         '''
         self.log.debug(f"Get info for container {name}")
-        conts = self.clnt.get(f"/provisioning/searchTopology.do?queryParam={qplus(name)}"
-                              f"&startIndex=0&endIndex=0")
-        if conts['total'] > 0 and conts['containerList']:
-            for cont in conts['containerList']:
+        response = None
+        try:
+            response = self.clnt.get(
+                f"/provisioning/searchTopology.do?queryParam={qplus(name)}"
+                f"&startIndex=0&endIndex=0")
+        except CvpRequestError as err:
+            err_str = (f"Error reading container by name {name}: {err}. There is potentially"
+                       " an issue with networkprovisioning service or one of its dependencies."
+                       " If running CVP 2025.2.X+ then the networkprovisioning sevice likely needs"
+                       " to be enabled and started.")
+            self.log.error(err_str)
+        if response and response['total'] > 0 and response['containerList']:
+            for cont in response['containerList']:
                 if cont['name'] == name:
                     return cont
         return None
@@ -1115,8 +1157,17 @@ class CvpApi():
                 container (dict): Container info in dictionary format or None
         '''
         self.log.debug(f"Get info for container {key}")
-        return self.clnt.get(f"/provisioning/getContainerInfoById.do?"
-                             f"containerId={qplus(key)}")
+        container_data = None
+        try:
+            container_data = self.clnt.get(f"/provisioning/getContainerInfoById.do?"
+                                           f"containerId={qplus(key)}")
+        except CvpRequestError as err:
+            err_str = (f"Error reading container data by ID {key}: {err}. There is potentially"
+                       " an issue with networkprovisioning service or one of its dependencies."
+                       " If running CVP 2025.2.X+ then the networkprovisioning sevice likely needs"
+                       " to be enabled and started.")
+            self.log.error(err_str)
+        return container_data
 
     def get_configlets_by_device_id(self, mac, start=0, end=0):
         ''' Returns the list of configlets applied to a device.
@@ -1311,7 +1362,16 @@ class CvpApi():
             'reconciled': reconciled,
             'unCheckedLines': '',
         }
-        return self.clnt.post(url_str, data=body, timeout=self.request_timeout)
+        response = None
+        try:
+            response = self.clnt.post(url_str, data=body, timeout=self.request_timeout)
+        except CvpRequestError as err:
+            err_str = (f"Error updating reconcile configlet for device {dev_mac}: {err}."
+                       " There is potentially an issue with networkprovisioning service or one"
+                       " of its dependencies. If running CVP 2025.2.X+ then the"
+                       " networkprovisioning sevice likely needs to be enabled and started.")
+            self.log.error(err_str)
+        return response
 
     def add_note_to_configlet(self, key, note):
         ''' Add a note to a configlet.
@@ -1392,8 +1452,15 @@ class CvpApi():
                     temp actions.
         '''
         url = (f"/provisioning/getAllTempActions.do?startIndex={start}&endIndex={end}")
-        data = self.clnt.get(url, timeout=self.request_timeout)
-
+        data = None
+        try:
+            data = self.clnt.get(url, timeout=self.request_timeout)
+        except CvpRequestError as err:
+            err_str = (f"Error reading all temp actions: {err}. There is potentially"
+                       " an issue with networkprovisioning service or one of its dependencies."
+                       " If running CVP 2025.2.X+ then the networkprovisioning sevice likely needs"
+                       " to be enabled and started.")
+            self.log.error(err_str)
         return data
 
     def _add_temp_action(self, data):
@@ -1407,7 +1474,14 @@ class CvpApi():
         '''
         url = ('/provisioning/addTempAction.do?'
                'format=topology&queryParam=&nodeId=root')
-        self.clnt.post(url, data=data, timeout=self.request_timeout)
+        try:
+            self.clnt.post(url, data=data, timeout=self.request_timeout)
+        except CvpRequestError as err:
+            err_str = (f"Error adding temp action for data {data}: {err}. There is potentially"
+                       " an issue with networkprovisioning service or one of its dependencies."
+                       " If running CVP 2025.2.X+ then the networkprovisioning sevice likely needs"
+                       " to be enabled and started.")
+            self.log.error(err_str)
 
     def _save_topology_v2(self, data):
         ''' Confirms a previously created temp action.
@@ -1425,7 +1499,16 @@ class CvpApi():
                     Ex: {u'data': {u'status': u'success', u'taskIds': []}}
         '''
         url = '/provisioning/v2/saveTopology.do'
-        return self.clnt.post(url, data=data, timeout=self.request_timeout)
+        response = None
+        try:
+            response = self.clnt.post(url, data=data, timeout=self.request_timeout)
+        except CvpRequestError as err:
+            err_str = (f"Error saving topology v2 for data {data}: {err}. There is potentially"
+                       " an issue with networkprovisioning service or one of its dependencies."
+                       " If running CVP 2025.2.X+ then the networkprovisioning sevice likely needs"
+                       " to be enabled and started.")
+            self.log.error(err_str)
+        return response
 
     def apply_configlets_to_device(self, app_name, dev, new_configlets, # pylint: disable=too-many-locals
                                    create_task=True, reorder_configlets=False, validate=False):
@@ -1801,9 +1884,18 @@ class CvpApi():
         data = {'configIdList': configlet_keys,
                 'netElementId': mac,
                 'pageType': page_type}
-        return self.clnt.post(
-            '/provisioning/v2/validateAndCompareConfiglets.do',
-            data=data, timeout=self.request_timeout)
+        response = None
+        try:
+            response =  self.clnt.post(
+                '/provisioning/v2/validateAndCompareConfiglets.do',
+                data=data, timeout=self.request_timeout)
+        except CvpRequestError as err:
+            err_str = (f"Error validating configlets for device: {err}. There is potentially"
+                       " an issue with networkprovisioning service or one of its dependencies."
+                       " If running CVP 2025.2.X+ then the networkprovisioning sevice likely needs"
+                       " to be enabled and started.")
+            self.log.error(err_str)
+        return response
 
     def get_applied_devices(self, configlet_name, start=0, end=0):
         ''' Returns a list of devices to which the named configlet is applied.
@@ -1940,13 +2032,21 @@ class CvpApi():
                 response (dict): A dict that contains the parent container info
         '''
         self.log.debug(f"get_parent_container_for_device: called for {dev_mac}")
-        data = self.clnt.get(f"/provisioning/searchTopology.do?"
-                             f"queryParam={dev_mac}&startIndex=0&endIndex=0",
-                             timeout=self.request_timeout)
-        if data['total'] > 0:
+        data = None
+        try:
+            data = self.clnt.get(f"/provisioning/searchTopology.do?"
+                                 f"queryParam={dev_mac}&startIndex=0&endIndex=0",
+                                 timeout=self.request_timeout)
+        except CvpRequestError as err:
+            err_str = (f"Error reading parent container for device: {err}. There is potentially"
+                       " an issue with networkprovisioning service or one of its dependencies."
+                       " If running CVP 2025.2.X+ then the networkprovisioning sevice likely needs"
+                       " to be enabled and started.")
+            self.log.error(err_str)
+        if data and data['total'] > 0:
             cont_name = data['netElementContainerList'][0]['containerName']
             return self.get_container_by_name(cont_name)
-        return None
+        return data
 
     def move_device_to_container(self, app_name, device, container,
                                  create_task=True):
@@ -2021,9 +2121,18 @@ class CvpApi():
             req_url = (f"/provisioning/v3/searchTopology.do?queryParam={qplus(query)}&"
                        f"startIndex={start}&endIndex={end}")
 
-        data = self.clnt.get(req_url, timeout=self.request_timeout)
-        if 'netElementList' in data:
-            for device in data['netElementList']:
+        response = None
+        try:
+            response = self.clnt.get(req_url, timeout=self.request_timeout)
+        except CvpRequestError as err:
+            err_str = (f"Error searching topology for query {query}: {err}. There is potentially"
+                       " an issue with networkprovisioning service or one of its dependencies."
+                       " If running CVP 2025.2.X+ then the networkprovisioning sevice likely needs"
+                       " to be enabled and started.")
+            self.log.error(err_str)
+
+        if response and 'netElementList' in response:
+            for device in response['netElementList']:
                 device['status'] = device['deviceStatus']
                 device['parentContainerKey'] = device['parentContainerId']
                 if 'isMLAGEnabled' in device:
@@ -2038,7 +2147,7 @@ class CvpApi():
                 device['bootupTimestamp'] = device.get('bootupTimeStamp', '')
                 # Key internalBuildId for V3 search topology is no longer in return data.
                 device['internalBuild'] = device.get('internalBuildId', '')
-        return data
+        return response
 
     def filter_topology(self, node_id='root', fmt='topology',
                         start=0, end=0):
@@ -2055,7 +2164,16 @@ class CvpApi():
         '''
         url = (f"/provisioning/filterTopology.do?nodeId={node_id}&"
                f"format={fmt}&startIndex={start}&endIndex={end}")
-        return self.clnt.get(url, timeout=self.request_timeout)
+        response = None
+        try:
+            response = self.clnt.get(url, timeout=self.request_timeout)
+        except CvpRequestError as err:
+            err_str = (f"Error filtering topology: {err}. There is potentially"
+                       " an issue with networkprovisioning service or one of its dependencies."
+                       " If running CVP 2025.2.X+ then the networkprovisioning sevice likely needs"
+                       " to be enabled and started.")
+            self.log.error(err_str)
+        return response
 
     def check_compliance(self, node_key, node_type):
         ''' Check that a device is in compliance, that is the configlets
@@ -2073,14 +2191,22 @@ class CvpApi():
         '''
         self.log.debug(f"check_compliance: node_key: {node_key} node_type: {node_type}")
         data = {'nodeId': node_key, 'nodeType': node_type}
-        resp = self.clnt.post('/provisioning/checkCompliance.do', data=data,
-                              timeout=self.request_timeout)
+        response = None
+        try:
+            response = self.clnt.post('/provisioning/checkCompliance.do', data=data,
+                                      timeout=self.request_timeout)
+        except CvpRequestError as err:
+            err_str = (f"Error checking compliance: {err}. There is potentially"
+                       " an issue with networkprovisioning service or one of its dependencies."
+                       " If running CVP 2025.2.X+ then the networkprovisioning sevice likely needs"
+                       " to be enabled and started.")
+            self.log.error(err_str)
         if self.clnt.apiversion is None:
             self.get_cvp_info()
         if self.clnt.apiversion >= 2.0:
-            if resp['complianceIndication'] == '':
-                resp['complianceIndication'] = 'NONE'
-        return resp
+            if response and response['complianceIndication'] == '':
+                response['complianceIndication'] = 'NONE'
+        return response
 
     def get_event_by_id(self, e_id):
         ''' Return information on the requested event ID.
@@ -2986,9 +3112,19 @@ class CvpApi():
 
         # Get proposed configlets device will inherit from container it is
         # being moved to.
-        prop_conf = self.clnt.get(f"/provisioning/getTempConfigsByNetElementId."
-                                  f"do?netElementId={device['key']}")
-        new_configlets = prop_conf['proposedConfiglets']
+        prop_conf = None
+        try:
+            prop_conf = self.clnt.get(f"/provisioning/getTempConfigsByNetElementId."
+                                      f"do?netElementId={device['key']}")
+        except CvpRequestError as err:
+            err_str = (f"Error reading temp configs for device {device['key']}: {err}."
+                       " There is potentially an issue with networkprovisioning service or one"
+                       " of its dependencies. If running CVP 2025.2.X+ then the"
+                       " networkprovisioning sevice likely needs to be enabled and started.")
+            self.log.error(err_str)
+        new_configlets = []
+        if prop_conf:
+            new_configlets = prop_conf['proposedConfiglets']
         if configlets:
             new_configlets.extend(configlets)
         self.apply_configlets_to_device('deploy_device', device,
