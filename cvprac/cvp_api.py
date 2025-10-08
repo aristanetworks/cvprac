@@ -1456,16 +1456,16 @@ class CvpApi():
                     temp actions.
         '''
         url = (f"/provisioning/getAllTempActions.do?startIndex={start}&endIndex={end}")
-        data = None
+        response = None
         try:
-            data = self.clnt.get(url, timeout=self.request_timeout)
+            response = self.clnt.get(url, timeout=self.request_timeout)
         except CvpRequestError as err:
             err_str = (f"Error reading all temp actions: {err}. There is potentially"
                        " an issue with networkprovisioning service or one of its dependencies."
                        " If running CVP 2025.2.X+ then the networkprovisioning sevice likely needs"
                        " to be enabled and started.")
             self.log.error(err_str)
-        return data
+        return response
 
     def _add_temp_action(self, data):
         ''' Adds temp action that requires a saveTopology call to take effect.
@@ -1894,7 +1894,7 @@ class CvpApi():
                 '/provisioning/v2/validateAndCompareConfiglets.do',
                 data=data, timeout=self.request_timeout)
         except CvpRequestError as err:
-            err_str = (f"Error validating configlets for device: {err}. There is potentially"
+            err_str = (f"Error validating configlets for device {mac}: {err}. There is potentially"
                        " an issue with networkprovisioning service or one of its dependencies."
                        " If running CVP 2025.2.X+ then the networkprovisioning sevice likely needs"
                        " to be enabled and started.")
@@ -2036,21 +2036,21 @@ class CvpApi():
                 response (dict): A dict that contains the parent container info
         '''
         self.log.debug(f"get_parent_container_for_device: called for {dev_mac}")
-        data = None
+        response = None
         try:
-            data = self.clnt.get(f"/provisioning/searchTopology.do?"
+            response = self.clnt.get(f"/provisioning/searchTopology.do?"
                                  f"queryParam={dev_mac}&startIndex=0&endIndex=0",
                                  timeout=self.request_timeout)
         except CvpRequestError as err:
-            err_str = (f"Error reading parent container for device: {err}. There is potentially"
-                       " an issue with networkprovisioning service or one of its dependencies."
-                       " If running CVP 2025.2.X+ then the networkprovisioning sevice likely needs"
-                       " to be enabled and started.")
+            err_str = (f"Error reading parent container for device {dev_mac}: {err}. There is"
+                       " potentially an issue with networkprovisioning service or one of its"
+                       " dependencies. If running CVP 2025.2.X+ then the networkprovisioning"
+                       " sevice likely needs to be enabled and started.")
             self.log.error(err_str)
-        if data and data['total'] > 0:
-            cont_name = data['netElementContainerList'][0]['containerName']
+        if response and response['total'] > 0:
+            cont_name = response['netElementContainerList'][0]['containerName']
             return self.get_container_by_name(cont_name)
-        return data
+        return response
 
     def move_device_to_container(self, app_name, device, container,
                                  create_task=True):
