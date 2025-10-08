@@ -1164,7 +1164,7 @@ class CvpApi():
         response = None
         try:
             response = self.clnt.get(f"/provisioning/getContainerInfoById.do?"
-                                           f"containerId={qplus(key)}")
+                                     f"containerId={qplus(key)}")
         except CvpRequestError as err:
             err_str = (f"Error reading container data by ID {key}: {err}. There is potentially"
                        " an issue with networkprovisioning service or one of its dependencies."
