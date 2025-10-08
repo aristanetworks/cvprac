@@ -209,7 +209,7 @@ some API functions. The current API version information handled by
 cvprac is shown below.
 
 - Current latest API version is 14.0 API version is set to latest (2024.3.X+)
-- available version for CVaaS API version is set to 4.0 for 2020.1.1 and
+- available version for CVaaS API version is set to 14.0 for 2024.3.X and
 - beyond. API version is set to 3.0 for 2019.0.0 through 2020.1.0 API
 - version is set to 2.0 for 2018.2.X API version is set to 1.0 for
 - 2018.1.X and prior
