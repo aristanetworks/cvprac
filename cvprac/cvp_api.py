@@ -1161,9 +1161,9 @@ class CvpApi():
                 container (dict): Container info in dictionary format or None
         '''
         self.log.debug(f"Get info for container {key}")
-        container_data = None
+        response = None
         try:
-            container_data = self.clnt.get(f"/provisioning/getContainerInfoById.do?"
+            response = self.clnt.get(f"/provisioning/getContainerInfoById.do?"
                                            f"containerId={qplus(key)}")
         except CvpRequestError as err:
             err_str = (f"Error reading container data by ID {key}: {err}. There is potentially"
@@ -1171,7 +1171,7 @@ class CvpApi():
                        " If running CVP 2025.2.X+ then the networkprovisioning sevice likely needs"
                        " to be enabled and started.")
             self.log.error(err_str)
-        return container_data
+        return response
 
     def get_configlets_by_device_id(self, mac, start=0, end=0):
         ''' Returns the list of configlets applied to a device.
