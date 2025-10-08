@@ -686,7 +686,7 @@ class CvpApi():
 
     # pylint: disable=too-many-locals
     def add_devices_to_inventory(self, device_list, wait=False, move_to_container=True):
-        ''' Add a list of devices inventory and optionall move them to specified parent container.
+        ''' Add list of devices to inventory and optionally move them to specified parent container.
 
             Args:
                 device_list (list): A list of devices to be added in the
