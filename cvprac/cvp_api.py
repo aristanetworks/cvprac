@@ -1890,7 +1890,7 @@ class CvpApi():
                 'pageType': page_type}
         response = None
         try:
-            response =  self.clnt.post(
+            response = self.clnt.post(
                 '/provisioning/v2/validateAndCompareConfiglets.do',
                 data=data, timeout=self.request_timeout)
         except CvpRequestError as err:
@@ -2039,8 +2039,8 @@ class CvpApi():
         response = None
         try:
             response = self.clnt.get(f"/provisioning/searchTopology.do?"
-                                 f"queryParam={dev_mac}&startIndex=0&endIndex=0",
-                                 timeout=self.request_timeout)
+                                     f"queryParam={dev_mac}&startIndex=0&endIndex=0",
+                                     timeout=self.request_timeout)
         except CvpRequestError as err:
             err_str = (f"Error reading parent container for device {dev_mac}: {err}. There is"
                        " potentially an issue with networkprovisioning service or one of its"
@@ -3164,27 +3164,29 @@ class CvpApi():
 
                     Ex: {'data': <token>}
         '''
-        endpoint_legacy = '/cvpservice/enroll/createToken'
-        endpoint = '/api/resources/admin.Enrollment/AddEnrollmentToken'
         if not devices:
             devices = ["*"]
-        # For on-prem check the version as it is only supported from 2021.2.0+
-        if not self.clnt.is_cvaas:
-            if self.clnt.apiversion is None:
-                self.get_cvp_info()
-            # TODO: update this check when 2024.2.0 is released
-            if self.clnt.apiversion >= 6.0:
-                self.log.debug('v6 /cvpservice/enroll/createToken')
-                data = {"reenrollDevices": devices, "duration": duration}
-                return self.clnt.post(endpoint_legacy, data=data, timeout=self.request_timeout)
-            self.log.warning(
-                'Enrollment Tokens only supported on CVP 2021.2.0+')
-            return None
-        data = {
-            "enrollmentToken": {"reenrollDevices": devices,
-                                "validFor": duration}
-        }
-        return self.clnt.post(endpoint, data=data, timeout=self.request_timeout)
+        if self.clnt.apiversion is None:
+            self.get_cvp_info()
+        response = None
+        if self.clnt.apiversion >= 13.0:
+            # Use resource API for CVP 2024.2.0+
+            data = {
+                "enrollmentToken": {"reenrollDevices": devices,
+                                    "validFor": duration}
+            }
+            response = self.clnt.post(
+                '/api/resources/admin.Enrollment/AddEnrollmentToken',
+                data=data, timeout=self.request_timeout)
+        elif self.clnt.apiversion >= 6.0:
+            # User service API for CVP 2021.2.0 - 2024.1.X
+            self.log.debug('v6 /cvpservice/enroll/createToken')
+            data = {"reenrollDevices": devices, "duration": duration}
+            response = self.clnt.post(
+                '/cvpservice/enroll/createToken', data=data, timeout=self.request_timeout)
+        else:
+            self.log.warning('Enrollment Tokens only supported on CVP 2021.2.0+')
+        return response
 
     def get_all_tags(self, element_type='ELEMENT_TYPE_UNSPECIFIED', workspace_id=''):
         ''' Get all device and/or interface tags from the mainline workspace or all other workspaces
@@ -4333,7 +4335,7 @@ class CvpApi():
             else:
                 token_data = tok['value']
             if (datetime.strptime(token_data[valid_until_format], "%Y-%m-%dT%H:%M:%SZ") <
-                datetime.utcnow()):
+                    datetime.utcnow()):
                 self.svc_account_token_delete(token_data['key']['id'])
                 expired_tokens.append(tok)
         return expired_tokens
