@@ -221,12 +221,8 @@ installations of CVP. If you have upgraded to CVP 2025.2.X+ from a previous vers
 network provisioning service should be running as usual.
 
 If you have done a fresh install of CVP 2025.2.X+ and you want to continue to use provisioning APIs
-you will have to enable and start the networkprovisioning service.
-
-SSH to CVP and run the following commands:
-
-`cvpi enable networkprovisioning`
-`cvpi start networkprovisioning`
+you will have to enable and start the networkprovisioning service. Please contact TAC for
+information on enabling networkprovisioning in CVP 2025.2.X+.
 
 ### Examples
 
