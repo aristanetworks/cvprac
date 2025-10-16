@@ -3169,8 +3169,8 @@ class CvpApi():
         if self.clnt.apiversion is None:
             self.get_cvp_info()
         response = None
-        if self.clnt.apiversion >= 13.0:
-            # Use resource API for CVP 2024.2.0+
+        if self.clnt.apiversion >= 14.0:
+            # Use resource API for CVP 2024.3.0+
             data = {
                 "enrollmentToken": {"reenrollDevices": devices,
                                     "validFor": duration}
@@ -3179,7 +3179,7 @@ class CvpApi():
                 '/api/resources/admin.Enrollment/AddEnrollmentToken',
                 data=data, timeout=self.request_timeout)
         elif self.clnt.apiversion >= 6.0:
-            # User service API for CVP 2021.2.0 - 2024.1.X
+            # User service API for CVP 2021.2.0 - 2024.2.X
             self.log.debug('v6 /cvpservice/enroll/createToken')
             data = {"reenrollDevices": devices, "duration": duration}
             response = self.clnt.post(

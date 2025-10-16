@@ -2438,8 +2438,8 @@ class TestCvpClient(TestCvpClientBase):
         # Set client apiversion if it is not already set
         if self.clnt.apiversion is None:
             self.api.get_cvp_info()
-        if self.clnt.apiversion >= 13.0:
-            # If CVaaS is used or CVP 2024.2.0+ check if the returned list has an
+        if self.clnt.apiversion >= 14.0:
+            # If CVaaS is used or CVP 2024.3.0+ check if the returned list has an
             # "enrollmentToken" key
             # The format of enroll token returned by CVaaS should be:
             # [{'enrollmentToken':{'token': <token>, 'groups': [],
@@ -2453,7 +2453,7 @@ class TestCvpClient(TestCvpClientBase):
                 token_obj = gen_token
             self.assertIn("enrollmentToken", token_obj)
         elif self.clnt.apiversion >= 6.0:
-            # If CVP is between 2021.2.0 - 2024.1.0+
+            # If CVP is between 2021.2.0 - 2024.2.0+
             # Test if the returned value has a "data" key for on-prem
             # Format of enroll token returned by on-prem should be:
             # {'data': <token>}
