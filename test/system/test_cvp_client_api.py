@@ -2438,23 +2438,28 @@ class TestCvpClient(TestCvpClientBase):
         # Set client apiversion if it is not already set
         if self.clnt.apiversion is None:
             self.api.get_cvp_info()
-        if self.clnt.apiversion >= 6.0:
-            # Test if the returned value has a "data" key for on-prem
-            # Format of enroll token returned by on-prem should be:
-            # {'data': <token>}
-            if not self.clnt.is_cvaas:
-                gen_token = self.api.create_enroll_token("24h")
-                self.assertEqual(list(gen_token.keys())[0], "data")
-            # Else if CVaaS is used check if the returned list has an
+        if self.clnt.apiversion >= 14.0:
+            # If CVaaS is used or CVP 2024.3.0+ check if the returned list has an
             # "enrollmentToken" key
             # The format of enroll token returned by CVaaS should be:
             # [{'enrollmentToken':{'token': <token>, 'groups': [],
             #   'reenrollDevices': <devices list>,
             #   'validFor': <duration e.g 24h>,
             #   'field_mask': None}}]
-            else:
+            gen_token = self.api.create_enroll_token("86400s")
+            if isinstance(gen_token, list):
+                token_obj = gen_token[0]
+            elif isinstance(gen_token, dict):
+                token_obj = gen_token
+            self.assertIn("enrollmentToken", token_obj)
+        elif self.clnt.apiversion >= 6.0:
+            # If CVP is between 2021.2.0 - 2024.2.0+
+            # Test if the returned value has a "data" key for on-prem
+            # Format of enroll token returned by on-prem should be:
+            # {'data': <token>}
+            if not self.clnt.is_cvaas:
                 gen_token = self.api.create_enroll_token("24h")
-                self.assertEqual(list(gen_token[0].keys()), "enrollmentToken")
+                self.assertEqual(list(gen_token.keys())[0], "data")
         else:
             pprint(f'SKIPPING TEST (test_api_create_enroll_token) FOR API - {self.clnt.apiversion}')
             time.sleep(1)
