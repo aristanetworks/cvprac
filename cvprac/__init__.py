@@ -32,5 +32,5 @@
 ''' RESTful API Client class for Cloudvision(R) Portal
 '''
 
-__version__ = '1.4.2'
+__version__ = '1.4.2.dev'
 __author__ = 'Arista Networks, Inc.'
