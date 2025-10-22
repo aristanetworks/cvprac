@@ -193,7 +193,7 @@ are some examples of the cluster URLs used in production, a full list can be fou
 
     URLs without `www` are not supported.
 
-helpcenter link: https://www.arista.io/help/articles/b3ZlcnZpZXcuQWxsLmRlcGxveW1lbnQ=#Y3ZhYXNEZXBsb3ltZW50-region
+helpcenter link: [helpcenter](https://www.arista.io/help/articles/b3ZlcnZpZXcuQWxsLmRlcGxveW1lbnQ=#Y3ZhYXNEZXBsb3ltZW50-region)
 
 ### CVP Version Handling
 
