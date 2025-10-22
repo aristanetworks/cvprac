@@ -177,8 +177,8 @@ generic in this sense. If you are using the cvaas\_token parameter
 please convert to api\_token because the cvaas\_token parameter will be
 deprecated in the future.
 
-Please note that the correct regional URL where the CVaaS tenant is deployed must be used. The following are the
-cluster URLs used in production:
+Please note that the correct regional URL where the CVaaS tenant is deployed must be used. The following
+are some examples of the cluster URLs used in production, a full list can be found on helpcenter:
 
 | Region | URL |
 |--------|-----|
@@ -192,6 +192,8 @@ cluster URLs used in production:
 !!! Warning
 
     URLs without `www` are not supported.
+
+helpcenter link: https://www.arista.io/help/articles/b3ZlcnZpZXcuQWxsLmRlcGxveW1lbnQ=#Y3ZhYXNEZXBsb3ltZW50-region
 
 ### CVP Version Handling
 
