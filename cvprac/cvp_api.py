@@ -1138,7 +1138,7 @@ class CvpApi():
         try:
             response = self.clnt.get(
                 f"/provisioning/searchTopology.do?queryParam={qplus(name)}"
-                f"&startIndex=0&endIndex=0")
+                f"&startIndex=0&endIndex=0", timeout=self.request_timeout)
         except CvpRequestError as err:
             err_str = (f"Error reading container by name {name}: {err}. There is potentially"
                        " an issue with networkprovisioning service or one of its dependencies."
