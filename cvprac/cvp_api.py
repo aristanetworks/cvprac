@@ -3119,7 +3119,8 @@ class CvpApi():
         prop_conf = None
         try:
             prop_conf = self.clnt.get(f"/provisioning/getTempConfigsByNetElementId."
-                                      f"do?netElementId={device['key']}", timeout=self.request_timeout)
+                                      f"do?netElementId={device['key']}",
+                                      timeout=self.request_timeout)
         except CvpRequestError as err:
             err_str = (f"Error reading temp configs for device {device['key']}: {err}."
                        " There is potentially an issue with networkprovisioning service or one"
