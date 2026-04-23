@@ -1095,9 +1095,9 @@ class CvpApi():
         if self.clnt.apiversion == 1.0:
             self.log.debug('v1 Inventory API Call')
             return self.clnt.get(f"/inventory/add/searchContainers.do?"
-                                 f"startIndex={start}&endIndex={end}")
+                                 f"startIndex={start}&endIndex={end}", timeout=self.request_timeout)
         self.log.debug('v2 Inventory API Call')
-        containers = self.clnt.get('/inventory/containers')
+        containers = self.clnt.get('/inventory/containers', timeout=self.request_timeout)
         for container in containers:
             container['name'] = container['Name']
             container['key'] = container['Key']
@@ -1138,7 +1138,7 @@ class CvpApi():
         try:
             response = self.clnt.get(
                 f"/provisioning/searchTopology.do?queryParam={qplus(name)}"
-                f"&startIndex=0&endIndex=0")
+                f"&startIndex=0&endIndex=0", timeout=self.request_timeout)
         except CvpRequestError as err:
             err_str = (f"Error reading container by name {name}: {err}. There is potentially"
                        " an issue with networkprovisioning service or one of its dependencies."
@@ -1164,7 +1164,7 @@ class CvpApi():
         response = None
         try:
             response = self.clnt.get(f"/provisioning/getContainerInfoById.do?"
-                                     f"containerId={qplus(key)}")
+                                     f"containerId={qplus(key)}", timeout=self.request_timeout)
         except CvpRequestError as err:
             err_str = (f"Error reading container data by ID {key}: {err}. There is potentially"
                        " an issue with networkprovisioning service or one of its dependencies."
@@ -3119,7 +3119,7 @@ class CvpApi():
         prop_conf = None
         try:
             prop_conf = self.clnt.get(f"/provisioning/getTempConfigsByNetElementId."
-                                      f"do?netElementId={device['key']}")
+                                      f"do?netElementId={device['key']}", timeout=self.request_timeout)
         except CvpRequestError as err:
             err_str = (f"Error reading temp configs for device {device['key']}: {err}."
                        " There is potentially an issue with networkprovisioning service or one"
@@ -3383,7 +3383,7 @@ class CvpApi():
         if self.cvp_version_compare('>=', 6.0, msg):
             workspace_url = f"/api/resources/workspace/v1/Workspace?key.workspaceId={workspace_id}"
             self.log.debug(f"v6 {workspace_url}")
-            return self.clnt.get(workspace_url)
+            return self.clnt.get(workspace_url, timeout=self.request_timeout)
         return None
 
     def workspace_config(self, workspace_id, display_name,
@@ -4076,7 +4076,7 @@ class CvpApi():
             url = '/api/resources/serviceaccount/v1/Token/all'
             self.log.debug(f"v14 {url}")
             # Pull list of tokens out of data key of return for new resource APIs
-            resp = self.clnt.get(url)
+            resp = self.clnt.get(url, timeout=self.request_timeout)
             tokens = []
             if "data" in resp:
                 tokens = resp["data"]
@@ -4104,7 +4104,7 @@ class CvpApi():
             endpoint = '/api/resources/serviceaccount/v1/Token'
             query_param = f"?key.id={token_id}"
             self.log.debug(f'v14 {endpoint + query_param}')
-            return self.clnt.get(endpoint + query_param)
+            return self.clnt.get(endpoint + query_param, timeout=self.request_timeout)
         if self.cvp_version_compare('>=', 7.0, msg):
             endpoint = '/api/v3/services/arista.serviceaccount.v1.TokenService/GetOne'
             payload = {"key": {"id": token_id}}
@@ -4190,7 +4190,7 @@ class CvpApi():
             endpoint = '/api/resources/serviceaccount/v1/Account/all'
             self.log.debug(f"v14 {endpoint}")
             # Pull list of accounts out of data key of return for new resource APIs
-            resp = self.clnt.get(endpoint)
+            resp = self.clnt.get(endpoint, timeout=self.request_timeout)
             svc_accounts = []
             if "data" in resp:
                 svc_accounts = resp["data"]
@@ -4217,7 +4217,7 @@ class CvpApi():
             endpoint = '/api/resources/serviceaccount/v1/Account'
             query_param = f"?key.name={username}"
             self.log.debug(f"v14 {endpoint + query_param}")
-            return self.clnt.get(endpoint + query_param)
+            return self.clnt.get(endpoint + query_param, timeout=self.request_timeout)
         if self.cvp_version_compare('>=', 7.0, msg):
             endpoint = '/api/v3/services/arista.serviceaccount.v1.AccountService/GetOne'
             payload = {"key": {"name": username}}
