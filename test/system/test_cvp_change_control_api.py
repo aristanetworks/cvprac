@@ -71,20 +71,18 @@ class TestCvpClientCC(TestCvpClientBase):
             raise Exception("No device found")
         return device_list
 
-    def create_snapshot(self):
+    def create_snapshot(self, name="snapshot", commands=["show version"], frequency="350"):
         """ Create snapshot for change control with custom stages
         """
         pprint('CREATING SNAPSHOT...')
         device_list = self.get_device_list()
         template_details = {
-            "commands": [
-                "show version"
-            ],
+            "commands": commands,
             "deviceList": [
                 device_list[0]
             ],
-            "frequency": "350",
-            "name": "show version"
+            "frequency": frequency,
+            "name": name
         }
         response = self.clnt.post(
             '/snapshot/templates/schedule?', data=template_details)
@@ -626,7 +624,9 @@ class TestCvpClientCC(TestCvpClientBase):
             device_id_2 = devices[0]
 
         template_id = [
-            self.create_snapshot(), self.create_snapshot()]
+            self.create_snapshot(name="systest show version"),
+            self.create_snapshot(name="systest show version2", frequency="300"),
+        ]
         time.sleep(1)
         custom_cc = {'key': {
             'id': self.cc_id
