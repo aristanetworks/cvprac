@@ -3101,7 +3101,7 @@ class CvpApi():
         '''
         cc_url = '/api/resources/changecontrol/v1/ApproveConfig'
         # For on-prem check the version as it is only supported from 2021.2.0+
-        # Since the get_change_control already checks this, no need to check it again
+        # Since the change_control_get_one already checks this, no need to check it again
         cc_status = self.change_control_get_one(cc_id)
         if cc_status is None:
             return None
