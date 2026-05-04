@@ -123,7 +123,7 @@ class CvpClient():
     # Maximum number of times to retry a get or post to the same
     # CVP node.
     NUM_RETRY_REQUESTS = 3
-    LATEST_API_VERSION = 17.0
+    LATEST_API_VERSION = 19.0
 
     def __init__(self, logger='cvprac', syslog=False, filename=None,
                  log_level='INFO'):
@@ -222,7 +222,9 @@ class CvpClient():
             For CVP versions 2024.3.x, use api version 14.0
             For CVP versions 2025.1.x, use api version 15.0
             For CVP versions 2025.2.x, use api version 16.0
-            For CVP versions 2025.3.x and beyond, use api version 17.0
+            For CVP versions 2025.3.x, use api version 17.0
+            For CVP versions 2026.1.x, use api version 18.0
+            For CVP versions 2026.2.x and beyond, use api version 19.0
 
 
             Args:
@@ -231,6 +233,8 @@ class CvpClient():
         self.version = version
         self.log.info('Version %s', version)
         # Set apiversion to latest available API version for CVaaS
+        # Set apiversion to 19.0 for 2026.2.x
+        # Set apiversion to 18.0 for 2026.1.x
         # Set apiversion to 17.0 for 2025.3.x
         # Set apiversion to 16.0 for 2025.2.x
         # Set apiversion to 15.0 for 2025.1.x
@@ -260,7 +264,13 @@ class CvpClient():
                               ' Appending 0. Updated Version String - %s',
                               ".".join(version_components))
             full_version = ".".join(version_components)
-            if parse(full_version) >= parse('2025.3.0'):
+            if parse(full_version) >= parse('2026.2.0'):
+                self.log.info('Setting API version to v19')
+                self.apiversion = 19.0
+            elif parse(full_version) >= parse('2026.1.0'):
+                self.log.info('Setting API version to v18')
+                self.apiversion = 18.0
+            elif parse(full_version) >= parse('2025.3.0'):
                 self.log.info('Setting API version to v17')
                 self.apiversion = 17.0
             elif parse(full_version) >= parse('2025.2.0'):
