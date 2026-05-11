@@ -20,8 +20,6 @@
 
 import sys
 import time
-import string
-import random
 from getpass import getpass
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -57,66 +55,81 @@ class CvpDeviceUpgrader(object):
 
     def create_mlag_issu_change_control(self, taskIDs, deviceIDs):
         cc_id = f"CC_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        pre_upgrade_stage = {'stage': [{
-            'id': f"preU_{cc_id}",
-            'name': 'pre_upgrade',
-            'stage_row':[{'stage': [{
-                'id': ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(9)),
+        cc_name = f"Change Control {cc_id}"
+
+        stages = {
+            'root': {
+                'name': f"{cc_name} Root",
+                'rows': {'values': [
+                    {'values': [f"preU_{cc_id}"]},
+                    {'values': [f"U_{cc_id}"]},
+                    {'values': [f"postU_{cc_id}"]},
+                ]},
+            },
+            f"preU_{cc_id}": {
+                'name': 'pre_upgrade',
+                'rows': {'values': [
+                    {'values': [f"preU_{cc_id}_{i}" for i in range(len(deviceIDs))]},
+                ]},
+            },
+            f"U_{cc_id}": {
+                'name': 'upgrade',
+                'rows': {'values': [
+                    {'values': [f"U_{cc_id}_{i}" for i in range(len(taskIDs))]},
+                ]},
+            },
+            f"postU_{cc_id}": {
+                'name': 'post_upgrade',
+                'rows': {'values': [
+                    {'values': [f"postU_{cc_id}_{i}" for i in range(len(deviceIDs))]},
+                ]},
+            },
+        }
+
+        for i, device_id in enumerate(deviceIDs):
+            stages[f"preU_{cc_id}_{i}"] = {
+                'name': 'Check MLAG Health',
                 'action': {
                     'name': 'mlaghealthcheck',
                     'timeout': 0,
-                    'args': {
-                        'DeviceID': device_id
-                    }
-                }
-            } for device_id in deviceIDs]}]
-        }]}
-        upgrade_stage = {'stage': [{
-            'id': f"U_{cc_id}",
-            'name': 'upgrade',
-            'stage_row': [{'stage': [{
-                'id': task_id,
+                    'args': {'values': {'DeviceID': device_id}},
+                },
+            }
+            stages[f"postU_{cc_id}_{i}"] = {
+                'name': 'Check MLAG Health',
+                'action': {
+                    'name': 'mlaghealthcheck',
+                    'timeout': 0,
+                    'args': {'values': {'DeviceID': device_id}},
+                },
+            }
+
+        for i, task_id in enumerate(taskIDs):
+            stages[f"U_{cc_id}_{i}"] = {
+                'name': 'Image Upgrade',
                 'action': {
                     'name': 'task',
-                    'args': {
-                        'TaskID': task_id
-                    }
-                }
-            } for task_id in taskIDs]}]
-        }]}
-        post_upgrade_stage = {'stage': [{
-            'id': f"postU_{cc_id}",
-            'name': 'post_upgrade',
-            'stage_row': [{'stage': [{
-                'id': ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(9)),
-                'action': {
-                    'name': 'mlaghealthcheck',
-                    'timeout': 0,
-                    'args': {
-                        'DeviceID': device_id
-                    }
-                }
-            } for device_id in deviceIDs]}]
-        }]}
-        cc_data = {'config': {
-            'id': cc_id,
-            'name': f"Change Control {cc_id}",
-            'root_stage': {
-                'id': 'root',
-                'name': f"Change Control {cc_id} root",
-                'stage_row': [pre_upgrade_stage, upgrade_stage, post_upgrade_stage],
+                    'timeout': 3000,
+                    'args': {'values': {'TaskID': task_id}},
+                },
             }
-        }}
+
+        custom_cc = {
+            'key': {'id': cc_id},
+            'change': {
+                'name': cc_name,
+                'notes': 'MLAG ISSU Change Control',
+                'rootStageId': 'root',
+                'stages': {'values': stages},
+            },
+        }
         try:
-            res = self.session.post('/api/v3/services/ccapi.ChangeControl/Update',
-                data=cc_data,
-                timeout=self.session.api.request_timeout
-            )
+            res = self.session.api.change_control_create_with_custom_stages(custom_cc)
         except Exception as e:
             print(str(e))
-            return(None)
-        print(f"Change control {res[0]['id']} created at {res[0]['update_timestamp']}")
-        return(res[0]['id'])
+            return None
+        print(f"Change control {cc_id} created")
+        return cc_id
 
     def get_mlag_issu_change_control_logs(self, ccID, startTime):
         end_time = int(time.time() * 1000)
@@ -138,21 +151,25 @@ class CvpDeviceUpgrader(object):
 
     def run_mlag_issu_change_control(self, ccID):
         print(f"Automatic approval of change control {ccID}")
-        self.session.api.approve_change_control(ccID, datetime.utcnow().isoformat() + 'Z')
+        self.session.api.change_control_approve(ccID, datetime.utcnow().isoformat() + 'Z')
         time.sleep(2)
         print(f"Starting the execution of change control {ccID}")
         start_time = int(time.time() * 1000)
-        self.session.api.execute_change_controls([ccID])
+        self.session.api.change_control_start(ccID)
         time.sleep(2)
-        cc_status = self.session.api.get_change_control_status(ccID)[0]['status']
+        cc = self.session.api.change_control_get_one(ccID)
+        cc_status = cc['value']['status']
+        cc_error = cc['value'].get('error', '')
         start_time = self.get_mlag_issu_change_control_logs(ccID, start_time)
-        while cc_status['state'] == 'Running':
+        while cc_status == 'CHANGE_CONTROL_STATUS_RUNNING':
             time.sleep(30)
-            cc_status = self.session.api.get_change_control_status(ccID)[0]['status']
+            cc = self.session.api.change_control_get_one(ccID)
+            cc_status = cc['value']['status']
+            cc_error = cc['value'].get('error', '')
             start_time = self.get_mlag_issu_change_control_logs(ccID, start_time)
-        print(f"Change control {ccID} final status: {cc_status['state']}")
-        if cc_status['error']:
-            print(f"Change control {ccID} had the following errors: {cc_status['error']}")
+        print(f"Change control {ccID} final status: {cc_status}")
+        if cc_error:
+            print(f"Change control {ccID} had the following errors: {cc_error}")
         else:
             print(f"Change control {ccID} completed without errors")
 
