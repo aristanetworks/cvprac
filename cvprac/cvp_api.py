@@ -685,6 +685,7 @@ class CvpApi():
         return data
 
     # pylint: disable=too-many-locals
+    # pylint: disable=too-many-branches
     def add_devices_to_inventory(self, device_list, wait=False, move_to_container=True):
         ''' Add list of devices to inventory and optionally move them to specified parent container.
 
@@ -785,11 +786,13 @@ class CvpApi():
                 for device in device_list:
                     devs = [dev for dev in inv if 'ipAddress' in dev and
                             device['device_ip'] in dev['ipAddress']]
-                    dev = devs[0]
-                    container = {'key': device['parent_key'],
-                                 'name': device['parent_name']}
-                    self.move_device_to_container('add_devices_to_inventory API v2',
-                                                  dev, container, False)
+                    # Only attempt to move device to another container if it is in inventory
+                    if devs:
+                        dev = devs[0]
+                        container = {'key': device['parent_key'],
+                                     'name': device['parent_name']}
+                        self.move_device_to_container('add_devices_to_inventory API v2',
+                                                      dev, container, False)
         return failed_onboard
 
     def add_device_to_inventory(self, device_ip, parent_name,
