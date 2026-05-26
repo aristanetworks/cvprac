@@ -685,6 +685,7 @@ class CvpApi():
         return data
 
     # pylint: disable=too-many-locals
+    # pylint: disable=too-many-branches
     def add_devices_to_inventory(self, device_list, wait=False, move_to_container=True):
         ''' Add list of devices to inventory and optionally move them to specified parent container.
 
@@ -714,6 +715,10 @@ class CvpApi():
                         parent_key: 'container-id-1234'
                     }
                 ]
+            Returns: Dict of devices that failed to onboard in below format. None if all devices
+                     onboarded successfully.
+
+                     {'192.168.0.11': "ERROR"}
         '''
 
         self.log.debug('add_devices_to_inventory: called')
@@ -735,17 +740,27 @@ class CvpApi():
             self.clnt.post('/inventory/add/addToInventory.do?'
                            'startIndex=0&endIndex=0', data=data,
                            timeout=self.request_timeout)
-        else:
-            self.log.debug('v2 Inventory API Call')
+            return None
+        self.log.debug('v2 Inventory API Call')
 
-            # Create a list of device IPs
-            device_ips = [dev['device_ip'] for dev in device_list]
+        # Create a list of device IPs
+        device_ips = [dev['device_ip'] for dev in device_list]
 
-            # First add the devices to the inventory in a single call
-            data = {'hosts': device_ips}
-            self.clnt.post('/inventory/devices', data=data,
-                           timeout=self.request_timeout)
+        # First add the devices to the inventory in a single call
+        data = {'hosts': device_ips}
+        failed_onboard = None
+        resp = self.clnt.post('/inventory/devices', data=data, timeout=self.request_timeout)
+        if resp and 'failed' in resp['data']:
+            failed_onboard = resp['data']['failed']
+            for failed_dev_ip in failed_onboard:
+                self.log.warning(
+                    'Found error onboarding device %s - %s',
+                    failed_dev_ip,
+                    failed_onboard[failed_dev_ip]
+                )
+                device_ips.remove(failed_dev_ip)
 
+        if device_ips:
             # Get the inventory list
             inv = self.get_inventory()
 
@@ -771,11 +786,14 @@ class CvpApi():
                 for device in device_list:
                     devs = [dev for dev in inv if 'ipAddress' in dev and
                             device['device_ip'] in dev['ipAddress']]
-                    dev = devs[0]
-                    container = {'key': device['parent_key'],
-                                 'name': device['parent_name']}
-                    self.move_device_to_container('add_devices_to_inventory API v2',
-                                                  dev, container, False)
+                    # Only attempt to move device to another container if it is in inventory
+                    if devs:
+                        dev = devs[0]
+                        container = {'key': device['parent_key'],
+                                     'name': device['parent_name']}
+                        self.move_device_to_container('add_devices_to_inventory API v2',
+                                                      dev, container, False)
+        return failed_onboard
 
     def add_device_to_inventory(self, device_ip, parent_name,
                                 parent_key, wait=False, move_to_container=True):
