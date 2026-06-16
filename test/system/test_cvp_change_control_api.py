@@ -7,7 +7,7 @@ import time
 import unittest
 from test_cvp_base import TestCvpClientBase
 import urllib3
-from cvprac.cvp_client_errors import CvpRequestError
+from cvprac.cvp_client_errors import CvpApiError, CvpRequestError
 urllib3.disable_warnings(
     urllib3.exceptions.InsecureRequestWarning)
 
@@ -787,6 +787,62 @@ class TestCvpClientCC(TestCvpClientBase):
             with self.assertRaises(CvpRequestError):
                 self.api.change_control_create_with_custom_stages(
                     None)
+
+    def test_api_change_control_approve_with_task_errors(self):
+        """ Verify that approving a change control with tasks containing
+            configuration errors raises CvpApiError.
+            This test adds an invalid EOS command to a configlet to create
+            a task with a DEVICEERROR, then verifies that approval is blocked.
+        """
+        pprint("test_api_change_control_approve_with_task_errors")
+        if self.get_version():
+            # Create a task with invalid config that will produce DEVICEERROR
+            task_id, org_config, configlet = self._create_task_with_invalid_config()
+
+            # Create change control for the task
+            self.create_change_control_for_task(task_id)
+            time.sleep(2)
+
+            try:
+                # Approving should raise CvpApiError due to task config errors
+                with self.assertRaises(CvpApiError) as context:
+                    self.approve_change_control()
+                pprint(f'Caught expected error: {context.exception}')
+                self.assertIn('configuration errors', str(context.exception))
+            finally:
+                # Predict the task ID that update_configlet will create for the restore
+                tasks = self.api.get_tasks()
+                restore_task_id = str(int(tasks['data'][0]['workOrderId']) + 1) \
+                    if tasks and tasks.get('data') else None
+                # Restore configlet to original config
+                self.api.update_configlet(org_config, configlet['key'],
+                                          configlet['name'])
+                # Delete CC and cancel the original invalid task
+                self.delete_change_control(self.cc_id)
+                self.cancel_task(task_id)
+                # Cancel the restoration task created by update_configlet above
+                if restore_task_id:
+                    restore_task = self.api.get_task_by_id(restore_task_id)
+                    if restore_task and restore_task.get('currentTaskName') != 'Cancelled':
+                        self.cancel_task(restore_task_id)
+
+    def test_api_change_control_execute_without_approval(self):
+        """ Verify that starting a change control without approving it first
+            is rejected by CVP with a CvpRequestError.
+            This ensures CVP enforces the approval requirement before execution even on API calls.
+        """
+        pprint("test_api_change_control_execute_without_approval")
+        if self.get_version():
+            # Create task
+            task_id = self.create_task()
+
+            # Create change control but do NOT approve it
+            self.create_change_control_for_task(task_id)
+            time.sleep(1)
+
+            # Starting without approval should raise CvpRequestError
+            with self.assertRaises(CvpRequestError):
+                self.start_change_control(self.cc_id)
 
 
 if __name__ == '__main__':

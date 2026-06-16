@@ -2154,21 +2154,30 @@ class TestCvpClient(TestCvpClientBase):
         orig_configlets = self.api.get_configlets_by_device_id(test_dev['key'])
         # delete from inventory
         if self.clnt.apiversion <= 7.0:
+            print(f"  [DEBUG] apiversion <= 7.0, using delete_device")
             self.api.delete_device(test_dev['systemMacAddress'])
             # sleep to allow delete to complete
             time.sleep(1)
         else:
             req_id = str(uuid.uuid4())
+            print(f"  [DEBUG] apiversion > 7.0, using device_decommissioning with req_id={req_id}")
             self.api.device_decommissioning(test_dev['serialNumber'], req_id)
             decomm_status = "DECOMMISSIONING_STATUS_SUCCESS"
             decomm = ""
             decomm_timer = 0
-            while decomm != decomm_status or decomm_timer < 600:
-                decomm = self.api.device_decommissioning_status_get_one(req_id)['value']['status']
+            while decomm != decomm_status and decomm_timer < 600:
+                resp = self.api.device_decommissioning_status_get_one(req_id)
+                decomm = resp['value']['status']
+                print(f"  [DEBUG] decomm_timer={decomm_timer}s, status={decomm}")
+                if decomm == decomm_status:
+                    break
                 time.sleep(10)
                 decomm_timer += 10
+            print(f"  [DEBUG] decommission loop exited: status={decomm}, timer={decomm_timer}s")
         # verify not found in inventory
+        print(f"  [DEBUG] verifying device {test_dev['fqdn']} removed from inventory")
         res = self.api.get_device_by_name(test_dev['fqdn'])
+        print(f"  [DEBUG] get_device_by_name result: {res}")
         self.assertEqual(res, {})
         # add back to inventory
         # Adding test device back to inv started timing out in CVP2021.2.0
@@ -2177,17 +2186,22 @@ class TestCvpClient(TestCvpClientBase):
             self.api.get_cvp_info()
         if self.clnt.apiversion >= 6.0:
             self.api.request_timeout = orig_timeout * 3
+        print(f"  [DEBUG] adding device back: ip={test_dev['ipAddress']}, container={orig_cont['name']}")
         self.api.add_device_to_inventory(test_dev['ipAddress'],
                                          orig_cont['name'],
                                          orig_cont['key'], True)
+        print(f"  [DEBUG] add_device_to_inventory returned")
         # get non connected device count until it is back to equal or less
         # than the original non connected device count
         non_connect_count = self.api.get_non_connected_device_count()
-        for _ in range(3):
+        print(f"  [DEBUG] non_connect_count={non_connect_count}, orig={orig_non_connect_count}")
+        for i in range(3):
             if non_connect_count <= orig_non_connect_count:
                 break
             time.sleep(1)
             non_connect_count = self.api.get_non_connected_device_count()
+            print(f"  [DEBUG] retry {i+1}: non_connect_count={non_connect_count}")
+        print(f"  [DEBUG] calling save_inventory")
         results = self.api.save_inventory()
         # Save Inventory is deprecated for 2018.2 and beyond
         if self.clnt.apiversion == 1.0:
@@ -2204,16 +2218,23 @@ class TestCvpClient(TestCvpClientBase):
         self.assertEqual(re_added_dev['systemMacAddress'],
                          test_dev['systemMacAddress'])
         # apply original configlets back to device
+        print(f"  [DEBUG] applying original configlets back to device")
         results = self.api.apply_configlets_to_device("test_api_inventory",
                                                       test_dev, orig_configlets,
                                                       create_task=True)
+        print(f"  [DEBUG] apply_configlets result: {results}")
         # execute returned task and wait for it to complete
-        self.api.execute_task(results['data']['taskIds'][0])
-        task_status = self.api.get_task_by_id(results['data']['taskIds'][0])
+        task_id = results['data']['taskIds'][0]
+        print(f"  [DEBUG] executing task {task_id}")
+        self.api.execute_task(task_id)
+        task_status = self.api.get_task_by_id(task_id)
+        task_timer = 0
         while task_status['taskStatus'] != 'COMPLETED':
-            task_status = self.api.get_task_by_id(
-                results['data']['taskIds'][0])
+            print(f"  [DEBUG] task {task_id} status={task_status['taskStatus']}, waited {task_timer}s")
+            task_status = self.api.get_task_by_id(task_id)
             time.sleep(1)
+            task_timer += 1
+        print(f"  [DEBUG] task {task_id} COMPLETED after {task_timer}s")
         if self.clnt.apiversion >= 6.0:
             self.api.request_timeout = orig_timeout
 

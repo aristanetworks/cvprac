@@ -186,6 +186,49 @@ class TestCvpClientBase(DutSystemTest):
         self.task_id = task_id
         return task_id, org_config
 
+    def _create_task_with_invalid_config(self):
+        ''' Create a task by adding an invalid EOS command to a configlet.
+            The invalid command will cause a DEVICEERROR in the config diff
+            compliance check, which is used to test the task error validation
+            in change_control_approve.
+
+            Returns:
+                (task_id, org_config, configlet)
+                task_id (str): Task ID
+                org_config (str): Original configlet contents for cleanup
+                configlet (dict): The configlet dict for cleanup
+        '''
+        task_id = self._get_next_task_id()
+        configlet = None
+        for conf in self.dev_configlets:
+            if conf['netElementCount'] == 1:
+                configlet = conf
+                break
+        if configlet is None:
+            configlet = self.dev_configlets[0]
+
+        org_config = configlet['config']
+        config = org_config + '\ntypocommand test\n'
+        configlet['config'] = config
+
+        self.api.update_configlet(config, configlet['key'], configlet['name'])
+
+        cnt = 30
+        if self.clnt.apiversion is None:
+            self.api.get_cvp_info()
+        if self.clnt.apiversion >= 2.0:
+            cnt += 30
+        while cnt > 0:
+            time.sleep(1)
+            result = self.api.get_task_by_id(task_id)
+            if result is not None:
+                break
+            cnt -= 1
+        err_msg = f'Timeout waiting for task id {task_id} to be created'
+        self.assertGreater(cnt, 0, msg=err_msg)
+        self.task_id = task_id
+        return task_id, org_config, configlet
+
     def delete_change_control(self, cc_id):
         """ Delete change control
         """
