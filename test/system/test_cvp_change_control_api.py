@@ -824,6 +824,7 @@ class TestCvpClientCC(TestCvpClientBase):
                 # Restore configlet to original config
                 self.api.update_configlet(org_config, configlet['key'],
                                           configlet['name'])
+                configlet['config'] = org_config
                 # Delete CC and cancel the original invalid task
                 self.delete_change_control(self.cc_id)
                 self.cancel_task(task_id)
@@ -867,6 +868,7 @@ class TestCvpClientCC(TestCvpClientBase):
                 # Restore configlet to original config
                 self.api.update_configlet(org_config, configlet['key'],
                                           configlet['name'])
+                configlet['config'] = org_config
                 # Delete CC and cancel the original task
                 self.delete_change_control(self.cc_id)
                 self.cancel_task(task_id)
