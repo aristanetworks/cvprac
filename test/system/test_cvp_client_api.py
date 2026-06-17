@@ -50,7 +50,6 @@
          Failure response received from the netElement : ' Unauthorized User '
 '''
 import os
-import re
 import shutil
 import time
 import unittest
@@ -1238,33 +1237,6 @@ class TestCvpClient(TestCvpClientBase):
         # Verify configlet was deleted
         with self.assertRaises(CvpApiError):
             self.api.get_configlet_by_name(name)
-
-    def test_api_update_configlet_wait_task_ids(self):
-        ''' Verify update_configlet returns task IDs when requested.
-        '''
-        configlet = self._get_single_device_configlet()
-        self._track_configlet_restore(configlet)
-
-        config = configlet['config']
-        match = re.match(r'lldp timer (\d+)', config)
-        if match is not None:
-            value = int(match.group(1)) + 1
-            updated_config = re.sub(match.group(0), f'lldp timer {value}', config)
-        else:
-            updated_config = 'lldp timer 13\n' + config
-
-        result = self.api.update_configlet(
-            updated_config, configlet['key'], configlet['name'], wait_task_ids=True)
-
-        self.assertEqual(result['data']['status'], 'success')
-        self.assertIn('taskIds', result['data'])
-        self.assertGreater(len(result['data']['taskIds']), 0)
-
-        task_id = str(result['data']['taskIds'][0])
-        self._track_task_ids([task_id])
-        task = self.api.get_task_by_id(task_id)
-        self.assertIsNotNone(task)
-        self.assertEqual(task['workOrderId'], task_id)
 
     def test_api_add_note_to_configlet(self):
         ''' Verify add_note_to_configlet

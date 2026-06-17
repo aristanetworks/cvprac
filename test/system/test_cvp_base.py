@@ -130,6 +130,8 @@ class TestCvpClientBase(DutSystemTest):
         self.cc_id = str(uuid.uuid4())
         self.cc_name = f'test_api_{time.time()}'
         self.configlet_restores = {}
+        self._verify_cleanup_compliance = False
+        self._cleanup_requires_restore_execution = False
 
     def tearDown(self):
         '''
@@ -137,6 +139,7 @@ class TestCvpClientBase(DutSystemTest):
             and remove created containers.
         '''
         cleanup_error = None
+        self._prepare_cleanup()
         try:
             chg_ctrl_get_one = self.api.change_control_get_one(self.cc_id)
             if chg_ctrl_get_one:
@@ -147,7 +150,7 @@ class TestCvpClientBase(DutSystemTest):
                 self._restore_configlets,
                 self._restore_device_container,
                 self._cancel_tracked_tasks,
-                self._cancel_open_tasks_for_cleanup,
+                self._cancel_open_tasks,
                 self._cleanup_extra_containers,
                 self._refresh_after_cleanup):
             try:
@@ -199,9 +202,9 @@ class TestCvpClientBase(DutSystemTest):
 
         # Updating the configlet will cause a task to be created to apply
         # the change to the device.
-        response = self.api.update_configlet(
-            config, configlet['key'], configlet['name'], wait_task_ids=True)
-        task_ids = self._extract_task_ids(response)
+        task_snapshot = self._get_task_snapshot()
+        self.api.update_configlet(config, configlet['key'], configlet['name'])
+        task_ids = self._discover_task_ids(task_snapshot, fallback_task_id=task_id)
         if task_ids:
             self._track_task_ids(task_ids)
             task_id = task_ids[0]
@@ -396,6 +399,7 @@ class TestCvpClientBase(DutSystemTest):
             task_id = str(task_id)
             if task_id not in self.task_ids:
                 self.task_ids.append(task_id)
+                self._verify_cleanup_compliance = True
 
     def _get_single_device_configlet(self):
         ''' Return a configlet assigned only to the test device when possible. '''
@@ -412,6 +416,109 @@ class TestCvpClientBase(DutSystemTest):
                 'name': configlet['name'],
                 'config': configlet['config']
             }
+            self._verify_cleanup_compliance = True
+
+    def _log_cleanup(self, message):
+        ''' Log teardown cleanup progress to the shared system-test log. '''
+        self.clnt.log.info('system test cleanup: %s', message)
+
+    def _prepare_cleanup(self):
+        ''' Capture teardown context before mutating cleanup state. '''
+        if not self._verify_cleanup_compliance:
+            self._log_cleanup('mode=read-only tracked_tasks=0 restore_configlets=0')
+            return
+        tracked_states = self._get_tracked_task_states()
+        self._cleanup_requires_restore_execution = any(
+            task is not None and task.get('workOrderUserDefinedStatus') == 'Completed'
+            for task in tracked_states.values())
+        if self._cleanup_requires_restore_execution:
+            cleanup_mode = 'applied-change rollback'
+        else:
+            cleanup_mode = 'pending-only'
+        self._log_cleanup(
+            f'mode={cleanup_mode} tracked_tasks={self.task_ids} '
+            f'restore_configlets={list(self.configlet_restores.keys())}')
+
+    def _get_tracked_task_states(self):
+        ''' Return a mapping of tracked task IDs to their current task info. '''
+        states = {}
+        for task_id in self.task_ids:
+            states[str(task_id)] = self.api.get_task_by_id(task_id)
+        return states
+
+    def _get_task_snapshot(self):
+        ''' Return current tasks keyed by task ID. '''
+        snapshot = {}
+        tasks = self.api.get_tasks()
+        for task in tasks.get('data', []):
+            task_id = task.get('workOrderId')
+            if task_id is not None:
+                snapshot[str(task_id)] = task
+        return snapshot
+
+    def _discover_task_ids(self, before_tasks, fallback_task_id=None):
+        ''' Detect task IDs created by a configlet update. '''
+        cnt = 30
+        if self.clnt.apiversion is None:
+            self.api.get_cvp_info()
+        if self.clnt.apiversion >= 2.0:
+            cnt += 30
+        while cnt > 0:
+            after_tasks = self._get_task_snapshot()
+            task_ids = [
+                task_id for task_id in after_tasks
+                if task_id not in before_tasks
+            ]
+            if task_ids:
+                return task_ids
+            if fallback_task_id is not None:
+                fallback = after_tasks.get(str(fallback_task_id))
+                if fallback is not None:
+                    return [str(fallback_task_id)]
+            time.sleep(1)
+            cnt -= 1
+        if fallback_task_id is not None:
+            fallback = self.api.get_task_by_id(fallback_task_id)
+            if fallback is not None:
+                return [str(fallback_task_id)]
+        return []
+
+    def _wait_for_task_completion(self, task_id, timeout=600, poll_interval=10):
+        ''' Wait for a task to reach a terminal state and return the task. '''
+        cnt = max(1, int(timeout / poll_interval))
+        while cnt > 0:
+            task = self.api.get_task_by_id(task_id)
+            if task is not None:
+                status = task.get('workOrderUserDefinedStatus')
+                if status in ('Completed', 'Cancelled', 'Failed'):
+                    return task
+            time.sleep(poll_interval)
+            cnt -= 1
+        raise AssertionError(f'Timeout waiting for cleanup task id {task_id} to complete')
+
+    def _execute_restore_tasks(self, task_ids, configlet_name):
+        ''' Execute restore tasks so applied config changes are rolled back. '''
+        for task_id in task_ids:
+            task = self.api.get_task_by_id(task_id)
+            if task is None:
+                raise AssertionError(
+                    f'Cleanup restore task {task_id} for configlet {configlet_name} was not found')
+            status = task.get('workOrderUserDefinedStatus')
+            if status == 'Completed':
+                continue
+            if status in ('Cancelled', 'Failed'):
+                raise AssertionError(
+                    f'Cleanup restore task {task_id} for configlet {configlet_name} '
+                    f'is already {status}')
+            self._log_cleanup(
+                f'executing restore task {task_id} for configlet {configlet_name}')
+            self.api.execute_task(task_id)
+            task = self._wait_for_task_completion(task_id)
+            status = task.get('workOrderUserDefinedStatus')
+            if status != 'Completed':
+                raise AssertionError(
+                    f'Cleanup restore task {task_id} for configlet {configlet_name} '
+                    f'ended in {status}')
 
     def _restore_configlets(self):
         ''' Restore any configlets modified by the shared task helper. '''
@@ -419,8 +526,24 @@ class TestCvpClientBase(DutSystemTest):
             current = self.api.get_configlet_by_name(restore['name'])
             if current is None or current.get('config') == restore['config']:
                 continue
-            self.api.update_configlet(
+            self._log_cleanup(f'restoring configlet {restore["name"]}')
+            task_snapshot = self._get_task_snapshot()
+            fallback_task_id = None
+            if self._cleanup_requires_restore_execution:
+                fallback_task_id = self._get_next_task_id()
+            response = self.api.update_configlet(
                 restore['config'], restore['key'], restore['name'])
+            restore_task_ids = self._extract_task_ids(response)
+            if not restore_task_ids:
+                restore_task_ids = self._discover_task_ids(
+                    task_snapshot, fallback_task_id=fallback_task_id)
+            if restore_task_ids:
+                self._track_task_ids(restore_task_ids)
+            elif self._cleanup_requires_restore_execution:
+                raise AssertionError(
+                    f'Cleanup could not identify restore task for configlet {restore["name"]}')
+            if self._cleanup_requires_restore_execution and restore_task_ids:
+                self._execute_restore_tasks(restore_task_ids, restore['name'])
 
     def _restore_device_container(self):
         ''' Move the shared test device back to the suite baseline container. '''
@@ -441,10 +564,6 @@ class TestCvpClientBase(DutSystemTest):
             if task is not None and not self._task_is_terminal(task):
                 self.cancel_task(task_id)
 
-    def _cancel_open_tasks_for_cleanup(self):
-        ''' Cancel any remaining open tasks during teardown cleanup. '''
-        self._cancel_open_tasks()
-
     def _cleanup_extra_containers(self):
         ''' Delete containers created after the suite baseline was captured. '''
         baseline_keys = set(TestCvpClientBase._suite_container_baseline.keys())
@@ -455,4 +574,5 @@ class TestCvpClientBase(DutSystemTest):
     def _refresh_after_cleanup(self):
         ''' Refresh shared state and verify compliance after teardown cleanup. '''
         self._refresh_device_state()
-        self._wait_for_device_compliance()
+        if self._verify_cleanup_compliance:
+            self._wait_for_device_compliance()
