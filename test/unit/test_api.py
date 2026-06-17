@@ -176,6 +176,60 @@ class TestAPI(unittest.TestCase):
 
     @patch.object(CvpApi, 'change_control_get_one')
     @patch.object(CvpApi, 'get_config_diff_for_task')
+    def test_change_control_get_task_errors(self, mock_diff, mock_get_one):
+        """Test that change_control_get_task_errors returns task config errors."""
+        self.clnt.apiversion = 6.0
+        cc_id = 'test-cc-id'
+        mock_get_one.return_value = {
+            'value': {
+                'key': {'id': cc_id},
+                'change': {
+                    'name': 'Test CC',
+                    'time': '2021-12-13T21:05:58.813750128Z',
+                    'rootStageId': 'root',
+                    'stages': {'values': {
+                        'root': {'name': 'root', 'rows': {'values': [{'values': ['stage0']}]}},
+                        'stage0': {
+                            'name': 'Update Config',
+                            'action': {
+                                'name': 'task',
+                                'timeout': 3000,
+                                'args': {'values': {'TaskID': '10'}}
+                            }
+                        }
+                    }}
+                }
+            },
+            'time': '2021-12-13T21:05:58.813750128Z'
+        }
+        task_error = {
+            'error_code': 'DEVICEERROR',
+            'error_msg': '> typocommand test % Invalid input',
+            'line_num': 50,
+            'configlet_name': 'test-configlet',
+            'config_line_num': 54
+        }
+        mock_diff.return_value = [
+            {'sources': {'source': []}},
+            {'diff': {'entries': []}},
+            {'error': task_error}
+        ]
+        result = self.api.change_control_get_task_errors(cc_id)
+        self.assertEqual(result, [('10', task_error)])
+        mock_get_one.assert_called_once_with(cc_id)
+        mock_diff.assert_called_once_with('10')
+
+    @patch.object(CvpApi, 'change_control_get_one')
+    def test_change_control_get_task_errors_returns_none_without_cc(self, mock_get_one):
+        """Test that change_control_get_task_errors returns None when the CC is missing."""
+        self.clnt.apiversion = 6.0
+        mock_get_one.return_value = None
+        result = self.api.change_control_get_task_errors('missing-cc-id')
+        self.assertIsNone(result)
+        mock_get_one.assert_called_once_with('missing-cc-id')
+
+    @patch.object(CvpApi, 'change_control_get_one')
+    @patch.object(CvpApi, 'get_config_diff_for_task')
     @patch.object(CvpClient, 'post')
     def test_change_control_approve_skips_validation_on_unapprove(self, mock_post, mock_diff, mock_get_one):
         """Test that unapproving a change control skips task error validation."""

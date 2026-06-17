@@ -804,6 +804,13 @@ class TestCvpClientCC(TestCvpClientBase):
             time.sleep(2)
 
             try:
+                # Verify task errors can be fetched directly from the change control
+                task_errors = self.api.change_control_get_task_errors(self.cc_id)
+                self.assertIsNotNone(task_errors)
+                self.assertGreater(len(task_errors), 0)
+                self.assertEqual(task_errors[0][0], task_id)
+                self.assertEqual(task_errors[0][1]['error_code'], 'DEVICEERROR')
+
                 # Approving should raise CvpApiError due to task config errors
                 with self.assertRaises(CvpApiError) as context:
                     self.approve_change_control()

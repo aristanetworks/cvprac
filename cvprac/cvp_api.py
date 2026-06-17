@@ -3074,6 +3074,24 @@ class CvpApi():
             return self.clnt.get(cc_url, timeout=self.request_timeout)
         return None
 
+    def change_control_get_task_errors(self, cc_id):
+        ''' Get task configuration errors for a change control.
+            Supported versions: CVP 2021.2.0 or newer and CVaaS.
+
+            Args:
+               cc_id (str): The ID of the change control.
+
+            Returns:
+                errors (list): A list of (task_id, error_dict) tuples for any tasks
+                    with DEVICEERROR entries. Empty list if no errors found.
+                    Returns None if the change control does not exist or the API
+                    is unsupported.
+        '''
+        cc_status = self.change_control_get_one(cc_id)
+        if cc_status is None:
+            return None
+        return self._parse_task_errors_from_cc_data(cc_status)
+
     def change_control_approval_get_one(self, cc_id, cc_time=None):
         ''' Get the state of a specific Change Control's approve config using Resource APIs.
             Supported versions: CVP 2021.2.0 or newer and CVaaS.
