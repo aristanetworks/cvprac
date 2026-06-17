@@ -3151,7 +3151,7 @@ class CvpApi():
             return None
 
         if approve:
-            task_errors = self._get_task_errors_from_cc(cc_status)
+            task_errors = self._parse_task_errors_from_cc_data(cc_status)
             if task_errors:
                 error_details = "; ".join(
                     f"Task {tid}: {err['error_msg']}"
@@ -3174,8 +3174,8 @@ class CvpApi():
         }
         return self.clnt.post(cc_url, data=payload, timeout=self.request_timeout)
 
-    def _get_task_errors_from_cc(self, cc_data):
-        ''' Extract task IDs from a change control and check each for config errors.
+    def _parse_task_errors_from_cc_data(self, cc_data):
+        ''' Extract task IDs from a change control data and check each for config errors.
             Make an API call on each task and parse the config diff for errors.
 
             Args:

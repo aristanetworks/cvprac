@@ -820,6 +820,7 @@ class TestCvpClientCC(TestCvpClientBase):
                 # Delete CC and cancel the original invalid task
                 self.delete_change_control(self.cc_id)
                 self.cancel_task(task_id)
+                time.sleep(2)
                 # Cancel the restoration task created by update_configlet above
                 if restore_task_id:
                     restore_task = self.api.get_task_by_id(restore_task_id)
@@ -834,15 +835,40 @@ class TestCvpClientCC(TestCvpClientBase):
         pprint("test_api_change_control_execute_without_approval")
         if self.get_version():
             # Create task
-            task_id = self.create_task()
+            task_id, org_config = self._create_task()
+            configlet = None
+            for conf in self.dev_configlets:
+                if conf['netElementCount'] == 1:
+                    configlet = conf
+                    break
+            if configlet is None:
+                configlet = self.dev_configlets[0]
 
             # Create change control but do NOT approve it
             self.create_change_control_for_task(task_id)
             time.sleep(1)
 
-            # Starting without approval should raise CvpRequestError
-            with self.assertRaises(CvpRequestError):
-                self.start_change_control(self.cc_id)
+            try:
+                # Starting without approval should raise CvpRequestError
+                with self.assertRaises(CvpRequestError):
+                    self.start_change_control(self.cc_id)
+            finally:
+                # Predict the task ID that update_configlet will create for the restore
+                tasks = self.api.get_tasks()
+                restore_task_id = str(int(tasks['data'][0]['workOrderId']) + 1) \
+                    if tasks and tasks.get('data') else None
+                # Restore configlet to original config
+                self.api.update_configlet(org_config, configlet['key'],
+                                          configlet['name'])
+                # Delete CC and cancel the original task
+                self.delete_change_control(self.cc_id)
+                self.cancel_task(task_id)
+                time.sleep(2)
+                # Cancel the restoration task created by update_configlet above
+                if restore_task_id:
+                    restore_task = self.api.get_task_by_id(restore_task_id)
+                    if restore_task and restore_task.get('currentTaskName') != 'Cancelled':
+                        self.cancel_task(restore_task_id)
 
 
 if __name__ == '__main__':
