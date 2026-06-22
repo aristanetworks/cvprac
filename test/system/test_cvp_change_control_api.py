@@ -106,9 +106,9 @@ class TestCvpClientCC(TestCvpClientBase):
         """
         pprint('CREATING TASKS...')
         # global task_id
-        (task_id, _) = self._create_task()
+        task_id, orig_config, configlet = self._create_task()
         self.task_id = task_id
-        return task_id
+        return task_id, orig_config, configlet
 
     def create_change_control_for_task(self, task_id):
         """ Create change control for tasks
@@ -182,7 +182,7 @@ class TestCvpClientCC(TestCvpClientBase):
             "test_api_change_control_create_for_tasks")
         if self.get_version():
             # Create Task
-            task_id = self.create_task()
+            task_id, orig_config, configlet = self.create_task()
 
             # Create change control;
             chg_ctrl = self.create_change_control_for_task(
@@ -246,6 +246,12 @@ class TestCvpClientCC(TestCvpClientBase):
             with self.assertRaises(CvpRequestError):
                 self.get_cc_status(self.cc_id)
 
+            # Restore the configlet to what it was before the task was created.
+            # Set class task_id for cleanup during test tearDown.
+            self.task_id = self._get_next_task_id()
+            self.api.update_configlet(orig_config, configlet['key'], configlet['name'])
+            time.sleep(2)
+
     def test_api_change_control_approval_get_one(self):
         """ Verify change_control_approval_get_one
          """
@@ -253,7 +259,7 @@ class TestCvpClientCC(TestCvpClientBase):
             "test_api_change_control_approval_get_one")
         if self.get_version():
             # Create task
-            task_id = self.create_task()
+            task_id, orig_config, configlet = self.create_task()
 
             # Create change control
             self.create_change_control_for_task(
@@ -289,6 +295,12 @@ class TestCvpClientCC(TestCvpClientBase):
             # Cancel Task
             self.cancel_task(task_id)
 
+            # Restore the configlet to what it was before the task was created.
+            # Set class task_id for cleanup during test tearDown.
+            self.task_id = self._get_next_task_id()
+            self.api.update_configlet(orig_config, configlet['key'], configlet['name'])
+            time.sleep(2)
+
     def test_api_change_control_approval_get_one_without_approve(self):
         """ Verify change_control_approval_get_one_without_approve
          """
@@ -296,7 +308,7 @@ class TestCvpClientCC(TestCvpClientBase):
             "test_api_change_control_approval_get_one_without_approve")
         if self.get_version():
             # Create task
-            task_id = self.create_task()
+            task_id, orig_config, configlet = self.create_task()
 
             # Create CC
             self.create_change_control_for_task(
@@ -313,6 +325,12 @@ class TestCvpClientCC(TestCvpClientBase):
 
             # Cancel Task
             self.cancel_task(task_id)
+
+            # Restore the configlet to what it was before the task was created.
+            # Set class task_id for cleanup during test tearDown.
+            self.task_id = self._get_next_task_id()
+            self.api.update_configlet(orig_config, configlet['key'], configlet['name'])
+            time.sleep(2)
 
     def test_api_change_control_create_for_empty_tasks_list(self):
         """ Verify change_control_create_for_tasks for empty task list
@@ -442,7 +460,7 @@ class TestCvpClientCC(TestCvpClientBase):
         pprint("test_api_change_control_get_one")
         if self.get_version():
             # Create task
-            task_id = self.create_task()
+            task_id, orig_config, configlet = self.create_task()
 
             # Create CC
             self.create_change_control_for_task(
@@ -472,6 +490,12 @@ class TestCvpClientCC(TestCvpClientBase):
 
             # Cancel Task
             self.cancel_task(task_id)
+
+            # Restore the configlet to what it was before the task was created.
+            # Set class task_id for cleanup during test tearDown.
+            self.task_id = self._get_next_task_id()
+            self.api.update_configlet(orig_config, configlet['key'], configlet['name'])
+            time.sleep(2)
 
     def test_api_change_control_get_one_without_ccid(self):
         """ Verify change_control_get_one_without_ccid
@@ -519,7 +543,7 @@ class TestCvpClientCC(TestCvpClientBase):
         if self.get_version():
             pprint("CHANGE CONTROL GET ALL...")
             # Create task
-            task_id = self.create_task()
+            task_id, orig_config, configlet = self.create_task()
 
             # Create CC
             self.create_change_control_for_task(
@@ -536,6 +560,12 @@ class TestCvpClientCC(TestCvpClientBase):
 
             # Cancel Task
             self.cancel_task(task_id)
+
+            # Restore the configlet to what it was before the task was created.
+            # Set class task_id for cleanup during test tearDown.
+            self.task_id = self._get_next_task_id()
+            self.api.update_configlet(orig_config, configlet['key'], configlet['name'])
+            time.sleep(2)
 
     def test_api_change_control_get_all_without_create_chg_ctrl(self):
         """ Verify change_control_get_all_without_create_chg_ctrl
@@ -557,7 +587,7 @@ class TestCvpClientCC(TestCvpClientBase):
         ids = []
         if self.get_version():
             # Create task
-            task_id = self.create_task()
+            task_id, orig_config, configlet = self.create_task()
 
             # Create CC
             self.create_change_control_for_task(
@@ -585,17 +615,22 @@ class TestCvpClientCC(TestCvpClientBase):
             # Cancel Task
             self.cancel_task(task_id)
 
+            # Restore the configlet to what it was before the task was created.
+            # Set class task_id for cleanup during test tearDown.
+            self.task_id = self._get_next_task_id()
+            self.api.update_configlet(orig_config, configlet['key'], configlet['name'])
+            time.sleep(2)
+
     def test_api_change_control_approval_get_all_without_approve(self):
         """ Verify change_control_approval_get_all_without_approve
          """
         pprint("test_api_change_control_approval_get_all_without_approve")
         if self.get_version():
             # Create task
-            task_id = self.create_task()
+            task_id, orig_config, configlet = self.create_task()
 
             # Create CC
-            self.create_change_control_for_task(
-                task_id)
+            self.create_change_control_for_task(task_id)
 
             ids = []
             pprint("CHANGE CONTROL APPROVAL GET ALL WITHOUT APPROVE...")
@@ -609,6 +644,12 @@ class TestCvpClientCC(TestCvpClientBase):
             self.delete_change_control(self.cc_id)
             # Cancel Task
             self.cancel_task(task_id)
+
+            # Restore the configlet to what it was before the task was created.
+            # Set class task_id for cleanup during test tearDown.
+            self.task_id = self._get_next_task_id()
+            self.api.update_configlet(orig_config, configlet['key'], configlet['name'])
+            time.sleep(2)
 
     def test_api_change_control_create_with_custom_stages(self):
         """ Verify test_api_change_control_create_with_custom_stages
@@ -817,23 +858,14 @@ class TestCvpClientCC(TestCvpClientBase):
                 pprint(f'Caught expected error: {context.exception}')
                 self.assertIn('configuration errors', str(context.exception))
             finally:
-                # Predict the task ID that update_configlet will create for the restore
-                tasks = self.api.get_tasks()
-                restore_task_id = str(int(tasks['data'][0]['workOrderId']) + 1) \
-                    if tasks and tasks.get('data') else None
-                # Restore configlet to original config
-                self.api.update_configlet(org_config, configlet['key'],
-                                          configlet['name'])
-                configlet['config'] = org_config
                 # Delete CC and cancel the original invalid task
                 self.delete_change_control(self.cc_id)
                 self.cancel_task(task_id)
+                # Restore configlet to original config
+                # Set class task_id for cleanup during test tearDown.
+                self.task_id = self._get_next_task_id()
+                self.api.update_configlet(org_config, configlet['key'], configlet['name'])
                 time.sleep(2)
-                # Cancel the restoration task created by update_configlet above
-                if restore_task_id:
-                    restore_task = self.api.get_task_by_id(restore_task_id)
-                    if restore_task and restore_task.get('currentTaskName') != 'Cancelled':
-                        self.cancel_task(restore_task_id)
 
     def test_api_change_control_execute_without_approval(self):
         """ Verify that starting a change control without approving it first
@@ -843,14 +875,7 @@ class TestCvpClientCC(TestCvpClientBase):
         pprint("test_api_change_control_execute_without_approval")
         if self.get_version():
             # Create task
-            task_id, org_config = self._create_task()
-            configlet = None
-            for conf in self.dev_configlets:
-                if conf['netElementCount'] == 1:
-                    configlet = conf
-                    break
-            if configlet is None:
-                configlet = self.dev_configlets[0]
+            task_id, orig_config, configlet = self.create_task()
 
             # Create change control but do NOT approve it
             self.create_change_control_for_task(task_id)
@@ -858,26 +883,21 @@ class TestCvpClientCC(TestCvpClientBase):
 
             try:
                 # Starting without approval should raise CvpRequestError
-                with self.assertRaises(CvpRequestError):
+                with self.assertRaises(CvpRequestError) as context:
                     self.start_change_control(self.cc_id)
+                pprint(f'Caught expected error: {context.exception}')
             finally:
-                # Predict the task ID that update_configlet will create for the restore
-                tasks = self.api.get_tasks()
-                restore_task_id = str(int(tasks['data'][0]['workOrderId']) + 1) \
-                    if tasks and tasks.get('data') else None
-                # Restore configlet to original config
-                self.api.update_configlet(org_config, configlet['key'],
-                                          configlet['name'])
-                configlet['config'] = org_config
-                # Delete CC and cancel the original task
+                # Delete CC
                 self.delete_change_control(self.cc_id)
+
+                # Cancel Task
                 self.cancel_task(task_id)
+
+                # Restore the configlet to what it was before the task was created.
+                # Set class task_id for cleanup during test tearDown.
+                self.task_id = self._get_next_task_id()
+                self.api.update_configlet(orig_config, configlet['key'], configlet['name'])
                 time.sleep(2)
-                # Cancel the restoration task created by update_configlet above
-                if restore_task_id:
-                    restore_task = self.api.get_task_by_id(restore_task_id)
-                    if restore_task and restore_task.get('currentTaskName') != 'Cancelled':
-                        self.cancel_task(restore_task_id)
 
 
 if __name__ == '__main__':
