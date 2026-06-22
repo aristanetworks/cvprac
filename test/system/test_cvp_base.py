@@ -123,12 +123,6 @@ class TestCvpClientBase(DutSystemTest):
             # in following list.
             ignore_current_task_name = ["Cancelled"]
             task = self.api.get_task_by_id(self.task_id)
-            print("")
-            print(self.task_id)
-            print(task)
-            print(task["taskStatus"])
-            print(task["workOrderState"])
-            print(task["currentTaskName"])
             if task:
                 if task["currentTaskName"] not in ignore_current_task_name:
                     if task["taskStatus"] not in ignore_task_status:
