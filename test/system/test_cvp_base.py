@@ -13,6 +13,7 @@ import urllib3
 sys.path.append(os.path.join(os.path.dirname(__file__), '../lib'))
 from systestlib import DutSystemTest
 from cvprac.cvp_client import CvpClient
+from cvprac.cvp_client_errors import CvpApiError
 
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -101,7 +102,6 @@ class TestCvpClientBase(DutSystemTest):
         '''
         self.task_id = None
         self.cc_id = str(uuid.uuid4())
-        # self.cc_name = 'test_api_%d %s' % time.time()
         self.cc_name = f'test_api_{time.time()}'
 
     def tearDown(self):
@@ -113,11 +113,25 @@ class TestCvpClientBase(DutSystemTest):
         if chg_ctrl_get_one:
             # Delete CC
             self.delete_change_control(self.cc_id)
-            # Cancel task
-            if self.task_id:
-                task = self.api.get_task_by_id(self.task_id)
-                if task and task['currentTaskName'] != "Cancelled":
-                    self.cancel_task(self.task_id)
+            self.cc_id = None
+        # Cancel task
+        if self.task_id:
+            # Do not attempt to cancel tasks with taskStatus
+            # in following list.
+            ignore_task_status = ["COMPLETED"]
+            # Do not attempt to cancel tasks with currentTaskName
+            # in following list.
+            ignore_current_task_name = ["Cancelled"]
+            task = self.api.get_task_by_id(self.task_id)
+            if task:
+                if task["currentTaskName"] not in ignore_current_task_name:
+                    if task["taskStatus"] not in ignore_task_status:
+                        try:
+                            self.cancel_task(self.task_id)
+                        except CvpApiError as err:
+                            print(f"Error while trying to cancel task {self.task_id} - {err}")
+                            print(f"Task info - {task}")
+            self.task_id = None
 
     def _get_next_task_id(self):
         ''' Return the next task id.
@@ -146,10 +160,10 @@ class TestCvpClientBase(DutSystemTest):
         configlet = None
         for conf in self.dev_configlets:
             if conf['netElementCount'] == 1:
-                configlet = conf
+                configlet = conf.copy()
                 break
         if configlet is None:
-            configlet = self.dev_configlets[0]
+            configlet = self.dev_configlets[0].copy()
 
         config = configlet['config']
         org_config = config
@@ -184,7 +198,50 @@ class TestCvpClientBase(DutSystemTest):
         err_msg = f'Timeout waiting for task id {task_id} to be created'
         self.assertGreater(cnt, 0, msg=err_msg)
         self.task_id = task_id
-        return task_id, org_config
+        return task_id, org_config, configlet
+
+    def _create_task_with_invalid_config(self):
+        ''' Create a task by adding an invalid EOS command to a configlet.
+            The invalid command will cause a DEVICEERROR in the config diff
+            compliance check, which is used to test the task error validation
+            in change_control_approve.
+
+            Returns:
+                (task_id, org_config, configlet)
+                task_id (str): Task ID
+                org_config (str): Original configlet contents for cleanup
+                configlet (dict): The configlet dict for cleanup
+        '''
+        task_id = self._get_next_task_id()
+        configlet = None
+        for conf in self.dev_configlets:
+            if conf['netElementCount'] == 1:
+                configlet = conf.copy()
+                break
+        if configlet is None:
+            configlet = self.dev_configlets[0].copy()
+
+        org_config = configlet['config']
+        config = org_config + '\ntypocommand test\n'
+        configlet['config'] = config
+
+        self.api.update_configlet(config, configlet['key'], configlet['name'])
+
+        cnt = 30
+        if self.clnt.apiversion is None:
+            self.api.get_cvp_info()
+        if self.clnt.apiversion >= 2.0:
+            cnt += 30
+        while cnt > 0:
+            time.sleep(1)
+            result = self.api.get_task_by_id(task_id)
+            if result is not None:
+                break
+            cnt -= 1
+        err_msg = f'Timeout waiting for task id {task_id} to be created'
+        self.assertGreater(cnt, 0, msg=err_msg)
+        self.task_id = task_id
+        return task_id, org_config, configlet
 
     def delete_change_control(self, cc_id):
         """ Delete change control
