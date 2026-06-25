@@ -288,7 +288,7 @@ requiring a manual refresh.
 ## Testing
 
 The cvprac module provides both unit tests and system tests. 
-To run the system tests, read the [detailed system test documentation](test/system/SYSTEM_TEST_CVP_SETUP.md) for more informatio on how to set up the environment.
+To run the system tests, read the [detailed system test documentation](test/system/SYSTEM_TEST_CVP_SETUP.md) for more information on how to set up the environment.
 
 To run the system tests:
 
