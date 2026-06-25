@@ -471,6 +471,22 @@ class CvpApi():
         return self.clnt.post('/task/cancelTask.do', data=data,
                               timeout=self.request_timeout)
 
+    def get_config_diff_for_task(self, task_id):
+        ''' Get the config diff and validation errors for a specific task.
+            Uses the compliance check API to compare designed vs running config.
+
+            Args:
+                task_id (str): The task ID to check.
+
+            Returns:
+                response (list): A list of dicts containing sources, diff, and
+                    error entries. Error entries have error_code, error_msg,
+                    line_num, configlet_name, and config_line_num fields.
+        '''
+        diff_url = '/api/v3/services/compliancecheck.Compliance/GetConfigDiffForTask'
+        return self.clnt.post(diff_url, data={"task_id": str(task_id)},
+                              timeout=self.request_timeout)
+
     def get_configlets(self, start=0, end=0):
         ''' Returns a list of all defined configlets.
 
@@ -3058,6 +3074,24 @@ class CvpApi():
             return self.clnt.get(cc_url, timeout=self.request_timeout)
         return None
 
+    def change_control_get_task_errors(self, cc_id):
+        ''' Get task configuration errors for a change control.
+            Supported versions: CVP 2021.2.0 or newer and CVaaS.
+
+            Args:
+               cc_id (str): The ID of the change control.
+
+            Returns:
+                errors (list): A list of (task_id, error_dict) tuples for any tasks
+                    with DEVICEERROR entries. Empty list if no errors found.
+                    Returns None if the change control does not exist or the API
+                    is unsupported.
+        '''
+        cc_status = self.change_control_get_one(cc_id)
+        if cc_status is None:
+            return None
+        return self._parse_task_errors_from_cc_data(cc_status)
+
     def change_control_approval_get_one(self, cc_id, cc_time=None):
         ''' Get the state of a specific Change Control's approve config using Resource APIs.
             Supported versions: CVP 2021.2.0 or newer and CVaaS.
@@ -3111,6 +3145,10 @@ class CvpApi():
         ''' Approve/Unapprove a change control using Resource APIs.
             Supported versions: CVP 2021.2.0 or newer and CVaaS.
 
+            When approving (approve=True), validates that no tasks in the
+            change control have configuration errors. Raises CvpApiError
+            if any task has DEVICEERROR entries from the compliance check.
+
             Args:
               cc_id (str): The ID of the change control.
               notes (str): An optional approval note.
@@ -3129,6 +3167,19 @@ class CvpApi():
         else:
             self.log.error('The version timestamp was not found in the CC status.')
             return None
+
+        if approve:
+            task_errors = self._parse_task_errors_from_cc_data(cc_status)
+            if task_errors:
+                error_details = "; ".join(
+                    f"Task {tid}: {err['error_msg']}"
+                    for tid, err in task_errors
+                )
+                raise CvpApiError(
+                    f"Cannot approve change control {cc_id}. "
+                    f"Tasks have configuration errors: {error_details}"
+                )
+
         payload = {
             "key": {
                 "id": cc_id
@@ -3140,6 +3191,46 @@ class CvpApi():
             "version": version
         }
         return self.clnt.post(cc_url, data=payload, timeout=self.request_timeout)
+
+    def _parse_task_errors_from_cc_data(self, cc_data):
+        ''' Extract task IDs from a change control data and check each for config errors.
+            Make an API call on each task and parse the config diff for errors.
+
+            Args:
+                cc_data (dict): The change control dict from change_control_get_one.
+
+            Returns:
+                errors (list): A list of (task_id, error_dict) tuples for any tasks
+                    with DEVICEERROR entries. Empty list if no errors found.
+                    error_dict example: {
+                            "error_code": "DEVICEERROR",
+                            "error_msg": "> typocommand test % Invalid input (at token 0: 'typocommand')",
+                            "line_num": 50,
+                            "configlet_name": "device-name",
+                            "config_line_num": 54
+                        }
+        '''
+        errors = []
+        stages = (cc_data.get('value', {}).get('change', {})
+                  .get('stages', {}).get('values', {}))
+        for stage in stages.values():
+            action = stage.get('action', {})
+            if action.get('name') == 'task':
+                task_id = (action.get('args', {}).get('values', {})
+                           .get('TaskID'))
+                if task_id:
+                    try:
+                        resp = self.get_config_diff_for_task(task_id)
+                    except Exception as error:
+                        self.log.error(
+                            f"Failed to get config diff for task {task_id}: {error}")
+                        continue
+                    if isinstance(resp, list):
+                        for entry in resp:
+                            err = entry.get('error') if isinstance(entry, dict) else None
+                            if err and err.get('error_code') == 'DEVICEERROR':
+                                errors.append((task_id, err))
+        return errors
 
     def change_control_delete(self, cc_id):
         ''' Delete a pending Change Control using Resource APIs.

@@ -643,7 +643,7 @@ class TestCvpClient(TestCvpClientBase):
         ''' Verify get_task_by_id, get_task_by_status, add_note_to_task,
              get_logs_by_id, and cancel_task
         '''
-        (task_id, org_config) = self._create_task()
+        task_id, org_config, configlet = self._create_task()
 
         # Test get_task_by_id
         result = self.api.get_task_by_id(task_id)
@@ -700,13 +700,6 @@ class TestCvpClient(TestCvpClientBase):
 
         # Restore the configlet to what it was before the task was created.
         task_id = self._get_next_task_id()
-        configlet = None
-        for conf in self.dev_configlets:
-            if conf['netElementCount'] == 1:
-                configlet = conf
-                break
-        if configlet is None:
-            configlet = self.dev_configlets[0]
         self.api.update_configlet(org_config, configlet['key'],
                                   configlet['name'])
         time.sleep(2)
@@ -1311,7 +1304,13 @@ class TestCvpClient(TestCvpClientBase):
         ''' Verify execute_task
         '''
         # Create task and execute it
-        (task_id, _) = self._create_task()
+        task_id, org_config, configlet = self._create_task()
+        self._execute_long_running_task(task_id)
+
+        # Restore the configlet to what it was before the task was created.
+        task_id = self._get_next_task_id()
+        self.api.update_configlet(org_config, configlet['key'], configlet['name'])
+        time.sleep(2)
         self._execute_long_running_task(task_id)
 
         # Check compliance
