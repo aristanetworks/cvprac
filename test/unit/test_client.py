@@ -37,9 +37,11 @@ import json
 import unittest
 from itertools import cycle
 from unittest.mock import Mock
+from requests.cookies import cookiejar_from_dict
 from requests.exceptions import HTTPError, ReadTimeout, JSONDecodeError
-from cvprac.cvp_client import CvpClient
-from cvprac.cvp_client_errors import CvpApiError, CvpSessionLogOutError
+from cvprac.cvp_client import CvpClient, url_with_port
+from cvprac.cvp_client_errors import (CvpApiError, CvpRequestError,
+                                      CvpSessionLogOutError)
 
 
 class TestClient(unittest.TestCase):
@@ -199,6 +201,75 @@ class TestClient(unittest.TestCase):
         self.clnt._create_session(all_nodes=True)
         self.assertEqual(self.clnt.url_prefix, url)
         self.assertEqual(self.clnt.error_msg, error)
+
+    def test_url_with_port_ipv4_and_ipv6(self):
+        """Test replacing the port in a URL."""
+        self.assertEqual(url_with_port('https://1.1.1.1:443', 9443),
+                         'https://1.1.1.1:9443')
+        self.assertEqual(url_with_port('https://[2001:db8::1]:443', 9443),
+                         'https://[2001:db8::1]:9443')
+
+    def test_validate_certificate(self):
+        """Test certificate validation request uses mTLS endpoint."""
+        self.clnt.session = Mock()
+        self.clnt.url_prefix_short = 'https://1.1.1.1:443'
+        self.clnt.cert = False
+        self.clnt.cert_login_port = 9443
+        self.clnt.client_cert = ('client.crt', 'client.key')
+        self.clnt.connect_timeout = 5
+        response = Mock()
+        response.ok = True
+        response.text = '{}'
+        response.headers = {'Location': '/?cert_valid=true'}
+        response.cookies = cookiejar_from_dict({'cert_state_token': 'token'})
+        self.clnt.session.get.return_value = response
+
+        self.clnt._validate_certificate()
+
+        self.clnt.session.get.assert_called_once_with(
+            'https://1.1.1.1:9443/aaa/v1/validateCertificate',
+            headers=self.clnt.headers, timeout=5, verify=False,
+            cert=('client.crt', 'client.key'))
+        self.assertEqual(self.clnt.cookies.get('cert_state_token'), 'token')
+
+    def test_login_on_prem_with_certificate(self):
+        """Test certificate based login validates cert before auth."""
+        self.clnt.session = Mock()
+        self.clnt.url_prefix = 'https://1.1.1.1:443/web'
+        self.clnt.authdata = {'userId': 'certuser', 'password': 'password'}
+        self.clnt.connect_timeout = 10
+        self.clnt.cert = False
+        self.clnt.cert_login = True
+        self.clnt.cert_login_port = 9443
+        self.clnt.client_cert = ('client.crt', 'client.key')
+        self.clnt.cookies = cookiejar_from_dict({'cert_state_token': 'token'})
+        self.clnt._validate_certificate = Mock()
+        response = Mock()
+        response.ok = True
+        response.text = '{"sessionId": "SESSION"}'
+        response.json.return_value = {'sessionId': 'SESSION'}
+        response.cookies = cookiejar_from_dict({'access_token': 'ACCESS'})
+        self.clnt.session.post.return_value = response
+
+        self.clnt._login_on_prem()
+
+        self.clnt._validate_certificate.assert_called_once_with()
+        self.clnt.session.post.assert_called_once_with(
+            'https://1.1.1.1:443/web/login/authenticate.do',
+            data=json.dumps({'userId': 'certuser', 'password': 'password'}),
+            headers=self.clnt.headers, cookies=self.clnt.cookies, timeout=10,
+            verify=False, cert=('client.crt', 'client.key'))
+        self.assertEqual(self.clnt.headers['APP_SESSION_ID'], 'SESSION')
+        self.assertEqual(self.clnt.cookies.get('access_token'), 'ACCESS')
+
+    def test_login_on_prem_with_certificate_requires_client_cert(self):
+        """Test certificate login requires a client cert."""
+        self.clnt.url_prefix = 'https://1.1.1.1:443/web'
+        self.clnt.cert_login = True
+        self.clnt.client_cert = None
+
+        with self.assertRaises(CvpRequestError):
+            self.clnt._login_on_prem()
 
     def test_make_request_good(self):
         """ Test request does not raise exception and returns json.
