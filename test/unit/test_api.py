@@ -35,7 +35,7 @@
 """
 import unittest
 from itertools import cycle
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from cvprac.cvp_client import CvpClient
 from cvprac.cvp_api import CvpApi, sanitize_warnings
 from cvprac.cvp_client_errors import CvpApiError
@@ -129,6 +129,16 @@ class TestAPI(unittest.TestCase):
         }
         # The result should not change
         self.assertEqual(sanitize_warnings(test_input), test_input)
+
+    def test_get_cert_login_info(self):
+        """Test cert login info request."""
+        self.clnt.get = Mock(return_value={'username': 'certuser'})
+
+        result = self.api.get_cert_login_info()
+
+        self.clnt.get.assert_called_once_with('/aaa/v1/certLoginInfo',
+                                              timeout=30)
+        self.assertEqual(result, {'username': 'certuser'})
 
     @patch.object(CvpApi, 'change_control_get_one')
     @patch.object(CvpClient, 'post')

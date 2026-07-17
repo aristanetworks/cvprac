@@ -100,6 +100,7 @@ import logging
 from logging.handlers import SysLogHandler
 from itertools import cycle
 from packaging.version import parse
+from urllib.parse import urlparse, urlunparse
 
 import requests
 from requests.exceptions import ( # pylint: disable=redefined-builtin
@@ -114,6 +115,22 @@ from requests.exceptions import ( # pylint: disable=redefined-builtin
 from cvprac.cvp_api import CvpApi
 from cvprac.cvp_client_errors import CvpApiError, CvpLoginError, \
     CvpRequestError, CvpSessionLogOutError
+
+
+def url_with_port(url, port):
+    '''Return url with netloc port replaced by port.
+
+    For example, url_with_port('https://cvp.example.com:443/web', 9443)
+    returns 'https://cvp.example.com:9443/web'.
+    '''
+    parsed = urlparse(url)
+    host = parsed.hostname
+    if ':' in host and not host.startswith('['):
+        host = f'[{host}]'
+    netloc = host
+    if port:
+        netloc = f'{host}:{port}'
+    return urlunparse(parsed._replace(netloc=netloc))
 
 
 class CvpClient():
@@ -142,6 +159,9 @@ class CvpClient():
         self.apiversion = None
         self.authdata = None
         self.cert = False
+        self.cert_login = False
+        self.cert_login_port = None
+        self.client_cert = None
         self.connect_timeout = None
         self.cookies = None
         self.error_msg = ''
@@ -325,7 +345,8 @@ class CvpClient():
     def connect(self, nodes, username, password, connect_timeout=10,
                 request_timeout=30, protocol='https', port=None, cert=False,
                 is_cvaas=False, tenant=None, api_token=None, cvaas_token=None,
-                proxies=None):
+                proxies=None, cert_login=False, client_cert=None,
+                cert_login_port=9443):
         ''' Login to CVP and get a session ID and cookie.  Currently
             certificates are not verified if the https protocol is specified. A
             warning may be printed out from the requests module for this case.
@@ -366,6 +387,13 @@ class CvpClient():
                      Proxies can also be set via environment variables.
                      Please reference the below link for details of precedence.
                      https://requests.readthedocs.io/en/latest/user/advanced/#proxies
+                cert_login (boolean): Use CVP certificate based login flow.
+                    Supported on CVP 2026.3.0 and later. When True,
+                    client_cert must also be provided.
+                client_cert (str or tuple): Path to client certificate, or
+                    (cert, key) tuple as accepted by requests.
+                cert_login_port (int): CVP mTLS endpoint port. Default is
+                    9443.
 
             Raises:
                 CvpLoginError: A CvpLoginError is raised if a connection
@@ -388,6 +416,9 @@ class CvpClient():
                 nodes[idx] = os.environ.get('CURRENT_NODE_IP')
 
         self.cert = cert
+        self.cert_login = cert_login
+        self.cert_login_port = cert_login_port
+        self.client_cert = client_cert
         self.nodes = nodes
         self.node_cnt = len(nodes)
         self.node_pool = cycle(nodes)
@@ -538,6 +569,21 @@ class CvpClient():
             self.log.error(msg)
             raise CvpRequestError(msg)
 
+    def _validate_certificate(self):
+        '''Validate a client certificate for certificate based login.
+        '''
+        url = (url_with_port(self.url_prefix_short, self.cert_login_port) +
+               '/aaa/v1/validateCertificate')
+        response = self.session.get(url, headers=self.headers,
+                                    timeout=self.connect_timeout, verify=self.cert,
+                                    cert=self.client_cert)
+        self._is_good_response(response, f"Validate certificate: {url}")
+
+        if self.cookies is None:
+            self.cookies = response.cookies
+        else:
+            self.cookies.update(response.cookies)
+
     def _login(self):
         ''' Make a POST request to CVP login authentication.
             An error can be raised from the post method call or the
@@ -602,14 +648,24 @@ class CvpClient():
                     CVP node.  Destroy the class and re-instantiate.
         '''
         url = self.url_prefix + '/login/authenticate.do'
+        if self.cert_login:
+            if self.client_cert is None:
+                raise CvpRequestError(
+                    'client_cert is required when cert_login is True')
+            self._validate_certificate()
         response = self.session.post(url,
                                      data=json.dumps(self.authdata),
                                      headers=self.headers,
+                                     cookies=self.cookies,
                                      timeout=self.connect_timeout,
-                                     verify=self.cert)
+                                     verify=self.cert,
+                                     cert=self.client_cert)
         self._is_good_response(response, f"Authenticate: {url}")
 
-        self.cookies = response.cookies
+        if self.cookies is None:
+            self.cookies = response.cookies
+        else:
+            self.cookies.update(response.cookies)
         self.headers['APP_SESSION_ID'] = response.json()['sessionId']
 
     def _set_headers_api_token(self):
