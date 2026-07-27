@@ -134,7 +134,9 @@ class TestAPI(unittest.TestCase):
         """Test cert login info request."""
         self.clnt.get = Mock(return_value={'username': 'certuser'})
 
+        self.clnt.cert_login = True
         result = self.api.get_cert_login_info()
+        self.clnt.cert_login = False
 
         self.clnt.get.assert_called_once_with('/aaa/v1/certLoginInfo',
                                               timeout=30)

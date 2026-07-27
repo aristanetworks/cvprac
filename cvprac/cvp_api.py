@@ -201,8 +201,13 @@ class CvpApi():
                 CvpApiError: A CvpApiError is raised if the request is made
                     without a valid certificate based authentication session.
         '''
-        return self.clnt.get('/aaa/v1/certLoginInfo',
-                             timeout=self.request_timeout)
+        if self.clnt.cert_login:
+            return self.clnt.get('/aaa/v1/certLoginInfo',
+                                 timeout=self.request_timeout)
+        else:
+            self.log.warning(
+                "get_cert_login_info is only available when using certificate authentication"
+            )
 
     # pylint: disable=too-many-arguments
     def add_user(self, username, password, role, status, first_name,
