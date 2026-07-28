@@ -251,6 +251,7 @@ Example using CVP On Prem client cert login:
 
     >>> from cvprac.cvp_client import CvpClient
     >>> clnt = CvpClient()
+    >>> cert, key = "/cert/client.crt", "/cert/client.key" # cert_file_path, private_key_file_path
     >>> clnt.connect(['cvp1', 'cvp2', 'cvp3'], 'cvp_user', 'cvp_word', cert_login=True, client_cert=(cert, key))
     >>> result = clnt.get('/cvpInfo/getCvpInfo.do')
     >>> print result
