@@ -194,21 +194,6 @@ class CvpApi():
             self.clnt.set_version(data['version'])
         return data
 
-    def get_cert_login_info(self):
-        '''Return the username associated with the certificate login cookie.
-
-            Raises:
-                CvpApiError: A CvpApiError is raised if the request is made
-                    without a valid certificate based authentication session.
-        '''
-        if self.clnt.cert_login:
-            return self.clnt.get('/aaa/v1/certLoginInfo',
-                                 timeout=self.request_timeout)
-        else:
-            self.log.warning(
-                "get_cert_login_info is only available when using certificate authentication"
-            )
-
     # pylint: disable=too-many-arguments
     def add_user(self, username, password, role, status, first_name,
                  last_name, email, user_type):

@@ -247,6 +247,17 @@ Same example as above using the API method:
     {u'version': u'2016.1.0'}
     >>>
 
+Example using CVP On Prem client cert login:
+
+    >>> from cvprac.cvp_client import CvpClient
+    >>> clnt = CvpClient()
+    >>> cert, key = "/cert/client.crt", "/cert/client.key" # cert_file_path, private_key_file_path
+    >>> clnt.connect(['cvp1', 'cvp2', 'cvp3'], 'cvp_user', 'cvp_word', cert_login=True, client_cert=(cert, key))
+    >>> result = clnt.get('/cvpInfo/getCvpInfo.do')
+    >>> print result
+    {u'version': u'2016.1.0'}
+    >>>
+
 Same example as above but connecting to CVaaS with a token: Note that
 the username and password parameters are required by the connect
 function but will be ignored when using api\_token:
