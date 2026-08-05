@@ -574,16 +574,21 @@ class CvpClient():
         '''
         headers = getattr(response, 'headers', {}) or {}
         location = headers.get('Location') if hasattr(headers, 'get') else ''
-        if not isinstance(location, str):
-            location = ''
+        if not isinstance(location, str) or not location:
+            return
         query = parse_qs(urlparse(location).query)
         cert_valid = query.get('cert_valid', [None])[0]
         err_msg = query.get('cert_error', [None])[0]
         if err_msg:
             try:
-                err_msg = json.loads(err_msg).get('errorMessage', err_msg)
+                err_data = json.loads(err_msg)
             except ValueError:
                 pass
+            else:
+                if isinstance(err_data, dict) and err_data.get('errorMessage'):
+                    err_msg = err_data['errorMessage']
+            if not isinstance(err_msg, str):
+                err_msg = str(err_msg)
             # Backend returns a generic error message only for browser use case
             # that is not helpful here. If the error message contains the string
             # "close the browser and try again" then remove that part of the
