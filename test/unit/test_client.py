@@ -229,8 +229,53 @@ class TestClient(unittest.TestCase):
         self.clnt.session.get.assert_called_once_with(
             'https://1.1.1.1:9443/aaa/v1/validateCertificate',
             headers=self.clnt.headers, timeout=5, verify=False,
-            cert=('client.crt', 'client.key'))
+            cert=('client.crt', 'client.key'), allow_redirects=False)
         self.assertEqual(self.clnt.cookies.get('cert_state_token'), 'token')
+
+    def test_validate_certificate_location_error(self):
+        """Test validate certificate raises backend redirect errors."""
+        self.clnt.session = Mock()
+        self.clnt.url_prefix_short = 'https://1.1.1.1:443'
+        self.clnt.cert = False
+        self.clnt.cert_login_port = 9443
+        self.clnt.client_cert = ('client.crt', 'client.key')
+        self.clnt.connect_timeout = 5
+        response = Mock()
+        response.ok = True
+        response.text = '{}'
+        response.headers = {
+            'Location': '/cv?cert_error=%7B%22errorCode%22%3A%22212498%22'
+                        '%2C%22errorMessage%22%3A%22Failed+to+verify+'
+                        'client+certificate.+Please+ensure+the+issuing+CA+'
+                        'is+present+in+the+trusted+certificate+store.%22%7D'
+        }
+        self.clnt.session.get.return_value = response
+
+        with self.assertRaisesRegex(CvpApiError,
+                                    'Failed to verify client certificate'):
+            self.clnt._validate_certificate()
+
+    def test_validate_certificate_close_browser_error_trimmed(self):
+        """Test close browser guidance is trimmed from cert errors."""
+        self.clnt.session = Mock()
+        self.clnt.url_prefix_short = 'https://1.1.1.1:443'
+        self.clnt.cert = False
+        self.clnt.cert_login_port = 9443
+        self.clnt.client_cert = ('client.crt', 'client.key')
+        self.clnt.connect_timeout = 5
+        response = Mock()
+        response.ok = True
+        response.text = '{}'
+        response.headers = {
+            'Location': '/cv?cert_error=%7B%22errorCode%22%3A%22212498%22'
+                        '%2C%22errorMessage%22%3A%22x+y+z.+Please+close+'
+                        'the+browser+and+try+again.%22%7D'
+        }
+        self.clnt.session.get.return_value = response
+
+        with self.assertRaisesRegex(CvpApiError,
+                                    'Validate certificate: .*x y z$'):
+            self.clnt._validate_certificate()
 
     def test_login_on_prem_with_certificate(self):
         """Test certificate based login validates cert before auth."""

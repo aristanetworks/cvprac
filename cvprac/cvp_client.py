@@ -100,7 +100,7 @@ import logging
 from logging.handlers import SysLogHandler
 from itertools import cycle
 from packaging.version import parse
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import parse_qs, urlparse, urlunparse
 
 import requests
 from requests.exceptions import ( # pylint: disable=redefined-builtin
@@ -569,6 +569,46 @@ class CvpClient():
             self.log.error(msg)
             raise CvpRequestError(msg)
 
+    def _check_validate_certificate_result(self, response, prefix):
+        '''Check certificate validation details returned in redirect metadata.
+        '''
+        headers = getattr(response, 'headers', {}) or {}
+        location = headers.get('Location') if hasattr(headers, 'get') else ''
+        if not isinstance(location, str) or not location:
+            return
+        query = parse_qs(urlparse(location).query)
+        cert_valid = query.get('cert_valid', [None])[0]
+        err_msg = query.get('cert_error', [None])[0]
+        if err_msg:
+            try:
+                err_data = json.loads(err_msg)
+            except ValueError:
+                pass
+            else:
+                if isinstance(err_data, dict) and err_data.get('errorMessage'):
+                    err_msg = err_data['errorMessage']
+            if not isinstance(err_msg, str):
+                err_msg = str(err_msg)
+            # Backend returns a generic error message only for browser use case
+            # that is not helpful here. If the error message contains the string
+            # "close the browser and try again" then remove that part of the
+            # message to make it more useful.
+            # e.g "x y z. Please close the browser and try again. a b." becomes "x y z"
+            # e.g "x y z, then close the browser and try again." becomes "x y z"
+            close_browser_msg = 'close the browser and try again'
+            err_msg_lower = err_msg.lower()
+            close_browser_idx = err_msg_lower.find(close_browser_msg)
+            if close_browser_idx != -1:
+                end_idx = max(err_msg.rfind('.', 0, close_browser_idx),
+                              err_msg.rfind(',', 0, close_browser_idx))
+                if end_idx != -1:
+                    err_msg = err_msg[:end_idx]
+        err_msg = err_msg.strip() if err_msg else err_msg
+        if err_msg or (cert_valid and cert_valid.lower() != 'true'):
+            msg = f"{prefix}: Request Error: {err_msg or location}"
+            self.log.error(msg)
+            raise CvpApiError(msg)
+
     def _validate_certificate(self):
         '''Validate a client certificate for certificate based login.
         '''
@@ -576,8 +616,11 @@ class CvpClient():
                '/aaa/v1/validateCertificate')
         response = self.session.get(url, headers=self.headers,
                                     timeout=self.connect_timeout, verify=self.cert,
-                                    cert=self.client_cert)
-        self._is_good_response(response, f"Validate certificate: {url}")
+                                    cert=self.client_cert,
+                                    allow_redirects=False)
+        prefix = f"Validate certificate: {url}"
+        self._is_good_response(response, prefix)
+        self._check_validate_certificate_result(response, prefix)
 
         if self.cookies is None:
             self.cookies = response.cookies
