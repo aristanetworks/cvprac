@@ -96,6 +96,7 @@ Example:
 import os
 import re
 import json
+import ssl
 import logging
 from logging.handlers import SysLogHandler
 from itertools import cycle
@@ -609,9 +610,31 @@ class CvpClient():
             self.log.error(msg)
             raise CvpApiError(msg)
 
+    def _validate_client_certificate(self):
+        '''Validate the local client certificate/key before calling CVP.
+        '''
+        cert_file = self.client_cert
+        key_file = None
+        if isinstance(self.client_cert, (tuple)):
+            if len(self.client_cert) != 2:
+                msg = ('Invalid client certificate/key: client_cert must be a '
+                       '(certificate, key) pair')
+                self.log.error(msg)
+                raise CvpRequestError(msg)
+            cert_file, key_file = self.client_cert
+
+        try:
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            context.load_cert_chain(certfile=cert_file, keyfile=key_file)
+        except (OSError, ssl.SSLError, TypeError, ValueError) as error:
+            msg = "Invalid client certificate or key"
+            self.log.error(msg)
+            raise CvpRequestError(msg) from error
+
     def _validate_certificate(self):
         '''Validate a client certificate for certificate based login.
         '''
+        self._validate_client_certificate()
         url = (url_with_port(self.url_prefix_short, self.cert_login_port) +
                '/aaa/v1/validateCertificate')
         response = self.session.get(url, headers=self.headers,
