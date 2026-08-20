@@ -34,9 +34,10 @@
 ''' Unit tests for the CvpClient class
 '''
 import json
+import ssl
 import unittest
 from itertools import cycle
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from requests.cookies import cookiejar_from_dict
 from requests.exceptions import HTTPError, ReadTimeout, JSONDecodeError
 from cvprac.cvp_client import CvpClient, url_with_port
@@ -223,9 +224,11 @@ class TestClient(unittest.TestCase):
         response.headers = {'Location': '/?cert_valid=true'}
         response.cookies = cookiejar_from_dict({'cert_state_token': 'token'})
         self.clnt.session.get.return_value = response
+        self.clnt._validate_client_certificate = Mock()
 
         self.clnt._validate_certificate()
 
+        self.clnt._validate_client_certificate.assert_called_once_with()
         self.clnt.session.get.assert_called_once_with(
             'https://1.1.1.1:9443/aaa/v1/validateCertificate',
             headers=self.clnt.headers, timeout=5, verify=False,
@@ -250,6 +253,7 @@ class TestClient(unittest.TestCase):
                         'is+present+in+the+trusted+certificate+store.%22%7D'
         }
         self.clnt.session.get.return_value = response
+        self.clnt._validate_client_certificate = Mock()
 
         with self.assertRaisesRegex(CvpApiError,
                                     'Failed to verify client certificate'):
@@ -272,10 +276,73 @@ class TestClient(unittest.TestCase):
                         'the+browser+and+try+again.%22%7D'
         }
         self.clnt.session.get.return_value = response
+        self.clnt._validate_client_certificate = Mock()
 
         with self.assertRaisesRegex(CvpApiError,
                                     'Validate certificate: .*x y z$'):
             self.clnt._validate_certificate()
+
+    def test_validate_client_certificate(self):
+        """Test local client certificate validation loads cert chain."""
+        self.clnt.client_cert = ('client.crt', 'client.key')
+        context = Mock()
+
+        with patch('cvprac.cvp_client.ssl.SSLContext',
+                   return_value=context) as mock_context:
+            self.clnt._validate_client_certificate()
+
+        mock_context.assert_called_once_with(ssl.PROTOCOL_TLS_CLIENT)
+        context.load_cert_chain.assert_called_once_with(
+            certfile='client.crt', keyfile='client.key')
+
+    def test_validate_client_certificate_single_file(self):
+        """Test local client certificate validation supports one file."""
+        self.clnt.client_cert = 'client.pem'
+        context = Mock()
+
+        with patch('cvprac.cvp_client.ssl.SSLContext',
+                   return_value=context):
+            self.clnt._validate_client_certificate()
+
+        context.load_cert_chain.assert_called_once_with(
+            certfile='client.pem', keyfile=None)
+
+    def test_validate_client_certificate_invalid_file(self):
+        """Test bad local client certificate raises a useful error."""
+        self.clnt.client_cert = ('bad.crt', 'bad.key')
+        context = Mock()
+        context.load_cert_chain.side_effect = ssl.SSLError(
+            'PEM lib')
+
+        with patch('cvprac.cvp_client.ssl.SSLContext',
+                   return_value=context):
+            with self.assertRaisesRegex(CvpRequestError,
+                    'Invalid client certificate or key'):
+                self.clnt._validate_client_certificate()
+
+    def test_validate_client_certificate_bad_tuple(self):
+        """Test malformed client_cert values fail before requests."""
+        self.clnt.client_cert = ('client.crt', 'client.key', 'extra')
+
+        with self.assertRaisesRegex(CvpRequestError,
+                                    'Invalid client certificate/key'):
+            self.clnt._validate_client_certificate()
+
+    def test_validate_certificate_bad_client_cert_skips_request(self):
+        """Test bad local client cert prevents validateCertificate call."""
+        self.clnt.session = Mock()
+        self.clnt.url_prefix_short = 'https://1.1.1.1:443'
+        self.clnt.cert = False
+        self.clnt.cert_login_port = 9443
+        self.clnt.client_cert = ('bad.crt', 'bad.key')
+        self.clnt._validate_client_certificate = Mock(
+            side_effect=CvpRequestError(
+                'Invalid client certificate/key: PEM lib'))
+
+        with self.assertRaisesRegex(CvpRequestError,
+                                    'Invalid client certificate/key'):
+            self.clnt._validate_certificate()
+        self.clnt.session.get.assert_not_called()
 
     def test_login_on_prem_with_certificate(self):
         """Test certificate based login validates cert before auth."""
