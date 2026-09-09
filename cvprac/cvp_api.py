@@ -2316,11 +2316,12 @@ class CvpApi():
             ''' Add an image to a CVP cluster studios image repository.
 
                 Args:
-                    name (str): Name for uploaded image in CVP studios.
-                        Must have supported extension type such as swi or swix.
+                    name (str): The name that will be used to identify the image
+                        or extension in CloudVision. Must have supported extension
+                        type such as swi or swix.
                     filepath (str): Local path to the image to upload.
-                    rebootRequired (bool): Marker for whether application of
-                        image will require a reboot.
+                    rebootRequired (bool): Specifies if the image or extension requires
+                        a device reboot. Reboots are always required for .swi files.
 
                 Returns:
                     data (dict): Dictionary of image add data.
