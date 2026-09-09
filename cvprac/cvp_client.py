@@ -986,7 +986,8 @@ class CvpClient():
                                                      headers=fhs,
                                                      timeout=timeout,
                                                      verify=self.cert,
-                                                     files=files)
+                                                     files=files,
+                                                     data=data)
                 elif req_type == 'DELETE':
                     response = self.session.delete(full_url,
                                                    cookies=self.cookies,
