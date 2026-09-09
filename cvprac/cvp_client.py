@@ -981,6 +981,11 @@ class CvpClient():
                         if 'Authorization' in self.headers:
                             fhs['Authorization'] = self.headers[
                                 'Authorization']
+                        # Data must be None or a dict so the key-value pairs can be extracted
+                        # as individual multipart/form-data fields right alongside the file
+                        # boundary parts. Hence when both data= and file= are present we do not
+                        # want to dump data as a JSON encoded string. Requests cannot merge a
+                        # raw string body with files and will raise a ValueError.
                         response = self.session.post(full_url,
                                                      cookies=self.cookies,
                                                      headers=fhs,
