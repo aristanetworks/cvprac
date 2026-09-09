@@ -316,8 +316,7 @@ class TestClient(unittest.TestCase):
 
         with patch('cvprac.cvp_client.ssl.SSLContext',
                    return_value=context):
-            with self.assertRaisesRegex(CvpRequestError,
-                    'Invalid client certificate or key'):
+            with self.assertRaisesRegex(CvpRequestError, 'Invalid client certificate or key'):
                 self.clnt._validate_client_certificate()
 
     def test_validate_client_certificate_bad_tuple(self):

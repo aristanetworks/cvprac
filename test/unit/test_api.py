@@ -35,7 +35,7 @@
 """
 import unittest
 from itertools import cycle
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 from cvprac.cvp_client import CvpClient
 from cvprac.cvp_api import CvpApi, sanitize_warnings
 from cvprac.cvp_client_errors import CvpApiError
