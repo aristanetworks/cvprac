@@ -2312,6 +2312,34 @@ class CvpApi():
                                       files={'file': image_data})
         return response
 
+    def image_upload(self, name, filepath, rebootRequired=False):
+            ''' Add an image to a CVP cluster studios image repository.
+
+                Args:
+                    name (str): The name that will be used to identify the image
+                        or extension in CloudVision. Must have supported extension
+                        type such as swi or swix.
+                    filepath (str): Local path to the image to upload.
+                    rebootRequired (bool): Specifies if the image or extension requires
+                        a device reboot. Reboots are always required for .swi files.
+
+                Returns:
+                    data (dict): Dictionary of image add data.
+            '''
+            # Get the absolute file path to be uploaded
+            image_path = os.path.abspath(filepath)
+            data = {
+                'name': name,
+                'rebootRequired': rebootRequired,
+            }
+            with open(image_path, 'rb') as image_data:
+                response = self.clnt.post(
+                    '/cvpservice/softwaremanagement/v1/uploads',
+                    data=data,
+                    files={'file': image_data},
+                )
+            return response
+
     def cancel_image(self, image_name):
         ''' Discard/cancel the uploaded image/image bundle before save.
 

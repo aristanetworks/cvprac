@@ -35,10 +35,16 @@
 
 ''' System test for the CvpApi class
 
+    Refer to test/system/SYSTEM_TEST_CVP_SETUP.md for more details.
+
+    The file test/fixtures/cvp_nodes.yaml should be modified to 
+    point to the CVP instance under test, with the associated username & password
+    and device name.
+
     Requirements for CVP Node:
     1) Test has dedicated access to the CVP node.
-    2) Contains at least one device in a container.
-    3) Container or device has at least one configlet applied.
+    2) Contains at least one device in the "Tenant" container.
+    3) Device has at least one configlet applied directly, without Reconcile configlets.
     4) Device has a user account and password that matches the CVP username
        and password.  If device does not have correct username and/or password
        then the tests that execute tasks will fail with the following error:
@@ -48,6 +54,7 @@
        and in the test log is the error:
 
          Failure response received from the netElement : ' Unauthorized User '
+    5) Device needs to have at least 1 interface called Ethernet1
 '''
 import os
 import shutil

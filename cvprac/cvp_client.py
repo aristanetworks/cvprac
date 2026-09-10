@@ -96,10 +96,12 @@ Example:
 import os
 import re
 import json
+import ssl
 import logging
 from logging.handlers import SysLogHandler
 from itertools import cycle
 from packaging.version import parse
+from urllib.parse import parse_qs, urlparse, urlunparse
 
 import requests
 from requests.exceptions import ( # pylint: disable=redefined-builtin
@@ -114,6 +116,22 @@ from requests.exceptions import ( # pylint: disable=redefined-builtin
 from cvprac.cvp_api import CvpApi
 from cvprac.cvp_client_errors import CvpApiError, CvpLoginError, \
     CvpRequestError, CvpSessionLogOutError
+
+
+def url_with_port(url, port):
+    '''Return url with netloc port replaced by port.
+
+    For example, url_with_port('https://cvp.example.com:443/web', 9443)
+    returns 'https://cvp.example.com:9443/web'.
+    '''
+    parsed = urlparse(url)
+    host = parsed.hostname
+    if ':' in host and not host.startswith('['):
+        host = f'[{host}]'
+    netloc = host
+    if port:
+        netloc = f'{host}:{port}'
+    return urlunparse(parsed._replace(netloc=netloc))
 
 
 class CvpClient():
@@ -142,6 +160,9 @@ class CvpClient():
         self.apiversion = None
         self.authdata = None
         self.cert = False
+        self.cert_login = False
+        self.cert_login_port = None
+        self.client_cert = None
         self.connect_timeout = None
         self.cookies = None
         self.error_msg = ''
@@ -325,7 +346,8 @@ class CvpClient():
     def connect(self, nodes, username, password, connect_timeout=10,
                 request_timeout=30, protocol='https', port=None, cert=False,
                 is_cvaas=False, tenant=None, api_token=None, cvaas_token=None,
-                proxies=None):
+                proxies=None, cert_login=False, client_cert=None,
+                cert_login_port=9443):
         ''' Login to CVP and get a session ID and cookie.  Currently
             certificates are not verified if the https protocol is specified. A
             warning may be printed out from the requests module for this case.
@@ -366,6 +388,13 @@ class CvpClient():
                      Proxies can also be set via environment variables.
                      Please reference the below link for details of precedence.
                      https://requests.readthedocs.io/en/latest/user/advanced/#proxies
+                cert_login (boolean): Use CVP certificate based login flow.
+                    Supported on CVP 2026.3.0 and later. When True,
+                    client_cert must also be provided.
+                client_cert (str or tuple): Path to client certificate, or
+                    (cert, key) tuple as accepted by requests.
+                cert_login_port (int): CVP mTLS endpoint port. Default is
+                    9443.
 
             Raises:
                 CvpLoginError: A CvpLoginError is raised if a connection
@@ -388,6 +417,9 @@ class CvpClient():
                 nodes[idx] = os.environ.get('CURRENT_NODE_IP')
 
         self.cert = cert
+        self.cert_login = cert_login
+        self.cert_login_port = cert_login_port
+        self.client_cert = client_cert
         self.nodes = nodes
         self.node_cnt = len(nodes)
         self.node_pool = cycle(nodes)
@@ -538,6 +570,86 @@ class CvpClient():
             self.log.error(msg)
             raise CvpRequestError(msg)
 
+    def _check_validate_certificate_result(self, response, prefix):
+        '''Check certificate validation details returned in redirect metadata.
+        '''
+        headers = getattr(response, 'headers', {}) or {}
+        location = headers.get('Location') if hasattr(headers, 'get') else ''
+        if not isinstance(location, str) or not location:
+            return
+        query = parse_qs(urlparse(location).query)
+        cert_valid = query.get('cert_valid', [None])[0]
+        err_msg = query.get('cert_error', [None])[0]
+        if err_msg:
+            try:
+                err_data = json.loads(err_msg)
+            except ValueError:
+                pass
+            else:
+                if isinstance(err_data, dict) and err_data.get('errorMessage'):
+                    err_msg = err_data['errorMessage']
+            if not isinstance(err_msg, str):
+                err_msg = str(err_msg)
+            # Backend returns a generic error message only for browser use case
+            # that is not helpful here. If the error message contains the string
+            # "close the browser and try again" then remove that part of the
+            # message to make it more useful.
+            # e.g "x y z. Please close the browser and try again. a b." becomes "x y z"
+            # e.g "x y z, then close the browser and try again." becomes "x y z"
+            close_browser_msg = 'close the browser and try again'
+            err_msg_lower = err_msg.lower()
+            close_browser_idx = err_msg_lower.find(close_browser_msg)
+            if close_browser_idx != -1:
+                end_idx = max(err_msg.rfind('.', 0, close_browser_idx),
+                              err_msg.rfind(',', 0, close_browser_idx))
+                if end_idx != -1:
+                    err_msg = err_msg[:end_idx]
+        err_msg = err_msg.strip() if err_msg else err_msg
+        if err_msg or (cert_valid and cert_valid.lower() != 'true'):
+            msg = f"{prefix}: Request Error: {err_msg or location}"
+            self.log.error(msg)
+            raise CvpApiError(msg)
+
+    def _validate_client_certificate(self):
+        '''Validate the local client certificate/key before calling CVP.
+        '''
+        cert_file = self.client_cert
+        key_file = None
+        if isinstance(self.client_cert, (tuple)):
+            if len(self.client_cert) != 2:
+                msg = ('Invalid client certificate/key: client_cert must be a '
+                       '(certificate, key) pair')
+                self.log.error(msg)
+                raise CvpRequestError(msg)
+            cert_file, key_file = self.client_cert
+
+        try:
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            context.load_cert_chain(certfile=cert_file, keyfile=key_file)
+        except (OSError, ssl.SSLError, TypeError, ValueError) as error:
+            msg = "Invalid client certificate or key"
+            self.log.error(msg)
+            raise CvpRequestError(msg) from error
+
+    def _validate_certificate(self):
+        '''Validate a client certificate for certificate based login.
+        '''
+        self._validate_client_certificate()
+        url = (url_with_port(self.url_prefix_short, self.cert_login_port) +
+               '/aaa/v1/validateCertificate')
+        response = self.session.get(url, headers=self.headers,
+                                    timeout=self.connect_timeout, verify=self.cert,
+                                    cert=self.client_cert,
+                                    allow_redirects=False)
+        prefix = f"Validate certificate: {url}"
+        self._is_good_response(response, prefix)
+        self._check_validate_certificate_result(response, prefix)
+
+        if self.cookies is None:
+            self.cookies = response.cookies
+        else:
+            self.cookies.update(response.cookies)
+
     def _login(self):
         ''' Make a POST request to CVP login authentication.
             An error can be raised from the post method call or the
@@ -602,14 +714,24 @@ class CvpClient():
                     CVP node.  Destroy the class and re-instantiate.
         '''
         url = self.url_prefix + '/login/authenticate.do'
+        if self.cert_login:
+            if self.client_cert is None:
+                raise CvpRequestError(
+                    'client_cert is required when cert_login is True')
+            self._validate_certificate()
         response = self.session.post(url,
                                      data=json.dumps(self.authdata),
                                      headers=self.headers,
+                                     cookies=self.cookies,
                                      timeout=self.connect_timeout,
-                                     verify=self.cert)
+                                     verify=self.cert,
+                                     cert=self.client_cert)
         self._is_good_response(response, f"Authenticate: {url}")
 
-        self.cookies = response.cookies
+        if self.cookies is None:
+            self.cookies = response.cookies
+        else:
+            self.cookies.update(response.cookies)
         self.headers['APP_SESSION_ID'] = response.json()['sessionId']
 
     def _set_headers_api_token(self):
@@ -859,12 +981,18 @@ class CvpClient():
                         if 'Authorization' in self.headers:
                             fhs['Authorization'] = self.headers[
                                 'Authorization']
+                        # Data must be None or a dict so the key-value pairs can be extracted
+                        # as individual multipart/form-data fields right alongside the file
+                        # boundary parts. Hence when both data= and file= are present we do not
+                        # want to dump data as a JSON encoded string. Requests cannot merge a
+                        # raw string body with files and will raise a ValueError.
                         response = self.session.post(full_url,
                                                      cookies=self.cookies,
                                                      headers=fhs,
                                                      timeout=timeout,
                                                      verify=self.cert,
-                                                     files=files)
+                                                     files=files,
+                                                     data=data)
                 elif req_type == 'DELETE':
                     response = self.session.delete(full_url,
                                                    cookies=self.cookies,
