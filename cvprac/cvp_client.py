@@ -767,6 +767,36 @@ class CvpClient():
             err = f"Error trying to logout {response}"
             self.log.error(err)
 
+    @staticmethod
+    def _upload_positions(files):
+        """Record original stream offsets, including Requests file tuples."""
+        positions = []
+        if files is not None:
+            entries = files.items() if hasattr(files, 'items') else files
+            for _, value in entries:
+                stream = value[1] if isinstance(value, (tuple, list)) else value
+                if not hasattr(stream, 'read'):
+                    continue  # Requests can replay literal bytes or strings.
+                try:
+                    position = stream.tell()
+                except (AttributeError, OSError, ValueError):
+                    position = None
+                positions.append((stream, position))
+        return positions
+
+    @staticmethod
+    def _rewind_upload(positions):
+        """Refuse retries when an upload cannot be safely replayed."""
+        for stream, position in positions:
+            try:
+                if position is None:
+                    raise ValueError('original stream position is unavailable')
+                stream.seek(position)
+            except (AttributeError, OSError, ValueError) as error:
+                raise CvpRequestError(
+                    'Cannot retry upload: file stream cannot be restored '
+                    'to its original position') from error
+
     def _make_request(self, req_type, url, timeout, data=None,
                       files=None):
         ''' Make a GET, POST or DELETE request to CVP.  If the request call raises a
@@ -822,9 +852,12 @@ class CvpClient():
         # Keep note of which node is handling this request.
         self._last_used_node = re.match('http[s]?://(.*):',
                                         self.url_prefix).group(1)
+        upload_positions = self._upload_positions(files)
         # Retry the request for the number of nodes.
         response = None
         for node_num in range(self.node_cnt):
+            if node_num:
+                self._rewind_upload(upload_positions)
             # Set full URL based on current node
             if '/api/' in url or '/cvpservice/' in url:
                 full_url = self.url_prefix_short + url
@@ -956,7 +989,10 @@ class CvpClient():
         # pylint: disable=raising-bad-type
         # For get or post requests apply both the connect and read timeout.
         timeout = (self.connect_timeout, timeout)
+        upload_positions = self._upload_positions(files)
         for req_try in range(self.NUM_RETRY_REQUESTS):
+            if req_try:
+                self._rewind_upload(upload_positions)
             try:
                 if req_type == 'GET':
                     response = self.session.get(full_url,
@@ -1096,6 +1132,8 @@ class CvpClient():
                     the request. Default is None.
                 files (dict): Dict of file name to files for upload. Currently
                     only used for adding images to CVP. Default is None.
+                    Stream uploads are retried from their original position.
+                    If a stream cannot be rewound, a retry raises CvpRequestError.
                 timeout (int): Number of seconds the client will wait between
                     bytes sent from the server.  Default value is 30 seconds.
 

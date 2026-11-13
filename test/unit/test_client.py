@@ -34,6 +34,8 @@
 ''' Unit tests for the CvpClient class
 '''
 import json
+from io import BytesIO
+from requests import Request
 import ssl
 import unittest
 from itertools import cycle
@@ -381,6 +383,133 @@ class TestClient(unittest.TestCase):
 
         with self.assertRaises(CvpRequestError):
             self.clnt._login_on_prem()
+
+    def test_upload_retry_preserves_stream_position(self):
+        """Real multipart preparation must replay the original file slice."""
+        for failure in ('timeout', 'logout', 'unauthorized', 'failover', 'timeout_failover'):
+            with self.subTest(failure=failure):
+                client = CvpClient()
+                client.session = Mock()
+                client.headers = {'Accept': 'application/json'}
+                client.url_prefix = 'https://1.1.1.1:443/web'
+                client.url_prefix_short = 'https://1.1.1.1:443'
+                client.node_cnt = 2
+                client.NUM_RETRY_REQUESTS = 2
+                client._reset_session = Mock()
+                client._create_session = Mock()
+                response = Mock()
+                response.json.return_value = {'ok': True}
+                response.content = b'{"ok": true}'
+                stream = BytesIO(b'PREFIX_IMAGE_PAYLOAD')
+                stream.seek(7)
+                second_stream = BytesIO(b'XXX_SECOND_PAYLOAD')
+                second_stream.seek(4)
+                bodies = []
+
+                def send(url, **kwargs):
+                    bodies.append(Request('POST', url, files=kwargs['files'],
+                                          data=kwargs['data']).prepare().body)
+                    if failure == 'timeout_failover' and len(bodies) <= 2:
+                        raise ReadTimeout('exhaust retries on first node')
+                    if len(bodies) == 1:
+                        if failure == 'timeout':
+                            raise ReadTimeout('after multipart preparation')
+                        if failure in ('failover', 'timeout_failover'):
+                            raise HTTPError('try another node')
+                    return response
+
+                client.session.post.side_effect = send
+                errors = {'logout': CvpSessionLogOutError('logged out'),
+                          'unauthorized': CvpApiError('Unauthorized')}
+                client._is_good_response = Mock(
+                    side_effect=[errors[failure], None] if failure in errors
+                    else None)
+                result = client.post('/image/addImage.do',
+                                     data={'name': 'image.swix'},
+                                     files={'file': ('image.swix', stream),
+                                            'second': second_stream})
+                self.assertEqual(result, {'ok': True})
+                self.assertEqual(len(bodies), 3 if failure == 'timeout_failover' else 2)
+                for body in bodies:
+                    self.assertIn(b'IMAGE_PAYLOAD', body)
+                    self.assertNotIn(b'PREFIX_', body)
+                    self.assertIn(b'SECOND_PAYLOAD', body)
+                    self.assertNotIn(b'XXX_', body)
+                    self.assertIn(b'image.swix', body)
+                if failure == 'failover':
+                    client._create_session.assert_called_once_with()
+                elif failure in errors:
+                    client._reset_session.assert_called_once_with()
+
+    def test_upload_unrewindable_stream_is_not_retried(self):
+        """Nonseekable or broken streams must not send a second body."""
+        class Nonseekable:
+            def __init__(self):
+                self.stream = BytesIO(b'IMAGE_PAYLOAD')
+
+            def read(self):
+                return self.stream.read()
+
+        class BrokenSeek(Nonseekable):
+            def tell(self):
+                return self.stream.tell()
+
+            def seek(self, position):
+                raise OSError('cannot rewind')
+
+        for stream_type in (Nonseekable, BrokenSeek):
+            for failure in ('timeout', 'logout', 'unauthorized', 'failover'):
+                with self.subTest(stream=stream_type.__name__, failure=failure):
+                    client = CvpClient()
+                    client.session = Mock()
+                    client.headers = {'Accept': 'application/json'}
+                    client.url_prefix = 'https://1.1.1.1:443/web'
+                    client.url_prefix_short = 'https://1.1.1.1:443'
+                    client.node_cnt = 2
+                    client.NUM_RETRY_REQUESTS = 2
+                    client._create_session = Mock()
+                    client._reset_session = Mock()
+                    errors = {'timeout': ReadTimeout('timed out'),
+                              'failover': HTTPError('try another node'),
+                              'logout': CvpSessionLogOutError('logged out'),
+                              'unauthorized': CvpApiError('Unauthorized')}
+
+                    def send(url, **kwargs):
+                        Request('POST', url, files=kwargs['files']).prepare()
+                        if failure in ('timeout', 'failover'):
+                            raise errors[failure]
+                        return Mock()
+
+                    client.session.post.side_effect = send
+                    client._is_good_response = Mock(side_effect=errors[failure])
+                    with self.assertRaisesRegex(CvpRequestError, 'Cannot retry upload'):
+                        client.post('/image/addImage.do', files={'file': stream_type()})
+                    self.assertEqual(client.session.post.call_count, 1)
+
+    def test_upload_first_attempt_and_literal_retry(self):
+        """Keep successful stream uploads and replayable byte uploads working."""
+        for file_value, retry in ((BytesIO(b'IMAGE_PAYLOAD'), False),
+                                  (b'IMAGE_PAYLOAD', True)):
+            with self.subTest(retry=retry):
+                client = self.clnt
+                client.session = Mock()
+                client.headers = {'Accept': 'application/json'}
+                client.NUM_RETRY_REQUESTS = 2
+                client._is_good_response = Mock()
+                bodies = []
+
+                def send(url, **kwargs):
+                    bodies.append(Request('POST', url, files=kwargs['files']).prepare().body)
+                    if retry and len(bodies) == 1:
+                        raise ReadTimeout('timed out')
+                    return Mock()
+
+                client.session.post.side_effect = send
+                client._send_request('POST', 'https://example.invalid/upload', 30,
+                                     files=[('file', file_value)])
+                self.assertEqual(len(bodies), 2 if retry else 1)
+                for body in bodies:
+                    self.assertIn(b'IMAGE_PAYLOAD', body)
 
     def test_make_request_good(self):
         """ Test request does not raise exception and returns json.
